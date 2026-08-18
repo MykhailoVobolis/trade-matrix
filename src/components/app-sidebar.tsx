@@ -1,13 +1,18 @@
 "use client";
 
+import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useTheme } from "next-themes";
 import {
   BarChart3Icon,
   ChevronsUpDownIcon,
   LayoutDashboardIcon,
   LogOutIcon,
+  MonitorIcon,
+  MoonIcon,
   PackageIcon,
+  SunIcon,
   SettingsIcon,
   ShoppingCartIcon,
   UploadIcon,
@@ -20,6 +25,8 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -36,6 +43,7 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { Switch } from "@/components/ui/switch";
 
 const navigationItems = [
   {
@@ -75,6 +83,24 @@ const navigationItems = [
   },
 ] as const;
 
+const themeOptions = [
+  {
+    label: "Light",
+    value: "light",
+    icon: SunIcon,
+  },
+  {
+    label: "System",
+    value: "system",
+    icon: MonitorIcon,
+  },
+  {
+    label: "Dark",
+    value: "dark",
+    icon: MoonIcon,
+  },
+] as const;
+
 function isItemActive(pathname: string, href: string) {
   if (href === "/app") {
     return pathname === href;
@@ -85,6 +111,15 @@ function isItemActive(pathname: string, href: string) {
 
 export function AppSidebar() {
   const pathname = usePathname();
+  const { resolvedTheme, setTheme, theme } = useTheme();
+  const mounted = useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+
+  const effectiveTheme = mounted ? resolvedTheme : "light";
+  const selectedTheme = mounted ? theme ?? "system" : "system";
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -185,6 +220,52 @@ export function AppSidebar() {
                   <SettingsIcon />
                   Settings
                 </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuGroup>
+                  <DropdownMenuItem
+                    className="justify-between"
+                    onSelect={(event) => event.preventDefault()}
+                  >
+                    <div className="flex items-center gap-1.5">
+                      <MoonIcon />
+                      <span>Appearance</span>
+                    </div>
+                    <Switch
+                      checked={effectiveTheme === "dark"}
+                      aria-label="Toggle dark mode"
+                      onMouseDown={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                      }}
+                      onCheckedChange={(checked) =>
+                        setTheme(checked ? "dark" : "light")
+                      }
+                    />
+                  </DropdownMenuItem>
+                  <div className="px-1 pb-1">
+                    <DropdownMenuRadioGroup
+                      value={selectedTheme}
+                      onValueChange={(value) => setTheme(value)}
+                    >
+                      <div className="grid grid-cols-3 gap-1">
+                        {themeOptions.map((option) => {
+                          const Icon = option.icon;
+
+                          return (
+                            <DropdownMenuRadioItem
+                              key={option.value}
+                              value={option.value}
+                              className="justify-center rounded-md px-2 py-1.5"
+                            >
+                              <Icon className="size-3.5" />
+                              <span className="sr-only">{option.label}</span>
+                            </DropdownMenuRadioItem>
+                          );
+                        })}
+                      </div>
+                    </DropdownMenuRadioGroup>
+                  </div>
+                </DropdownMenuGroup>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem>
                   <LogOutIcon />
