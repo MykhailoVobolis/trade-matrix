@@ -1,3 +1,3 @@
 export default function SalesPage() {
-  return <h1>Sales</h1>;
+  return <section>Sales</section>;
 }

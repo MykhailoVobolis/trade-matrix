@@ -6,8 +6,8 @@ export const metadata: Metadata = {
 
 export default function AppHomePage() {
   return (
-    <main className="flex w-full flex-1 items-center justify-center p-8">
+    <section className="flex w-full flex-1 items-center justify-center">
       <h1 className="text-2xl font-semibold">Dashboard</h1>
-    </main>
+    </section>
   );
 }
