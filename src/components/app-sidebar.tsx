@@ -119,22 +119,22 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
-      <SidebarHeader className="gap-3 overflow-hidden p-3 group-data-[collapsible=icon]:p-2">
-        <div className="flex min-h-10 items-center gap-2 group-data-[collapsible=icon]:justify-center">
-          <Link
-            href="/app"
-            className="flex h-10 min-w-0 items-center gap-3 overflow-hidden rounded-md px-2 py-1.5 text-sidebar-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-md group-data-[collapsible=icon]:p-0">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-              <LayoutDashboardIcon className="size-4" />
-            </div>
-            <div className="min-w-0 group-data-[collapsible=icon]:hidden">
-              <p className="truncate text-sm font-semibold">TradeMatrix</p>
-              <p className="truncate text-xs text-muted-foreground">Private workspace</p>
-            </div>
-          </Link>
-
-          <SidebarTrigger className="ml-auto shrink-0 group-data-[collapsible=icon]:hidden" />
-        </div>
+      <SidebarHeader>
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton size="lg" render={<Link href="/app" />} tooltip="TradeMatrix">
+              <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+                <LayoutDashboardIcon className="size-4" />
+              </div>
+              <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
+                <span className="truncate font-semibold">TradeMatrix</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  Private workspace
+                </span>
+              </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarHeader>
 
       <SidebarContent>
@@ -161,24 +161,23 @@ export function AppSidebar() {
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="overflow-hidden p-3 group-data-[collapsible=icon]:p-2">
+      <SidebarFooter>
         <SidebarMenu>
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <SidebarMenuButton
-                    size="lg"
-                    className="h-10 group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-0"
-                    tooltip="Demo User"
-                  />
-                }>
+                  <SidebarMenuButton size="lg" tooltip="Demo User" />
+                }
+              >
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
                   MV
                 </div>
                 <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate font-medium">Demo User</span>
-                  <span className="truncate text-xs text-muted-foreground">demo@tradematrix.app</span>
+                  <span className="truncate text-xs text-muted-foreground">
+                    demo@tradematrix.app
+                  </span>
                 </div>
                 <ChevronsUpDownIcon className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
               </DropdownMenuTrigger>
@@ -186,13 +185,15 @@ export function AppSidebar() {
               <DropdownMenuContent className="w-56 rounded-xl" side="top" align="end" sideOffset={8}>
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="p-0 font-normal">
-                    <div className="flex items-center gap-3 px-3 py-3">
-                      <div className="flex size-10 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
+                    <div className="flex items-center gap-2 px-2 py-1.5">
+                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
                         MV
                       </div>
                       <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
                         <span className="truncate font-medium">Demo User</span>
-                        <span className="truncate text-xs text-muted-foreground">demo@tradematrix.app</span>
+                        <span className="truncate text-xs text-muted-foreground">
+                          demo@tradematrix.app
+                        </span>
                       </div>
                     </div>
                   </DropdownMenuLabel>
@@ -249,6 +250,8 @@ export function AppSidebar() {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
+
+      <SidebarTrigger className="absolute top-3 right-3 shrink-0 group-data-[collapsible=icon]:hidden md:flex" />
 
       <SidebarRail />
     </Sidebar>
