@@ -26,6 +26,15 @@ type VerifyCodeResult = {
   redirectTo: string;
 };
 
+type TotpSetupResult = {
+  otpauthUrl: string;
+  setupKey: string;
+};
+
+type TotpSetupVerificationResult = {
+  redirectTo: string;
+};
+
 export class AuthFlowError extends Error {
   constructor(
     message: string,
@@ -146,6 +155,40 @@ export async function verifyCodeRequest({
 
 export async function resendVerificationCodeRequest(): Promise<void> {
   await wait(700);
+}
+
+export async function startTotpSetupRequest(): Promise<TotpSetupResult> {
+  await wait(800);
+
+  return {
+    otpauthUrl:
+      "otpauth://totp/TradeMatrix:demo%40tradematrix.app?secret=EQQNMKTBY3MF4DWFYITCIWM5YM2FFBZJ&issuer=TradeMatrix&algorithm=SHA1&digits=6&period=30",
+    setupKey: "EQQNMKTBY3MF4DWFYITCIWM5YM2FFBZJ",
+  };
+}
+
+export async function verifyTotpSetupRequest({
+  code,
+}: VerifyCodeValues): Promise<TotpSetupVerificationResult> {
+  await wait(900);
+
+  if (code === "000000") {
+    throw new AuthFlowError(
+      "That authenticator code has expired. Enter the latest code from your app and try again.",
+      "expired_code",
+    );
+  }
+
+  if (code !== "123456") {
+    throw new AuthFlowError(
+      "That code is invalid. Check the current code in your authenticator app and try again.",
+      "invalid_code",
+    );
+  }
+
+  return {
+    redirectTo: "/app/settings?tab=Security",
+  };
 }
 
 export function getGoogleAuthHref() {
