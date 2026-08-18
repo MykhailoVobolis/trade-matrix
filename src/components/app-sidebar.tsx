@@ -122,7 +122,11 @@ export function AppSidebar() {
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" render={<Link href="/app" />} tooltip="TradeMatrix">
+            <SidebarMenuButton
+              size="lg"
+              render={<Link href="/app" />}
+              tooltip="TradeMatrix"
+            >
               <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
                 <LayoutDashboardIcon className="size-4" />
               </div>
@@ -149,7 +153,8 @@ export function AppSidebar() {
                     <SidebarMenuButton
                       render={<Link href={item.href} />}
                       isActive={isItemActive(pathname, item.href)}
-                      tooltip={item.title}>
+                      tooltip={item.title}
+                    >
                       <Icon />
                       <span>{item.title}</span>
                     </SidebarMenuButton>
@@ -166,9 +171,7 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger
-                render={
-                  <SidebarMenuButton size="lg" tooltip="Demo User" />
-                }
+                render={<SidebarMenuButton size="lg" tooltip="Demo User" />}
               >
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
                   MV
@@ -182,7 +185,12 @@ export function AppSidebar() {
                 <ChevronsUpDownIcon className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent className="w-56 rounded-xl" side="top" align="end" sideOffset={8}>
+              <DropdownMenuContent
+                className="w-56 rounded-xl"
+                side="top"
+                align="end"
+                sideOffset={8}
+              >
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="p-0 font-normal">
                     <div className="flex items-center gap-2 px-2 py-1.5">
@@ -205,7 +213,10 @@ export function AppSidebar() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem className="justify-between" onSelect={(event) => event.preventDefault()}>
+                  <DropdownMenuItem
+                    className="justify-between"
+                    onSelect={(event) => event.preventDefault()}
+                  >
                     <div className="flex items-center gap-1.5">
                       <MoonIcon />
                       <span>Appearance</span>
@@ -217,11 +228,16 @@ export function AppSidebar() {
                         event.preventDefault();
                         event.stopPropagation();
                       }}
-                      onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+                      onCheckedChange={(checked) =>
+                        setTheme(checked ? "dark" : "light")
+                      }
                     />
                   </DropdownMenuItem>
                   <div className="px-1 pb-1">
-                    <DropdownMenuRadioGroup value={selectedTheme} onValueChange={(value) => setTheme(value)}>
+                    <DropdownMenuRadioGroup
+                      value={selectedTheme}
+                      onValueChange={(value) => setTheme(value)}
+                    >
                       <div className="grid grid-cols-3 gap-1">
                         {themeOptions.map((option) => {
                           const Icon = option.icon;
@@ -230,7 +246,8 @@ export function AppSidebar() {
                             <DropdownMenuRadioItem
                               key={option.value}
                               value={option.value}
-                              className="justify-center rounded-md px-2 py-1.5">
+                              className="justify-center rounded-md px-2 py-1.5"
+                            >
                               <Icon className="size-3.5" />
                               <span className="sr-only">{option.label}</span>
                             </DropdownMenuRadioItem>

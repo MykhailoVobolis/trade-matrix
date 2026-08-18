@@ -96,15 +96,18 @@ const activityItems = [
 const insights = [
   {
     title: "Coverage",
-    description: "Use this area for top-level KPI snapshots and quick navigation.",
+    description:
+      "Use this area for top-level KPI snapshots and quick navigation.",
   },
   {
     title: "Cross-entity links",
-    description: "Reserve this block for future shared buyers/suppliers insights.",
+    description:
+      "Reserve this block for future shared buyers/suppliers insights.",
   },
   {
     title: "Product mix",
-    description: "Placeholder for portfolio breakdown once real analytics land.",
+    description:
+      "Placeholder for portfolio breakdown once real analytics land.",
   },
 ] as const;
 
@@ -183,7 +186,9 @@ export default function AppHomePage() {
                 <TableBody>
                   {pipelineRows.map((row) => (
                     <TableRow key={row.entity}>
-                      <TableCell className="font-medium">{row.entity}</TableCell>
+                      <TableCell className="font-medium">
+                        {row.entity}
+                      </TableCell>
                       <TableCell>{row.market}</TableCell>
                       <TableCell>{row.sales}</TableCell>
                       <TableCell>{row.purchases}</TableCell>
