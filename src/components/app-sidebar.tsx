@@ -5,8 +5,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
-  BarChart3Icon,
+  Building2Icon,
   ChevronsUpDownIcon,
+  CloudUploadIcon,
+  HouseIcon,
   LayoutDashboardIcon,
   LogOutIcon,
   MonitorIcon,
@@ -14,8 +16,7 @@ import {
   PackageIcon,
   SunIcon,
   SettingsIcon,
-  ShoppingCartIcon,
-  UploadIcon,
+  TagIcon,
   UsersIcon,
 } from "lucide-react";
 
@@ -47,19 +48,24 @@ import { Switch } from "@/components/ui/switch";
 
 const navigationItems = [
   {
-    title: "Dashboard",
+    title: "Overview",
     href: "/app",
-    icon: LayoutDashboardIcon,
+    icon: HouseIcon,
   },
   {
-    title: "Sales",
-    href: "/app/sales",
-    icon: BarChart3Icon,
+    title: "Upload Tables",
+    href: "/app/uploads",
+    icon: CloudUploadIcon,
   },
   {
-    title: "Purchases",
-    href: "/app/purchases",
-    icon: ShoppingCartIcon,
+    title: "Suppliers",
+    href: "/app/suppliers",
+    icon: Building2Icon,
+  },
+  {
+    title: "Buyers",
+    href: "/app/buyers",
+    icon: UsersIcon,
   },
   {
     title: "Products",
@@ -67,19 +73,9 @@ const navigationItems = [
     icon: PackageIcon,
   },
   {
-    title: "Counterparties",
-    href: "/app/counterparties",
-    icon: UsersIcon,
-  },
-  {
-    title: "Analytics",
-    href: "/app/analytics",
-    icon: BarChart3Icon,
-  },
-  {
-    title: "Uploads",
-    href: "/app/uploads",
-    icon: UploadIcon,
+    title: "UKTZED",
+    href: "/app/uktzed",
+    icon: TagIcon,
   },
 ] as const;
 
@@ -119,28 +115,25 @@ export function AppSidebar() {
   );
 
   const effectiveTheme = mounted ? resolvedTheme : "light";
-  const selectedTheme = mounted ? theme ?? "system" : "system";
+  const selectedTheme = mounted ? (theme ?? "system") : "system";
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
       <SidebarHeader className="gap-3 overflow-hidden p-3 group-data-[collapsible=icon]:p-2">
-        <div className="flex items-center justify-between gap-2 group-data-[collapsible=icon]:justify-center">
+        <div className="flex min-h-10 items-center gap-2 group-data-[collapsible=icon]:justify-center">
           <Link
             href="/app"
-            className="flex min-w-0 items-center gap-3 overflow-hidden rounded-md px-2 py-1.5 text-sidebar-foreground group-data-[collapsible=icon]:mx-auto group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:p-0"
-          >
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-xl bg-sidebar-primary text-sidebar-primary-foreground">
+            className="flex h-10 min-w-0 items-center gap-3 overflow-hidden rounded-md px-2 py-1.5 text-sidebar-foreground group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:rounded-md group-data-[collapsible=icon]:p-0">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
               <LayoutDashboardIcon className="size-4" />
             </div>
             <div className="min-w-0 group-data-[collapsible=icon]:hidden">
               <p className="truncate text-sm font-semibold">TradeMatrix</p>
-              <p className="truncate text-xs text-muted-foreground">
-                Private workspace
-              </p>
+              <p className="truncate text-xs text-muted-foreground">Private workspace</p>
             </div>
           </Link>
 
-          <SidebarTrigger className="shrink-0 group-data-[collapsible=icon]:hidden" />
+          <SidebarTrigger className="ml-auto shrink-0 group-data-[collapsible=icon]:hidden" />
         </div>
       </SidebarHeader>
 
@@ -152,12 +145,11 @@ export function AppSidebar() {
                 const Icon = item.icon;
 
                 return (
-                  <SidebarMenuItem key={item.href}>
+                  <SidebarMenuItem key={item.href} className="py-0.5">
                     <SidebarMenuButton
                       render={<Link href={item.href} />}
                       isActive={isItemActive(pathname, item.href)}
-                      tooltip={item.title}
-                    >
+                      tooltip={item.title}>
                       <Icon />
                       <span>{item.title}</span>
                     </SidebarMenuButton>
@@ -177,29 +169,21 @@ export function AppSidebar() {
                 render={
                   <SidebarMenuButton
                     size="lg"
-                    className="group-data-[collapsible=icon]:size-8 group-data-[collapsible=icon]:p-0"
+                    className="h-10 group-data-[collapsible=icon]:!size-8 group-data-[collapsible=icon]:!p-0"
                     tooltip="Demo User"
                   />
-                }
-              >
+                }>
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
                   MV
                 </div>
                 <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate font-medium">Demo User</span>
-                  <span className="truncate text-xs text-muted-foreground">
-                    demo@tradematrix.app
-                  </span>
+                  <span className="truncate text-xs text-muted-foreground">demo@tradematrix.app</span>
                 </div>
                 <ChevronsUpDownIcon className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
               </DropdownMenuTrigger>
 
-              <DropdownMenuContent
-                className="w-56 rounded-xl"
-                side="top"
-                align="end"
-                sideOffset={8}
-              >
+              <DropdownMenuContent className="w-56 rounded-xl" side="top" align="end" sideOffset={8}>
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="p-0 font-normal">
                     <div className="flex items-center gap-3 px-3 py-3">
@@ -208,9 +192,7 @@ export function AppSidebar() {
                       </div>
                       <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
                         <span className="truncate font-medium">Demo User</span>
-                        <span className="truncate text-xs text-muted-foreground">
-                          demo@tradematrix.app
-                        </span>
+                        <span className="truncate text-xs text-muted-foreground">demo@tradematrix.app</span>
                       </div>
                     </div>
                   </DropdownMenuLabel>
@@ -222,10 +204,7 @@ export function AppSidebar() {
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
-                  <DropdownMenuItem
-                    className="justify-between"
-                    onSelect={(event) => event.preventDefault()}
-                  >
+                  <DropdownMenuItem className="justify-between" onSelect={(event) => event.preventDefault()}>
                     <div className="flex items-center gap-1.5">
                       <MoonIcon />
                       <span>Appearance</span>
@@ -237,16 +216,11 @@ export function AppSidebar() {
                         event.preventDefault();
                         event.stopPropagation();
                       }}
-                      onCheckedChange={(checked) =>
-                        setTheme(checked ? "dark" : "light")
-                      }
+                      onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
                     />
                   </DropdownMenuItem>
                   <div className="px-1 pb-1">
-                    <DropdownMenuRadioGroup
-                      value={selectedTheme}
-                      onValueChange={(value) => setTheme(value)}
-                    >
+                    <DropdownMenuRadioGroup value={selectedTheme} onValueChange={(value) => setTheme(value)}>
                       <div className="grid grid-cols-3 gap-1">
                         {themeOptions.map((option) => {
                           const Icon = option.icon;
@@ -255,8 +229,7 @@ export function AppSidebar() {
                             <DropdownMenuRadioItem
                               key={option.value}
                               value={option.value}
-                              className="justify-center rounded-md px-2 py-1.5"
-                            >
+                              className="justify-center rounded-md px-2 py-1.5">
                               <Icon className="size-3.5" />
                               <span className="sr-only">{option.label}</span>
                             </DropdownMenuRadioItem>
