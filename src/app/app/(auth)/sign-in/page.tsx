@@ -1,37 +1,86 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { LoaderCircleIcon } from "lucide-react";
 import { AuthDivider } from "@/components/auth/auth-divider";
+import { AuthFieldError } from "@/components/auth/auth-field-error";
 import { AuthFormShell } from "@/components/auth/auth-form-shell";
 import { AuthGoogleButton } from "@/components/auth/auth-google-button";
+import { AuthInlineMessage } from "@/components/auth/auth-inline-message";
 import { AuthWithVisualLayout } from "@/components/auth/auth-with-visual-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { getGoogleAuthHref, signInRequest } from "@/lib/auth/auth-api";
+import { signInSchema, type SignInValues } from "@/lib/auth/auth-schemas";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
 
 export default function SignInPage() {
+  const router = useRouter();
+  const form = useForm<SignInValues>({
+    resolver: zodResolver(signInSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const signInMutation = useMutation({
+    mutationFn: signInRequest,
+    onSuccess: ({ redirectTo }) => {
+      router.replace(redirectTo);
+    },
+  });
+
+  const handleSubmit = form.handleSubmit((values) => {
+    signInMutation.reset();
+    return signInMutation.mutateAsync(values);
+  });
+
   return (
     <AuthWithVisualLayout
       title="Welcome back"
       description="Use your work email and password to continue into the private TradeMatrix workspace."
     >
       <AuthFormShell className="border-none bg-transparent shadow-none ring-0">
-        <div className="space-y-4">
+        <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+          {signInMutation.error ? (
+            <AuthInlineMessage variant="error" title="Sign-in failed">
+              {signInMutation.error.message}
+            </AuthInlineMessage>
+          ) : null}
           <div className="space-y-2">
             <Label htmlFor="sign-in-email">Email</Label>
             <Input
+              {...form.register("email")}
               id="sign-in-email"
               type="email"
               placeholder="name@company.com"
               className="h-12 rounded-xl text-base"
+              aria-invalid={Boolean(form.formState.errors.email)}
+              disabled={signInMutation.isPending}
             />
+            <AuthFieldError>
+              {form.formState.errors.email?.message}
+            </AuthFieldError>
           </div>
           <div className="space-y-2">
             <Label htmlFor="sign-in-password">Password</Label>
             <Input
+              {...form.register("password")}
               id="sign-in-password"
               type="password"
               placeholder="Enter your password"
               className="h-12 rounded-xl text-base"
+              aria-invalid={Boolean(form.formState.errors.password)}
+              disabled={signInMutation.isPending}
             />
+            <AuthFieldError>
+              {form.formState.errors.password?.message}
+            </AuthFieldError>
             <div className="flex justify-end">
               <Link
                 href="/app/forgot-password"
@@ -41,12 +90,27 @@ export default function SignInPage() {
               </Link>
             </div>
           </div>
-        </div>
-        <Button size="lg" className="h-12 w-full rounded-xl text-base">
-          Sign in
-        </Button>
+          <Button
+            type="submit"
+            size="lg"
+            className="h-12 w-full rounded-xl text-base"
+            disabled={signInMutation.isPending}
+          >
+            {signInMutation.isPending ? (
+              <>
+                <LoaderCircleIcon className="animate-spin" />
+                Signing in...
+              </>
+            ) : (
+              "Sign in"
+            )}
+          </Button>
+        </form>
         <AuthDivider />
-        <AuthGoogleButton />
+        <AuthGoogleButton
+          nativeButton={false}
+          render={<Link href={getGoogleAuthHref()} />}
+        />
         <p className="text-center text-sm text-muted-foreground">
           Don&apos;t have an account?{" "}
           <Link

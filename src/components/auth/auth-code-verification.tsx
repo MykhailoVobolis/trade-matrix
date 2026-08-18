@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronLeftIcon } from "lucide-react";
 import Link from "next/link";
 
@@ -32,9 +32,11 @@ export function AuthCodeVerification({
   resendPrefixText = "Didn't receive the code?",
   footerText,
 }: AuthCodeVerificationProps) {
+  const [code, setCode] = useState(() => Array.from({ length: 6 }, () => ""));
   const [secondsLeft, setSecondsLeft] = useState(
     resendHref ? resendCountdownSeconds : 0,
   );
+  const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   useEffect(() => {
     if (!resendHref || secondsLeft <= 0) {
@@ -47,6 +49,48 @@ export function AuthCodeVerification({
 
     return () => window.clearTimeout(timeoutId);
   }, [resendHref, secondsLeft]);
+
+  const isCodeComplete = code.every((digit) => digit.length === 1);
+
+  function focusInput(index: number) {
+    inputRefs.current[index]?.focus();
+    inputRefs.current[index]?.select();
+  }
+
+  function updateDigit(index: number, rawValue: string) {
+    const nextDigit = rawValue.replace(/\D/g, "").slice(-1);
+
+    setCode((current) => {
+      const next = [...current];
+      next[index] = nextDigit;
+      return next;
+    });
+
+    if (nextDigit && index < 5) {
+      focusInput(index + 1);
+    }
+  }
+
+  function handlePaste(text: string) {
+    const sanitized = text.replace(/\D/g, "").slice(0, 6);
+
+    if (!sanitized) {
+      return;
+    }
+
+    setCode((current) => {
+      const next = [...current];
+
+      sanitized.split("").forEach((digit, index) => {
+        next[index] = digit;
+      });
+
+      return next;
+    });
+
+    const nextIndex = Math.min(sanitized.length, 5);
+    focusInput(nextIndex);
+  }
 
   return (
     <AuthWithVisualLayout
@@ -73,11 +117,39 @@ export function AuthCodeVerification({
               {Array.from({ length: 6 }).map((_, index) => (
                 <Input
                   key={index}
+                  ref={(node) => {
+                    inputRefs.current[index] = node;
+                  }}
                   aria-label={`Verification digit ${index + 1}`}
                   inputMode="numeric"
                   maxLength={1}
                   placeholder="0"
-                  className="h-18 rounded-2xl border-border/80 bg-background px-0 text-center text-4xl font-medium placeholder:font-medium placeholder:text-muted-foreground/45 md:text-4xl"
+                  value={code[index]}
+                  onChange={(event) => updateDigit(index, event.target.value)}
+                  onKeyDown={(event) => {
+                    if (
+                      event.key === "Backspace" &&
+                      !code[index] &&
+                      index > 0
+                    ) {
+                      focusInput(index - 1);
+                    }
+
+                    if (event.key === "ArrowLeft" && index > 0) {
+                      event.preventDefault();
+                      focusInput(index - 1);
+                    }
+
+                    if (event.key === "ArrowRight" && index < 5) {
+                      event.preventDefault();
+                      focusInput(index + 1);
+                    }
+                  }}
+                  onPaste={(event) => {
+                    event.preventDefault();
+                    handlePaste(event.clipboardData.getData("text"));
+                  }}
+                  className="h-18 rounded-2xl border-border/80 bg-background px-0 text-center text-4xl font-medium caret-transparent placeholder:font-medium placeholder:text-muted-foreground/45 md:text-4xl"
                 />
               ))}
             </div>
@@ -105,7 +177,11 @@ export function AuthCodeVerification({
             ) : null}
           </div>
         </div>
-        <Button size="lg" className="mt-8 h-12 w-full rounded-xl text-base">
+        <Button
+          size="lg"
+          className="mt-8 h-12 w-full rounded-xl text-base"
+          disabled={!isCodeComplete}
+        >
           {confirmLabel}
         </Button>
       </AuthFormShell>
