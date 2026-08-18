@@ -1,17 +1,28 @@
 import { AuthFormOnlyLayout } from "@/components/auth/auth-form-only-layout";
 import { AuthFormShell } from "@/components/auth/auth-form-shell";
+import { AuthStatusContent } from "@/components/auth/auth-status-content";
+import Link from "next/link";
 
 export default function PasswordChangedPage() {
   return (
-    <AuthFormOnlyLayout
-      title="Password updated"
-      description="Confirmation screen for the completed password reset flow."
-    >
-      <AuthFormShell
-        eyebrow="Done"
-        title="Password changed"
-        description="This status screen stays form-only, matching the simpler Leo recovery pattern."
-      />
+    <AuthFormOnlyLayout>
+      <AuthFormShell className="border-none bg-transparent shadow-none ring-0">
+        <AuthStatusContent
+          title="Password changed"
+          description="You can now return to the sign-in screen and access your TradeMatrix workspace with the new password."
+          action={
+            <p className="text-sm text-muted-foreground">
+              Back to{" "}
+              <Link
+                href="/app/sign-in"
+                className="font-medium text-sidebar-primary transition-colors hover:text-sidebar-primary/80"
+              >
+                Sign in
+              </Link>
+            </p>
+          }
+        />
+      </AuthFormShell>
     </AuthFormOnlyLayout>
   );
 }

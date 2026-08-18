@@ -4,8 +4,6 @@ type AppSegmentLayoutProps = {
   children: ReactNode;
 };
 
-export default function AppSegmentLayout({
-  children,
-}: AppSegmentLayoutProps) {
+export default function AppSegmentLayout({ children }: AppSegmentLayoutProps) {
   return children;
 }

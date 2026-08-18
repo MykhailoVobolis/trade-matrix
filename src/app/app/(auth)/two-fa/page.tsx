@@ -1,17 +1,30 @@
-import { AuthFormShell } from "@/components/auth/auth-form-shell";
-import { AuthWithVisualLayout } from "@/components/auth/auth-with-visual-layout";
+import { AuthCodeVerification } from "@/components/auth/auth-code-verification";
 
-export default function TwoFactorPage() {
-  return (
-    <AuthWithVisualLayout
-      title="Two-factor authentication"
-      description="Confirm your identity with a verification code before entering the private workspace."
-    >
-      <AuthFormShell
-        eyebrow="Two-factor"
-        title="Verification code"
-        description="The two-factor code entry flow will be added next, with support for the agreed email-based method."
+type TwoFactorPageProps = PageProps<"/app/two-fa">;
+
+export default async function TwoFactorPage({
+  searchParams,
+}: TwoFactorPageProps) {
+  const params = await searchParams;
+  const method = params.method === "totp" ? "totp" : "email";
+
+  if (method === "totp") {
+    return (
+      <AuthCodeVerification
+        title="2FA Required"
+        description="Open your authenticator app and enter the current 6-digit verification code."
+        backHref="/app/sign-in"
+        footerText="Use the latest code shown in your authenticator app."
       />
-    </AuthWithVisualLayout>
+    );
+  }
+
+  return (
+    <AuthCodeVerification
+      title="2FA Required"
+      description="We've sent a 6-digit verification code to your email. Please enter it below."
+      backHref="/app/sign-in"
+      resendHref="/app/two-fa?method=email"
+    />
   );
 }

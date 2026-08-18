@@ -5,14 +5,18 @@ import { AuthScreenHeader } from "@/components/auth/auth-screen-header";
 import { AuthVisualPanel } from "@/components/auth/auth-visual-panel";
 
 type AuthWithVisualLayoutProps = {
-  title: string;
+  title: ReactNode;
   description: string;
+  topAction?: ReactNode;
+  headerClassName?: string;
   children: ReactNode;
 };
 
 export function AuthWithVisualLayout({
   title,
   description,
+  topAction,
+  headerClassName,
   children,
 }: AuthWithVisualLayoutProps) {
   return (
@@ -22,9 +26,16 @@ export function AuthWithVisualLayout({
       </div>
       <div className="mx-auto flex min-h-svh w-full max-w-7xl flex-col px-4 pt-28 pb-6 md:px-8 md:pt-32 lg:px-12">
         <div className="flex flex-1 flex-col gap-10 xl:flex-row xl:items-stretch">
-          <div className="flex w-full max-w-2xl flex-col justify-center gap-8 xl:max-w-[34rem]">
-            <AuthScreenHeader title={title} description={description} />
-            <div>{children}</div>
+          <div className="flex w-full max-w-2xl flex-col xl:max-w-[34rem]">
+            {topAction ? <div className="pb-8">{topAction}</div> : null}
+            <div className="flex flex-1 flex-col justify-center gap-8">
+              <AuthScreenHeader
+                title={title}
+                description={description}
+                className={headerClassName ?? "px-4 text-center lg:text-center"}
+              />
+              <div>{children}</div>
+            </div>
           </div>
           <AuthVisualPanel />
         </div>

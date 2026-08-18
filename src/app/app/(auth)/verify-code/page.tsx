@@ -1,17 +1,12 @@
-import { AuthFormShell } from "@/components/auth/auth-form-shell";
-import { AuthWithVisualLayout } from "@/components/auth/auth-with-visual-layout";
+import { AuthCodeVerification } from "@/components/auth/auth-code-verification";
 
 export default function VerifyCodePage() {
   return (
-    <AuthWithVisualLayout
-      title="Verify your email"
-      description="Enter the verification code we send to continue the TradeMatrix account flow."
-    >
-      <AuthFormShell
-        eyebrow="Verify code"
-        title="Email verification"
-        description="The code input, resend flow, and verification states will be implemented in the next auth verification step."
-      />
-    </AuthWithVisualLayout>
+    <AuthCodeVerification
+      title="We sent you a code"
+      description="We've sent a 6-digit verification code to your email. Please enter it below."
+      backHref="/app/sign-up"
+      resendHref="/app/verify-code"
+    />
   );
 }

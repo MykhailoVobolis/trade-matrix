@@ -17,19 +17,19 @@ const visualHighlights = [
   {
     title: "Entity visibility",
     description:
-      "Track legal entities, suppliers, buyers, and product signals in one private workspace.",
+      "Monitor counterparties, products, and trade signals from one structured workspace.",
     icon: Building2Icon,
   },
   {
     title: "Secure access",
     description:
-      "Prepare your account flows for verification, 2FA, and controlled access to /app routes.",
+      "Support verification, recovery, and two-factor security without breaking the product shell.",
     icon: ShieldCheckIcon,
   },
   {
     title: "Shared context",
     description:
-      "Keep navigation, session state, and user identity aligned across the private shell.",
+      "Keep session state, navigation context, and user identity aligned across the platform.",
     icon: UsersIcon,
   },
 ] as const;
@@ -38,17 +38,18 @@ export function AuthVisualPanel() {
   return (
     <div className="hidden min-w-0 flex-1 xl:flex">
       <div className="relative flex w-full flex-col justify-between overflow-hidden rounded-[2rem] border border-border/70 bg-[radial-gradient(circle_at_top_left,rgba(48,128,255,0.18),transparent_38%),linear-gradient(180deg,rgba(255,255,255,0.96),rgba(244,247,255,0.88))] p-8 shadow-sm dark:bg-[radial-gradient(circle_at_top_left,rgba(48,128,255,0.24),transparent_38%),linear-gradient(180deg,rgba(17,24,39,0.96),rgba(10,15,27,0.92))]">
-        <div className="space-y-3">
+        <div className="space-y-3 pb-6">
           <div className="inline-flex items-center gap-2 rounded-full bg-sidebar-primary/10 px-3 py-1 text-xs font-medium text-sidebar-primary">
             <span className="size-2 rounded-full bg-sidebar-primary" />
             Private analytics workspace
           </div>
           <h2 className="max-w-lg text-4xl leading-tight font-semibold tracking-tight">
-            Sign in to the TradeMatrix control layer.
+            Access the TradeMatrix workspace with a consistent auth experience.
           </h2>
           <p className="max-w-xl text-sm leading-6 text-muted-foreground">
-            This side panel intentionally mirrors the structured product mockup
-            pattern from Leo, but stays inside the TradeMatrix visual system.
+            TradeMatrix authentication screens use the same visual system as the
+            private analytics shell, with focused flows for access, recovery,
+            and verification.
           </p>
         </div>
 
@@ -76,7 +77,7 @@ export function AuthVisualPanel() {
                 <CardContent className="pt-0">
                   <div className="flex items-center gap-1 text-xs font-medium text-muted-foreground">
                     <ArrowUpRightIcon className="size-3.5 text-sidebar-primary" />
-                    TradeMatrix auth foundation
+                    TradeMatrix access system
                   </div>
                 </CardContent>
               </Card>
