@@ -41,3 +41,11 @@ export const resetPasswordSchema = z
   });
 
 export type ResetPasswordValues = z.infer<typeof resetPasswordSchema>;
+
+export const verifyCodeSchema = z.object({
+  code: z
+    .string()
+    .regex(/^\d{6}$/, "Enter the complete 6-digit verification code."),
+});
+
+export type VerifyCodeValues = z.infer<typeof verifyCodeSchema>;

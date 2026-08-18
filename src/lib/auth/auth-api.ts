@@ -3,6 +3,7 @@ import type {
   ResetPasswordValues,
   SignInValues,
   SignUpValues,
+  VerifyCodeValues,
 } from "@/lib/auth/auth-schemas";
 
 type SignInResult = {
@@ -20,6 +21,20 @@ type ForgotPasswordResult = {
 type ResetPasswordResult = {
   redirectTo: string;
 };
+
+type VerifyCodeResult = {
+  redirectTo: string;
+};
+
+export class AuthFlowError extends Error {
+  constructor(
+    message: string,
+    public readonly code: "invalid_code" | "expired_code" | "too_many_attempts",
+  ) {
+    super(message);
+    this.name = "AuthFlowError";
+  }
+}
 
 function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -93,6 +108,44 @@ export async function resetPasswordRequest({
   return {
     redirectTo: "/app/password-changed",
   };
+}
+
+export async function verifyCodeRequest({
+  code,
+  attempt,
+}: VerifyCodeValues & {
+  attempt: number;
+}): Promise<VerifyCodeResult> {
+  await wait(900);
+
+  if (code === "000000") {
+    throw new AuthFlowError(
+      "This verification code has expired. Request a new one and try again.",
+      "expired_code",
+    );
+  }
+
+  if (attempt >= 3) {
+    throw new AuthFlowError(
+      "Too many invalid attempts. Wait a moment before trying again.",
+      "too_many_attempts",
+    );
+  }
+
+  if (code !== "123456") {
+    throw new AuthFlowError(
+      "That code is invalid. Check the email we sent and try again.",
+      "invalid_code",
+    );
+  }
+
+  return {
+    redirectTo: "/app/sign-in",
+  };
+}
+
+export async function resendVerificationCodeRequest(): Promise<void> {
+  await wait(700);
 }
 
 export function getGoogleAuthHref() {
