@@ -34,43 +34,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { demoAuthUser } from "@/lib/auth/auth-model";
+import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
+import { useAuthTwoFactorStore } from "@/lib/auth/auth-two-factor-store";
 import { cn } from "@/lib/utils";
 
 type SettingsTab = "general" | "security";
-
-const generalFields = [
-  {
-    label: "First name",
-    value: "Mykhailo",
-  },
-  {
-    label: "Last name",
-    value: "Vobolis",
-  },
-  {
-    label: "Email address",
-    value: "mvobolis@gmail.com",
-    disabled: true,
-  },
-] as const;
-
-const twoFactorOptions = [
-  {
-    value: "email",
-    title: "Two-Factor Authentication (2FA) - Email",
-    description:
-      "A security code will be sent to your email address for Two-Factor Authentication (2FA) when you sign in. You will need to check the email address associated with this account for this code in order to sign in.",
-    checked: true,
-  },
-  {
-    value: "authenticator",
-    title: "Two-Factor Authentication (2FA) - Authenticator",
-    description:
-      "Configure your Authenticator App to generate time-sensitive codes for signing into LeoAI. You will need to install an Authenticator app from your mobile device app store to generate codes.",
-    checked: false,
-    href: "/app/setup-2fa",
-  },
-] as const;
 
 const activeSessions = [
   {
@@ -114,6 +83,9 @@ function SettingsTabLink({
 }
 
 function GeneralSettingsPanel() {
+  const currentUser = useAuthSessionStore((state) => state.currentUser);
+  const user = currentUser ?? demoAuthUser;
+
   return (
     <div className="space-y-8">
       <div className="space-y-2">
@@ -125,9 +97,9 @@ function GeneralSettingsPanel() {
 
       <GeneralSettingsForm
         defaultValues={{
-          firstName: generalFields[0].value,
-          lastName: generalFields[1].value,
-          email: generalFields[2].value,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          email: user.email,
         }}
       />
     </div>
@@ -136,11 +108,31 @@ function GeneralSettingsPanel() {
 
 function SecuritySettingsPanel() {
   const router = useRouter();
+  const preferredMethod = useAuthTwoFactorStore(
+    (state) => state.preferredMethod,
+  );
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [sessionPendingDeletion, setSessionPendingDeletion] = useState<
     (typeof activeSessions)[number] | null
   >(null);
+  const twoFactorOptions = [
+    {
+      value: "email",
+      title: "Two-Factor Authentication (2FA) - Email",
+      description:
+        "A security code will be sent to your email address for Two-Factor Authentication (2FA) when you sign in. You will need to check the email address associated with this account for this code in order to sign in.",
+      checked: preferredMethod === "email",
+    },
+    {
+      value: "authenticator",
+      title: "Two-Factor Authentication (2FA) - Authenticator",
+      description:
+        "Configure your Authenticator App to generate time-sensitive codes for signing into TradeMatrix. You will need to install an Authenticator app from your mobile device app store to generate codes.",
+      checked: preferredMethod === "totp",
+      href: "/app/setup-2fa",
+    },
+  ] as const;
 
   return (
     <>

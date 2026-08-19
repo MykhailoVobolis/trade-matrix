@@ -2,6 +2,7 @@
 
 import { ThemeProvider } from "next-themes";
 
+import { AuthStateBootstrap } from "@/components/auth/auth-state-bootstrap";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryProvider } from "@/lib/query/query-provider";
 
@@ -17,6 +18,7 @@ export function Providers({ children }: ProvidersProps) {
       enableSystem
       disableTransitionOnChange
     >
+      <AuthStateBootstrap />
       <QueryProvider>
         <TooltipProvider>{children}</TooltipProvider>
       </QueryProvider>

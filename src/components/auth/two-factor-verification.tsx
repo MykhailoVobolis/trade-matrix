@@ -14,9 +14,11 @@ import { Button } from "@/components/ui/button";
 import {
   AuthFlowError,
   resendVerificationCodeRequest,
-  verifyCodeRequest,
+  verifyTwoFactorRequest,
 } from "@/lib/auth/auth-api";
+import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
 import { verifyCodeSchema } from "@/lib/auth/auth-schemas";
+import { useAuthTwoFactorStore } from "@/lib/auth/auth-two-factor-store";
 
 type TwoFactorVerificationProps = {
   method: "email" | "totp";
@@ -26,6 +28,12 @@ const maxAttempts = 3;
 
 export function TwoFactorVerification({ method }: TwoFactorVerificationProps) {
   const router = useRouter();
+  const challenge = useAuthTwoFactorStore((state) => state.pendingChallenge);
+  const completeChallenge = useAuthTwoFactorStore(
+    (state) => state.completeChallenge,
+  );
+  const clearChallenge = useAuthTwoFactorStore((state) => state.clearChallenge);
+  const completeSignIn = useAuthSessionStore((state) => state.completeSignIn);
   const [code, setCode] = useState("");
   const [isCodeComplete, setIsCodeComplete] = useState(false);
   const [attemptCount, setAttemptCount] = useState(0);
@@ -42,9 +50,15 @@ export function TwoFactorVerification({ method }: TwoFactorVerificationProps) {
   const bannerStatus = status?.variant === "warning" ? status : null;
 
   const verifyMutation = useMutation({
-    mutationFn: verifyCodeRequest,
-    onSuccess: ({ redirectTo }) => {
-      router.replace(redirectTo === "/app/sign-in" ? "/app" : redirectTo);
+    mutationFn: verifyTwoFactorRequest,
+    onSuccess: ({ redirectTo, accessToken, refreshToken, currentUser }) => {
+      completeSignIn({
+        accessToken,
+        refreshToken,
+        currentUser,
+      });
+      completeChallenge();
+      router.replace(redirectTo);
     },
     onError: (error) => {
       if (error instanceof AuthFlowError) {
@@ -134,6 +148,8 @@ export function TwoFactorVerification({ method }: TwoFactorVerificationProps) {
       await verifyMutation.mutateAsync({
         code: parsed.data.code,
         attempt: attemptCount,
+        method,
+        email: challenge?.email ?? "mvobolis@gmail.com",
       });
     } catch {
       // The mutation error is handled via onError state updates.
@@ -155,6 +171,7 @@ export function TwoFactorVerification({ method }: TwoFactorVerificationProps) {
           variant="outline"
           size="lg"
           className="w-fit px-5"
+          onClick={clearChallenge}
         >
           <ChevronLeftIcon className="size-4" />
           Back

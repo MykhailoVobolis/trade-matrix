@@ -5,17 +5,31 @@ import type {
   SignUpValues,
   VerifyCodeValues,
 } from "@/lib/auth/auth-schemas";
+import {
+  createMockAuthUser,
+  type AuthUser,
+  type TwoFactorMethod,
+} from "@/lib/auth/auth-model";
 
 type SignInResult = {
   redirectTo: string;
+  accessToken?: string;
+  refreshToken?: string | null;
+  currentUser?: AuthUser;
+  pendingTwoFactor?: {
+    email: string;
+    method: TwoFactorMethod;
+  };
 };
 
 type SignUpResult = {
   redirectTo: string;
+  verificationEmail: string;
 };
 
 type ForgotPasswordResult = {
   redirectTo: string;
+  recoveryEmail: string;
 };
 
 type ResetPasswordResult = {
@@ -24,6 +38,13 @@ type ResetPasswordResult = {
 
 type VerifyCodeResult = {
   redirectTo: string;
+};
+
+type VerifyTwoFactorResult = {
+  redirectTo: string;
+  accessToken: string;
+  refreshToken: string | null;
+  currentUser: AuthUser;
 };
 
 type TotpSetupResult = {
@@ -49,6 +70,14 @@ function wait(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
+function createMockAccessToken(email: string) {
+  return `tm-access-${btoa(email.toLowerCase())}`;
+}
+
+function createMockRefreshToken(email: string) {
+  return `tm-refresh-${btoa(`${email.toLowerCase()}-refresh`)}`;
+}
+
 export async function signInRequest(
   values: SignInValues,
 ): Promise<SignInResult> {
@@ -60,14 +89,33 @@ export async function signInRequest(
     throw new Error("Invalid email or password.");
   }
 
+  if (normalizedEmail.includes("totp")) {
+    return {
+      redirectTo: "/app/two-fa?method=totp",
+      pendingTwoFactor: {
+        email: normalizedEmail,
+        method: "totp",
+      },
+    };
+  }
+
   if (normalizedEmail.includes("2fa")) {
     return {
       redirectTo: "/app/two-fa?method=email",
+      pendingTwoFactor: {
+        email: normalizedEmail,
+        method: "email",
+      },
     };
   }
 
   return {
     redirectTo: "/app",
+    accessToken: createMockAccessToken(normalizedEmail),
+    refreshToken: createMockRefreshToken(normalizedEmail),
+    currentUser: createMockAuthUser({
+      email: normalizedEmail,
+    }),
   };
 }
 
@@ -84,6 +132,7 @@ export async function signUpRequest(
 
   return {
     redirectTo: "/app/verify-code",
+    verificationEmail: normalizedEmail,
   };
 }
 
@@ -99,7 +148,8 @@ export async function forgotPasswordRequest(
   }
 
   return {
-    redirectTo: `/app/check-your-inbox?email=${encodeURIComponent(normalizedEmail)}`,
+    redirectTo: "/app/check-your-inbox",
+    recoveryEmail: normalizedEmail,
   };
 }
 
@@ -150,6 +200,53 @@ export async function verifyCodeRequest({
 
   return {
     redirectTo: "/app/sign-in",
+  };
+}
+
+export async function verifyTwoFactorRequest({
+  code,
+  attempt,
+  method,
+  email,
+}: VerifyCodeValues & {
+  attempt: number;
+  method: TwoFactorMethod;
+  email: string;
+}): Promise<VerifyTwoFactorResult> {
+  await wait(900);
+
+  if (code === "000000") {
+    throw new AuthFlowError(
+      method === "totp"
+        ? "That authenticator code has expired. Enter the latest code from your app and try again."
+        : "This verification code has expired. Request a new one and try again.",
+      "expired_code",
+    );
+  }
+
+  if (attempt >= 3) {
+    throw new AuthFlowError(
+      "Too many invalid attempts. Wait a moment before trying again.",
+      "too_many_attempts",
+    );
+  }
+
+  if (code !== "123456") {
+    throw new AuthFlowError(
+      method === "totp"
+        ? "That code is invalid. Check the current code in your authenticator app and try again."
+        : "That code is invalid. Check the email we sent and try again.",
+      "invalid_code",
+    );
+  }
+
+  return {
+    redirectTo: "/app",
+    accessToken: createMockAccessToken(email),
+    refreshToken: createMockRefreshToken(email),
+    currentUser: createMockAuthUser({
+      email,
+    }),
   };
 }
 

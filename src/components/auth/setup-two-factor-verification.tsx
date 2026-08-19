@@ -16,6 +16,7 @@ import {
   startTotpSetupRequest,
   verifyTotpSetupRequest,
 } from "@/lib/auth/auth-api";
+import { useAuthTwoFactorStore } from "@/lib/auth/auth-two-factor-store";
 import { cn } from "@/lib/utils";
 
 function createMockQrCells(value: string) {
@@ -54,6 +55,9 @@ function createMockQrCells(value: string) {
 
 export function SetupTwoFactorVerification() {
   const router = useRouter();
+  const setPreferredMethod = useAuthTwoFactorStore(
+    (state) => state.setPreferredMethod,
+  );
   const [code, setCode] = useState("");
   const [isCodeComplete, setIsCodeComplete] = useState(false);
   const [hasInvalidCode, setHasInvalidCode] = useState(false);
@@ -71,6 +75,7 @@ export function SetupTwoFactorVerification() {
   const verifyMutation = useMutation({
     mutationFn: verifyTotpSetupRequest,
     onSuccess: ({ redirectTo }) => {
+      setPreferredMethod("totp");
       setHasInvalidCode(false);
       setStatus({
         title: "Authenticator connected",

@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
   Building2Icon,
@@ -45,6 +45,10 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Switch } from "@/components/ui/switch";
+import { demoAuthUser, getAuthUserInitials } from "@/lib/auth/auth-model";
+import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
+import { useAuthRecoveryStore } from "@/lib/auth/auth-recovery-store";
+import { useAuthTwoFactorStore } from "@/lib/auth/auth-two-factor-store";
 
 const navigationItems = [
   {
@@ -106,8 +110,13 @@ function isItemActive(pathname: string, href: string) {
 }
 
 export function AppSidebar() {
+  const router = useRouter();
   const pathname = usePathname();
   const { resolvedTheme, setTheme, theme } = useTheme();
+  const currentUser = useAuthSessionStore((state) => state.currentUser);
+  const signOut = useAuthSessionStore((state) => state.signOut);
+  const clearRecovery = useAuthRecoveryStore((state) => state.clearRecovery);
+  const clearChallenge = useAuthTwoFactorStore((state) => state.clearChallenge);
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,
@@ -116,6 +125,15 @@ export function AppSidebar() {
 
   const effectiveTheme = mounted ? resolvedTheme : "light";
   const selectedTheme = mounted ? (theme ?? "system") : "system";
+  const user = currentUser ?? demoAuthUser;
+  const userInitials = getAuthUserInitials(user);
+
+  function handleLogout() {
+    signOut();
+    clearRecovery();
+    clearChallenge();
+    router.replace("/app/sign-in");
+  }
 
   return (
     <Sidebar collapsible="icon" className="border-r border-sidebar-border">
@@ -174,12 +192,14 @@ export function AppSidebar() {
                 render={<SidebarMenuButton size="lg" tooltip="Demo User" />}
               >
                 <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
-                  MV
+                  {userInitials}
                 </div>
                 <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                  <span className="truncate font-medium">Demo User</span>
+                  <span className="truncate font-medium">
+                    {`${user.firstName} ${user.lastName}`}
+                  </span>
                   <span className="truncate text-xs text-muted-foreground">
-                    demo@tradematrix.app
+                    {user.email}
                   </span>
                 </div>
                 <ChevronsUpDownIcon className="ml-auto size-4 group-data-[collapsible=icon]:hidden" />
@@ -195,12 +215,14 @@ export function AppSidebar() {
                   <DropdownMenuLabel className="p-0 font-normal">
                     <div className="flex items-center gap-2 px-2 py-1.5">
                       <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
-                        MV
+                        {userInitials}
                       </div>
                       <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-medium">Demo User</span>
+                        <span className="truncate font-medium">
+                          {`${user.firstName} ${user.lastName}`}
+                        </span>
                         <span className="truncate text-xs text-muted-foreground">
-                          demo@tradematrix.app
+                          {user.email}
                         </span>
                       </div>
                     </div>
@@ -260,7 +282,7 @@ export function AppSidebar() {
                   </div>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>
                   <LogOutIcon />
                   Log out
                 </DropdownMenuItem>

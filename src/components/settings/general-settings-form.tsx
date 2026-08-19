@@ -14,6 +14,7 @@ import { ThemePreferenceRow } from "@/components/settings/theme-preference-row";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
 import { updateGeneralSettingsRequest } from "@/lib/settings/settings-api";
 import {
   generalSettingsSchema,
@@ -28,6 +29,9 @@ export function GeneralSettingsForm({
   defaultValues,
 }: GeneralSettingsFormProps) {
   const { resolvedTheme, setTheme } = useTheme();
+  const updateCurrentUser = useAuthSessionStore(
+    (state) => state.updateCurrentUser,
+  );
   const mounted = useSyncExternalStore(
     () => () => {},
     () => true,
@@ -57,6 +61,11 @@ export function GeneralSettingsForm({
       form.reset(profile);
       setAvatarFile(null);
       setAvatarError(null);
+      updateCurrentUser({
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+      });
     },
   });
 

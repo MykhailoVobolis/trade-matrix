@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { forgotPasswordRequest } from "@/lib/auth/auth-api";
+import { useAuthRecoveryStore } from "@/lib/auth/auth-recovery-store";
 import {
   forgotPasswordSchema,
   type ForgotPasswordValues,
@@ -22,6 +23,7 @@ import {
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
+  const startRecovery = useAuthRecoveryStore((state) => state.startRecovery);
   const form = useForm<ForgotPasswordValues>({
     resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
@@ -31,7 +33,8 @@ export default function ForgotPasswordPage() {
 
   const forgotPasswordMutation = useMutation({
     mutationFn: forgotPasswordRequest,
-    onSuccess: ({ redirectTo }) => {
+    onSuccess: ({ redirectTo, recoveryEmail }) => {
+      startRecovery(recoveryEmail);
       router.replace(redirectTo);
     },
   });

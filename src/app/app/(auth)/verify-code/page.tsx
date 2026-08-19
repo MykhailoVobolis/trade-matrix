@@ -16,12 +16,16 @@ import {
   resendVerificationCodeRequest,
   verifyCodeRequest,
 } from "@/lib/auth/auth-api";
+import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
 import { verifyCodeSchema } from "@/lib/auth/auth-schemas";
 
 const maxAttempts = 3;
 
 export default function VerifyCodePage() {
   const router = useRouter();
+  const clearPendingVerification = useAuthSessionStore(
+    (state) => state.clearPendingVerification,
+  );
   const [code, setCode] = useState("");
   const [isCodeComplete, setIsCodeComplete] = useState(false);
   const [attemptCount, setAttemptCount] = useState(0);
@@ -39,6 +43,7 @@ export default function VerifyCodePage() {
   const verifyMutation = useMutation({
     mutationFn: verifyCodeRequest,
     onSuccess: ({ redirectTo }) => {
+      clearPendingVerification();
       router.replace(redirectTo);
     },
     onError: (error) => {

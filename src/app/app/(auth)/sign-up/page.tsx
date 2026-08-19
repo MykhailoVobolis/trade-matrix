@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getGoogleAuthHref, signUpRequest } from "@/lib/auth/auth-api";
+import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
 import { signUpSchema, type SignUpValues } from "@/lib/auth/auth-schemas";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -20,6 +21,9 @@ import { useForm } from "react-hook-form";
 
 export default function SignUpPage() {
   const router = useRouter();
+  const setPendingVerification = useAuthSessionStore(
+    (state) => state.setPendingVerification,
+  );
   const form = useForm<SignUpValues>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
@@ -32,7 +36,8 @@ export default function SignUpPage() {
 
   const signUpMutation = useMutation({
     mutationFn: signUpRequest,
-    onSuccess: ({ redirectTo }) => {
+    onSuccess: ({ redirectTo, verificationEmail }) => {
+      setPendingVerification(verificationEmail);
       router.replace(redirectTo);
     },
   });

@@ -1,21 +1,29 @@
 "use client";
 
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { ChevronLeftIcon, LoaderCircleIcon } from "lucide-react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 import { AuthFormOnlyLayout } from "@/components/auth/auth-form-only-layout";
 import { AuthFormShell } from "@/components/auth/auth-form-shell";
 import { AuthOtpFields } from "@/components/auth/auth-otp-fields";
 import { Button } from "@/components/ui/button";
+import { resendVerificationCodeRequest } from "@/lib/auth/auth-api";
+import { useAuthRecoveryStore } from "@/lib/auth/auth-recovery-store";
 
 export default function CheckYourInboxPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const email = useAuthRecoveryStore((state) => state.email) ?? "your email";
+  const markCodeVerified = useAuthRecoveryStore(
+    (state) => state.markCodeVerified,
+  );
   const [isCodeComplete, setIsCodeComplete] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const email = searchParams.get("email") ?? "your email";
+  const resendMutation = useMutation({
+    mutationFn: resendVerificationCodeRequest,
+  });
 
   async function handleContinue() {
     if (!isCodeComplete || isSubmitting) {
@@ -24,6 +32,7 @@ export default function CheckYourInboxPage() {
 
     setIsSubmitting(true);
     await new Promise((resolve) => window.setTimeout(resolve, 700));
+    markCodeVerified();
     router.replace("/app/reset-password");
   }
 
@@ -55,7 +64,7 @@ export default function CheckYourInboxPage() {
           </div>
 
           <AuthOtpFields
-            resendHref={`/app/check-your-inbox?email=${encodeURIComponent(email)}`}
+            onResend={() => resendMutation.mutateAsync()}
             onCompleteChange={(_, complete) => setIsCodeComplete(complete)}
           />
         </div>

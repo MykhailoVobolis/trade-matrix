@@ -13,13 +13,21 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { getGoogleAuthHref, signInRequest } from "@/lib/auth/auth-api";
+import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
 import { signInSchema, type SignInValues } from "@/lib/auth/auth-schemas";
+import { useAuthTwoFactorStore } from "@/lib/auth/auth-two-factor-store";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 
 export default function SignInPage() {
   const router = useRouter();
+  const completeSignIn = useAuthSessionStore((state) => state.completeSignIn);
+  const clearPendingVerification = useAuthSessionStore(
+    (state) => state.clearPendingVerification,
+  );
+  const startChallenge = useAuthTwoFactorStore((state) => state.startChallenge);
+  const clearChallenge = useAuthTwoFactorStore((state) => state.clearChallenge);
   const form = useForm<SignInValues>({
     resolver: zodResolver(signInSchema),
     defaultValues: {
@@ -30,7 +38,35 @@ export default function SignInPage() {
 
   const signInMutation = useMutation({
     mutationFn: signInRequest,
-    onSuccess: ({ redirectTo }) => {
+    onSuccess: ({
+      redirectTo,
+      currentUser,
+      accessToken,
+      refreshToken,
+      pendingTwoFactor,
+    }) => {
+      clearPendingVerification();
+
+      if (pendingTwoFactor) {
+        startChallenge({
+          email: pendingTwoFactor.email,
+          method: pendingTwoFactor.method,
+          redirectTo: "/app",
+        });
+        router.replace(redirectTo);
+        return;
+      }
+
+      clearChallenge();
+
+      if (currentUser && accessToken) {
+        completeSignIn({
+          accessToken,
+          refreshToken: refreshToken ?? null,
+          currentUser,
+        });
+      }
+
       router.replace(redirectTo);
     },
   });

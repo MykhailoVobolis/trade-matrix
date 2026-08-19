@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { resetPasswordRequest } from "@/lib/auth/auth-api";
+import { useAuthRecoveryStore } from "@/lib/auth/auth-recovery-store";
 import {
   resetPasswordSchema,
   type ResetPasswordValues,
@@ -21,6 +22,10 @@ import {
 
 export default function ChangePasswordPage() {
   const router = useRouter();
+  const markRecoveryCompleted = useAuthRecoveryStore(
+    (state) => state.markRecoveryCompleted,
+  );
+  const clearRecovery = useAuthRecoveryStore((state) => state.clearRecovery);
 
   const form = useForm<ResetPasswordValues>({
     resolver: zodResolver(resetPasswordSchema),
@@ -34,7 +39,11 @@ export default function ChangePasswordPage() {
     mutationFn: (values: ResetPasswordValues) =>
       resetPasswordRequest({ values }),
     onSuccess: ({ redirectTo }) => {
+      markRecoveryCompleted();
       router.replace(redirectTo);
+      window.setTimeout(() => {
+        clearRecovery();
+      }, 0);
     },
   });
 
