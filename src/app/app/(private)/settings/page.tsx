@@ -1,3 +1,5 @@
+import { redirect } from "next/navigation";
+
 export default function SettingsPage() {
-  return <section>Settings</section>;
+  redirect("/app/settings/general");
 }

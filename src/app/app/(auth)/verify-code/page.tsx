@@ -136,7 +136,7 @@ export default function VerifyCodePage() {
           render={<Link href="/app/sign-up" />}
           variant="outline"
           size="lg"
-          className="w-fit rounded-xl px-5"
+          className="w-fit px-5"
         >
           <ChevronLeftIcon className="size-4" />
           Back

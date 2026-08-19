@@ -207,7 +207,9 @@ export function AppSidebar() {
                   </DropdownMenuLabel>
                 </DropdownMenuGroup>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem render={<Link href="/app/settings" />}>
+                <DropdownMenuItem
+                  render={<Link href="/app/settings/general" />}
+                >
                   <SettingsIcon />
                   Settings
                 </DropdownMenuItem>

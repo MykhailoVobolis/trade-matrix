@@ -161,10 +161,10 @@ export function SetupTwoFactorVerification() {
       topAction={
         <Button
           nativeButton={false}
-          render={<Link href="/app/settings?tab=Security" />}
+          render={<Link href="/app/settings/security" />}
           variant="outline"
           size="lg"
-          className="w-fit rounded-xl px-5"
+          className="w-fit px-5"
         >
           <ChevronLeftIcon className="size-4" />
           Back

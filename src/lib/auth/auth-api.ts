@@ -187,7 +187,7 @@ export async function verifyTotpSetupRequest({
   }
 
   return {
-    redirectTo: "/app/settings?tab=Security",
+    redirectTo: "/app/settings/security",
   };
 }
 

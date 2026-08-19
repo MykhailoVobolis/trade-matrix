@@ -45,7 +45,7 @@ export function AuthCodeVerification({
           render={<Link href={backHref} />}
           variant="outline"
           size="lg"
-          className="w-fit rounded-xl px-5"
+          className="w-fit px-5"
         >
           <ChevronLeftIcon className="size-4" />
           {backLabel}
