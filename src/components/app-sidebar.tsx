@@ -8,7 +8,7 @@ import { useTheme } from "next-themes";
 import {
   Building2Icon,
   ChevronsUpDownIcon,
-  CloudUploadIcon,
+  DatabaseIcon,
   HouseIcon,
   LayoutDashboardIcon,
   LogOutIcon,
@@ -59,9 +59,9 @@ const navigationItems = [
     icon: HouseIcon,
   },
   {
-    title: "Upload Tables",
-    href: "/app/uploads",
-    icon: CloudUploadIcon,
+    title: "Tables",
+    href: "/app/tables",
+    icon: DatabaseIcon,
   },
   {
     title: "Suppliers",
