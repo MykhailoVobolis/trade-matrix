@@ -1,0 +1,121 @@
+"use client";
+
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useMutation } from "@tanstack/react-query";
+import { LoaderCircleIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+
+import { AuthFieldError } from "@/components/auth/auth-field-error";
+import { AuthFormOnlyLayout } from "@/components/auth/auth-form-only-layout";
+import { AuthFormShell } from "@/components/auth/auth-form-shell";
+import { AuthInlineMessage } from "@/components/auth/auth-inline-message";
+import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
+import { resetPasswordRequest } from "@/lib/auth/auth-api";
+import { useAuthRecoveryStore } from "@/lib/auth/auth-recovery-store";
+import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
+import {
+  resetPasswordSchema,
+  type ResetPasswordValues,
+} from "@/lib/auth/auth-schemas";
+
+export default function ResetPasswordPage() {
+  const router = useRouter();
+  const signOut = useAuthSessionStore((state) => state.signOut);
+  const recoveryToken = useAuthRecoveryStore((state) => state.recoveryToken);
+  const markRecoveryCompleted = useAuthRecoveryStore(
+    (state) => state.markRecoveryCompleted,
+  );
+  const clearRecovery = useAuthRecoveryStore((state) => state.clearRecovery);
+
+  const form = useForm<ResetPasswordValues>({
+    resolver: zodResolver(resetPasswordSchema),
+    defaultValues: {
+      password: "",
+      confirmPassword: "",
+    },
+  });
+
+  const resetPasswordMutation = useMutation({
+    mutationFn: (values: ResetPasswordValues) =>
+      resetPasswordRequest({
+        values,
+        recoveryToken: recoveryToken ?? "",
+      }),
+    onSuccess: ({ redirectTo }) => {
+      signOut();
+      markRecoveryCompleted();
+      router.replace(redirectTo);
+      window.setTimeout(() => {
+        clearRecovery();
+      }, 0);
+    },
+  });
+
+  const handleSubmit = form.handleSubmit((values) => {
+    resetPasswordMutation.reset();
+    return resetPasswordMutation.mutateAsync(values);
+  });
+
+  return (
+    <AuthFormOnlyLayout
+      title="Reset your password"
+      description="Enter a new password below to change your password"
+    >
+      <AuthFormShell className="border-none bg-transparent shadow-none ring-0">
+        <form className="space-y-5" onSubmit={handleSubmit} noValidate>
+          {resetPasswordMutation.error ? (
+            <AuthInlineMessage variant="error" title="Password reset failed">
+              {resetPasswordMutation.error.message}
+            </AuthInlineMessage>
+          ) : null}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reset-password-new">New password</Label>
+              <PasswordInput
+                {...form.register("password")}
+                id="reset-password-new"
+                placeholder="Create a new password"
+                aria-invalid={Boolean(form.formState.errors.password)}
+                disabled={resetPasswordMutation.isPending}
+              />
+              <AuthFieldError>
+                {form.formState.errors.password?.message}
+              </AuthFieldError>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="reset-password-confirm">Confirm password</Label>
+              <PasswordInput
+                {...form.register("confirmPassword")}
+                id="reset-password-confirm"
+                placeholder="Repeat the new password"
+                aria-invalid={Boolean(form.formState.errors.confirmPassword)}
+                disabled={resetPasswordMutation.isPending}
+              />
+              <AuthFieldError>
+                {form.formState.errors.confirmPassword?.message}
+              </AuthFieldError>
+            </div>
+          </div>
+          <Button
+            type="submit"
+            size="lg"
+            className="h-12 w-full rounded-xl text-base"
+            disabled={resetPasswordMutation.isPending}
+          >
+            {resetPasswordMutation.isPending ? (
+              <>
+                <LoaderCircleIcon className="animate-spin" />
+                Updating password...
+              </>
+            ) : (
+              "Update password"
+            )}
+          </Button>
+        </form>
+      </AuthFormShell>
+    </AuthFormOnlyLayout>
+  );
+}
