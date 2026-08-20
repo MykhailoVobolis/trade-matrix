@@ -1,9 +1,20 @@
+"use client";
+
+import Link from "next/link";
+import { useEffect } from "react";
+
 import { AuthFormOnlyLayout } from "@/components/auth/auth-form-only-layout";
 import { AuthFormShell } from "@/components/auth/auth-form-shell";
 import { AuthStatusContent } from "@/components/auth/auth-status-content";
-import Link from "next/link";
+import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
 
 export default function PasswordChangedPage() {
+  const signOut = useAuthSessionStore((state) => state.signOut);
+
+  useEffect(() => {
+    signOut();
+  }, [signOut]);
+
   return (
     <AuthFormOnlyLayout>
       <AuthFormShell className="border-none bg-transparent shadow-none ring-0">

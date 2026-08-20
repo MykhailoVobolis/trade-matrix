@@ -1,34 +1,47 @@
 import type { GeneralSettingsValues } from "@/lib/settings/settings-schemas";
+import { requestJson } from "@/lib/api/http-client";
+import type { AuthUser } from "@/lib/auth/auth-model";
 
 type UpdateGeneralSettingsResult = {
-  profile: GeneralSettingsValues;
-  avatarFileName: string | null;
+  profile: Pick<AuthUser, "firstName" | "lastName" | "email" | "avatarUrl">;
 };
-
-function wait(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
 
 export async function updateGeneralSettingsRequest({
   values,
   avatarFile,
+  accessToken,
 }: {
   values: GeneralSettingsValues;
   avatarFile?: File | null;
+  accessToken: string;
 }): Promise<UpdateGeneralSettingsResult> {
-  await wait(900);
+  const formData = new FormData();
 
-  if (values.firstName.toLowerCase() === "error") {
-    throw new Error("We couldn't save your profile changes. Try again.");
+  if (values.firstName.trim()) {
+    formData.append("firstName", values.firstName.trim());
   }
+
+  if (values.lastName.trim()) {
+    formData.append("lastName", values.lastName.trim());
+  }
+
+  if (avatarFile) {
+    formData.append("avatar", avatarFile);
+  }
+
+  const profile = await requestJson<AuthUser>({
+    path: "/api/users/me/profile",
+    method: "PATCH",
+    body: formData,
+    accessToken,
+  });
 
   return {
     profile: {
-      ...values,
-      firstName: values.firstName.trim(),
-      lastName: values.lastName.trim(),
-      email: values.email.trim().toLowerCase(),
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      email: profile.email,
+      avatarUrl: profile.avatarUrl,
     },
-    avatarFileName: avatarFile?.name ?? null,
   };
 }

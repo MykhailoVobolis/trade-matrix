@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, type ReactNode } from "react";
+import { useEffect, useRef, type ReactNode } from "react";
 import { LoaderCircleIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -12,8 +12,12 @@ type PrivateRouteGuardProps = {
 
 export function PrivateRouteGuard({ children }: PrivateRouteGuardProps) {
   const router = useRouter();
+  const restoreSessionFromRefresh = useAuthSessionStore(
+    (state) => state.restoreSessionFromRefresh,
+  );
   const isAuthReady = useAuthSessionStore((state) => state.isAuthReady);
   const isAuthenticated = useAuthSessionStore((state) => state.isAuthenticated);
+  const hasTriedCookieRestoreRef = useRef(false);
 
   useEffect(() => {
     if (!isAuthReady) {
@@ -21,9 +25,19 @@ export function PrivateRouteGuard({ children }: PrivateRouteGuardProps) {
     }
 
     if (!isAuthenticated) {
-      router.replace("/app/sign-in");
+      if (hasTriedCookieRestoreRef.current) {
+        router.replace("/app/sign-in");
+        return;
+      }
+
+      hasTriedCookieRestoreRef.current = true;
+      void restoreSessionFromRefresh().then((restored) => {
+        if (!restored) {
+          router.replace("/app/sign-in");
+        }
+      });
     }
-  }, [isAuthReady, isAuthenticated, router]);
+  }, [isAuthReady, isAuthenticated, restoreSessionFromRefresh, router]);
 
   if (!isAuthReady) {
     return (

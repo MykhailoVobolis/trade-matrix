@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -45,6 +46,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Switch } from "@/components/ui/switch";
+import { logoutRequest } from "@/lib/auth/auth-api";
 import { demoAuthUser, getAuthUserInitials } from "@/lib/auth/auth-model";
 import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
 import { useAuthRecoveryStore } from "@/lib/auth/auth-recovery-store";
@@ -113,6 +115,7 @@ export function AppSidebar() {
   const router = useRouter();
   const pathname = usePathname();
   const { resolvedTheme, setTheme, theme } = useTheme();
+  const accessToken = useAuthSessionStore((state) => state.accessToken);
   const currentUser = useAuthSessionStore((state) => state.currentUser);
   const signOut = useAuthSessionStore((state) => state.signOut);
   const clearRecovery = useAuthRecoveryStore((state) => state.clearRecovery);
@@ -128,7 +131,15 @@ export function AppSidebar() {
   const user = currentUser ?? demoAuthUser;
   const userInitials = getAuthUserInitials(user);
 
-  function handleLogout() {
+  async function handleLogout() {
+    if (accessToken) {
+      try {
+        await logoutRequest(accessToken);
+      } catch {
+        // Local sign-out should still proceed if the backend session is already gone.
+      }
+    }
+
     signOut();
     clearRecovery();
     clearChallenge();
@@ -191,8 +202,18 @@ export function AppSidebar() {
               <DropdownMenuTrigger
                 render={<SidebarMenuButton size="lg" tooltip="Demo User" />}
               >
-                <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
-                  {userInitials}
+                <div className="relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
+                  {user.avatarUrl ? (
+                    <Image
+                      src={user.avatarUrl}
+                      alt={`${user.firstName} ${user.lastName}`}
+                      fill
+                      unoptimized
+                      className="object-cover"
+                    />
+                  ) : (
+                    userInitials
+                  )}
                 </div>
                 <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
                   <span className="truncate font-medium">
@@ -214,8 +235,18 @@ export function AppSidebar() {
                 <DropdownMenuGroup>
                   <DropdownMenuLabel className="p-0 font-normal">
                     <div className="flex items-center gap-2 px-2 py-1.5">
-                      <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
-                        {userInitials}
+                      <div className="relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
+                        {user.avatarUrl ? (
+                          <Image
+                            src={user.avatarUrl}
+                            alt={`${user.firstName} ${user.lastName}`}
+                            fill
+                            unoptimized
+                            className="object-cover"
+                          />
+                        ) : (
+                          userInitials
+                        )}
                       </div>
                       <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
                         <span className="truncate font-medium">

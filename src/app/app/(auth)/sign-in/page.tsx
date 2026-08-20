@@ -13,6 +13,7 @@ import { AuthWithVisualLayout } from "@/components/auth/auth-with-visual-layout"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { getGoogleAuthHref, signInRequest } from "@/lib/auth/auth-api";
 import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
 import { signInSchema, type SignInValues } from "@/lib/auth/auth-schemas";
@@ -39,19 +40,13 @@ export default function SignInPage() {
 
   const signInMutation = useMutation({
     mutationFn: signInRequest,
-    onSuccess: ({
-      redirectTo,
-      currentUser,
-      accessToken,
-      refreshToken,
-      pendingTwoFactor,
-    }) => {
+    onSuccess: ({ redirectTo, currentUser, accessToken, pendingTwoFactor }) => {
       clearPendingVerification();
 
       if (pendingTwoFactor) {
         startChallenge({
-          email: pendingTwoFactor.email,
           method: pendingTwoFactor.method,
+          twoFactorToken: pendingTwoFactor.twoFactorToken,
           redirectTo: "/app",
         });
         router.replace(redirectTo);
@@ -63,7 +58,6 @@ export default function SignInPage() {
       if (currentUser && accessToken) {
         completeSignIn({
           accessToken,
-          refreshToken: refreshToken ?? null,
           currentUser,
         });
       }
@@ -107,12 +101,10 @@ export default function SignInPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="sign-in-password">Password</Label>
-              <Input
+              <PasswordInput
                 {...form.register("password")}
                 id="sign-in-password"
-                type="password"
                 placeholder="Enter your password"
-                className="h-12 rounded-xl text-base"
                 aria-invalid={Boolean(form.formState.errors.password)}
                 disabled={signInMutation.isPending}
               />

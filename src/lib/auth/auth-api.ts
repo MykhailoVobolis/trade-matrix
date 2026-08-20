@@ -1,3 +1,4 @@
+import { ApiError, requestJson } from "@/lib/api/http-client";
 import type {
   ForgotPasswordValues,
   ResetPasswordValues,
@@ -5,56 +6,130 @@ import type {
   SignUpValues,
   VerifyCodeValues,
 } from "@/lib/auth/auth-schemas";
-import {
-  createMockAuthUser,
-  type AuthUser,
-  type TwoFactorMethod,
+import type {
+  AuthSession,
+  AuthUser,
+  TwoFactorMethod,
 } from "@/lib/auth/auth-model";
+
+type MessageResponse = {
+  message: string;
+};
+
+type AuthResponse = {
+  accessToken: string;
+  tokenType: "Bearer";
+  message: string;
+  user: AuthUser;
+};
+
+type TwoFactorChallengeResponse = {
+  requiresTwoFactor: true;
+  twoFactorToken: string;
+  method: TwoFactorMethod;
+  message: string;
+};
 
 type SignInResult = {
   redirectTo: string;
   accessToken?: string;
-  refreshToken?: string | null;
   currentUser?: AuthUser;
   pendingTwoFactor?: {
-    email: string;
     method: TwoFactorMethod;
+    twoFactorToken: string;
   };
 };
 
 type SignUpResult = {
   redirectTo: string;
   verificationEmail: string;
+  message: string;
 };
 
 type ForgotPasswordResult = {
   redirectTo: string;
   recoveryEmail: string;
+  message: string;
 };
 
 type ResetPasswordResult = {
   redirectTo: string;
+  message: string;
 };
 
 type VerifyCodeResult = {
   redirectTo: string;
+  message: string;
+  accessToken: string;
+  currentUser: AuthUser;
 };
 
 type VerifyTwoFactorResult = {
   redirectTo: string;
   accessToken: string;
-  refreshToken: string | null;
   currentUser: AuthUser;
+  message: string;
 };
 
 type TotpSetupResult = {
+  secret: string;
   otpauthUrl: string;
-  setupKey: string;
 };
 
 type TotpSetupVerificationResult = {
   redirectTo: string;
+  message: string;
 };
+
+type RefreshSessionResult = {
+  accessToken: string;
+  currentUser: AuthUser;
+};
+
+type ForgotPasswordVerifyResult = {
+  recoveryToken: string;
+  message: string;
+};
+
+type TwoFactorSettingsResponse = {
+  isTwoFactorEnabled: boolean;
+  method: TwoFactorMethod;
+  isTotpEnabled: boolean;
+};
+
+function isTwoFactorChallenge(
+  response: AuthResponse | TwoFactorChallengeResponse,
+): response is TwoFactorChallengeResponse {
+  return "requiresTwoFactor" in response;
+}
+
+function toAuthResult(response: AuthResponse) {
+  return {
+    accessToken: response.accessToken,
+    currentUser: response.user,
+    message: response.message,
+  };
+}
+
+function toAuthFlowError(error: unknown) {
+  if (error instanceof ApiError) {
+    const message = error.message.toLowerCase();
+
+    if (message.includes("expired")) {
+      return new AuthFlowError(error.message, "expired_code");
+    }
+
+    if (message.includes("too many") || error.status === 429) {
+      return new AuthFlowError(error.message, "too_many_attempts");
+    }
+
+    if (error.status === 400 || error.status === 401) {
+      return new AuthFlowError(error.message, "invalid_code");
+    }
+  }
+
+  return error;
+}
 
 export class AuthFlowError extends Error {
   constructor(
@@ -66,228 +141,345 @@ export class AuthFlowError extends Error {
   }
 }
 
-function wait(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
-function createMockAccessToken(email: string) {
-  return `tm-access-${btoa(email.toLowerCase())}`;
-}
-
-function createMockRefreshToken(email: string) {
-  return `tm-refresh-${btoa(`${email.toLowerCase()}-refresh`)}`;
-}
-
 export async function signInRequest(
   values: SignInValues,
 ): Promise<SignInResult> {
-  await wait(900);
-
-  const normalizedEmail = values.email.toLowerCase();
-
-  if (normalizedEmail === "error@tradematrix.app") {
-    throw new Error("Invalid email or password.");
-  }
-
-  if (normalizedEmail.includes("totp")) {
-    return {
-      redirectTo: "/app/two-fa?method=totp",
-      pendingTwoFactor: {
-        email: normalizedEmail,
-        method: "totp",
+  const response = await requestJson<AuthResponse | TwoFactorChallengeResponse>(
+    {
+      path: "/api/auth/login",
+      method: "POST",
+      body: {
+        email: values.email,
+        password: values.password,
       },
-    };
-  }
+    },
+  );
 
-  if (normalizedEmail.includes("2fa")) {
+  if (isTwoFactorChallenge(response)) {
     return {
-      redirectTo: "/app/two-fa?method=email",
+      redirectTo: `/app/two-fa?method=${response.method}`,
       pendingTwoFactor: {
-        email: normalizedEmail,
-        method: "email",
+        method: response.method,
+        twoFactorToken: response.twoFactorToken,
       },
     };
   }
 
   return {
     redirectTo: "/app",
-    accessToken: createMockAccessToken(normalizedEmail),
-    refreshToken: createMockRefreshToken(normalizedEmail),
-    currentUser: createMockAuthUser({
-      email: normalizedEmail,
-    }),
+    ...toAuthResult(response),
   };
 }
 
 export async function signUpRequest(
   values: SignUpValues,
 ): Promise<SignUpResult> {
-  await wait(1000);
+  const normalizedEmail = values.email.trim().toLowerCase();
 
-  const normalizedEmail = values.email.toLowerCase();
-
-  if (normalizedEmail === "taken@tradematrix.app") {
-    throw new Error("An account with this email already exists.");
-  }
+  const registration = await requestJson<MessageResponse>({
+    path: "/api/auth/register",
+    method: "POST",
+    body: {
+      email: normalizedEmail,
+      firstName: values.firstName,
+      lastName: values.lastName,
+      password: values.password,
+      terms: values.terms,
+    },
+  });
 
   return {
     redirectTo: "/app/verify-code",
     verificationEmail: normalizedEmail,
+    message: registration.message,
   };
 }
 
 export async function forgotPasswordRequest(
   values: ForgotPasswordValues,
 ): Promise<ForgotPasswordResult> {
-  await wait(900);
-
-  const normalizedEmail = values.email.toLowerCase();
-
-  if (normalizedEmail === "missing@tradematrix.app") {
-    throw new Error("We couldn't find an account with this email.");
-  }
+  const normalizedEmail = values.email.trim().toLowerCase();
+  const response = await requestJson<MessageResponse>({
+    path: "/api/auth/forgot-password",
+    method: "POST",
+    body: {
+      email: normalizedEmail,
+    },
+  });
 
   return {
     redirectTo: "/app/check-your-inbox",
     recoveryEmail: normalizedEmail,
-  };
-}
-
-export async function resetPasswordRequest({
-  values,
-}: {
-  values: ResetPasswordValues;
-}): Promise<ResetPasswordResult> {
-  await wait(1000);
-
-  if (values.password.toLowerCase().includes("password")) {
-    throw new Error("Choose a stronger password and try again.");
-  }
-
-  return {
-    redirectTo: "/app/password-changed",
+    message: response.message,
   };
 }
 
 export async function verifyCodeRequest({
+  email,
   code,
-  attempt,
 }: VerifyCodeValues & {
-  attempt: number;
+  email: string;
 }): Promise<VerifyCodeResult> {
-  await wait(900);
-
-  if (code === "000000") {
-    throw new AuthFlowError(
-      "This verification code has expired. Request a new one and try again.",
-      "expired_code",
-    );
-  }
-
-  if (attempt >= 3) {
-    throw new AuthFlowError(
-      "Too many invalid attempts. Wait a moment before trying again.",
-      "too_many_attempts",
-    );
-  }
-
-  if (code !== "123456") {
-    throw new AuthFlowError(
-      "That code is invalid. Check the email we sent and try again.",
-      "invalid_code",
-    );
-  }
+  const response = await requestJson<AuthResponse>({
+    path: "/api/auth/register/verify",
+    method: "POST",
+    body: {
+      email: email.trim().toLowerCase(),
+      code,
+    },
+  }).catch((error: unknown) => {
+    throw toAuthFlowError(error);
+  });
 
   return {
-    redirectTo: "/app/sign-in",
+    redirectTo: "/app",
+    ...toAuthResult(response),
+  };
+}
+
+export async function resendVerificationCodeRequest({
+  email,
+}: {
+  email: string;
+}): Promise<MessageResponse> {
+  return requestJson<MessageResponse>({
+    path: "/api/auth/register/resend-code",
+    method: "POST",
+    body: {
+      email: email.trim().toLowerCase(),
+    },
+  });
+}
+
+export async function verifyForgotPasswordCodeRequest({
+  email,
+  code,
+}: VerifyCodeValues & {
+  email: string;
+}): Promise<ForgotPasswordVerifyResult> {
+  return requestJson<ForgotPasswordVerifyResult>({
+    path: "/api/auth/forgot-password/verify",
+    method: "POST",
+    body: {
+      email: email.trim().toLowerCase(),
+      code,
+    },
+  }).catch((error: unknown) => {
+    throw toAuthFlowError(error);
+  });
+}
+
+export async function resendForgotPasswordCodeRequest({
+  email,
+}: {
+  email: string;
+}): Promise<MessageResponse> {
+  return requestJson<MessageResponse>({
+    path: "/api/auth/forgot-password",
+    method: "POST",
+    body: {
+      email: email.trim().toLowerCase(),
+    },
+  });
+}
+
+export async function resetPasswordRequest({
+  values,
+  recoveryToken,
+}: {
+  values: ResetPasswordValues;
+  recoveryToken: string;
+}): Promise<ResetPasswordResult> {
+  const response = await requestJson<MessageResponse>({
+    path: "/api/auth/forgot-password/reset",
+    method: "POST",
+    body: {
+      recoveryToken,
+      password: values.password,
+    },
+  });
+
+  return {
+    redirectTo: "/app/password-changed",
+    message: response.message,
+  };
+}
+
+export async function changePasswordRequest({
+  newPassword,
+  accessToken,
+}: {
+  newPassword: string;
+  accessToken: string;
+}): Promise<ResetPasswordResult> {
+  const response = await requestJson<MessageResponse>({
+    path: "/api/auth/change-password",
+    method: "POST",
+    accessToken,
+    body: {
+      newPassword,
+    },
+  });
+
+  return {
+    redirectTo: "/app/password-changed",
+    message: response.message,
   };
 }
 
 export async function verifyTwoFactorRequest({
   code,
-  attempt,
-  method,
-  email,
+  twoFactorToken,
 }: VerifyCodeValues & {
-  attempt: number;
-  method: TwoFactorMethod;
-  email: string;
+  twoFactorToken?: string | null;
 }): Promise<VerifyTwoFactorResult> {
-  await wait(900);
-
-  if (code === "000000") {
-    throw new AuthFlowError(
-      method === "totp"
-        ? "That authenticator code has expired. Enter the latest code from your app and try again."
-        : "This verification code has expired. Request a new one and try again.",
-      "expired_code",
-    );
-  }
-
-  if (attempt >= 3) {
-    throw new AuthFlowError(
-      "Too many invalid attempts. Wait a moment before trying again.",
-      "too_many_attempts",
-    );
-  }
-
-  if (code !== "123456") {
-    throw new AuthFlowError(
-      method === "totp"
-        ? "That code is invalid. Check the current code in your authenticator app and try again."
-        : "That code is invalid. Check the email we sent and try again.",
-      "invalid_code",
-    );
-  }
+  const response = await requestJson<AuthResponse>({
+    path: "/api/auth/2fa/verify",
+    method: "POST",
+    body: twoFactorToken ? { code, twoFactorToken } : { code },
+  }).catch((error: unknown) => {
+    throw toAuthFlowError(error);
+  });
 
   return {
     redirectTo: "/app",
-    accessToken: createMockAccessToken(email),
-    refreshToken: createMockRefreshToken(email),
-    currentUser: createMockAuthUser({
-      email,
-    }),
+    ...toAuthResult(response),
   };
 }
 
-export async function resendVerificationCodeRequest(): Promise<void> {
-  await wait(700);
+export async function resendTwoFactorCodeRequest({
+  twoFactorToken,
+}: {
+  twoFactorToken?: string | null;
+}): Promise<TwoFactorChallengeResponse> {
+  return requestJson<TwoFactorChallengeResponse>({
+    path: "/api/auth/2fa/resend",
+    method: "POST",
+    body: twoFactorToken ? { twoFactorToken } : {},
+  });
 }
 
-export async function startTotpSetupRequest(): Promise<TotpSetupResult> {
-  await wait(800);
+export async function refreshSessionRequest(): Promise<RefreshSessionResult> {
+  const response = await requestJson<AuthResponse>({
+    path: "/api/auth/refresh",
+    method: "POST",
+  });
+
+  return toAuthResult(response);
+}
+
+export async function logoutRequest(accessToken: string) {
+  return requestJson<MessageResponse>({
+    path: "/api/auth/logout",
+    method: "POST",
+    accessToken,
+  });
+}
+
+export async function logoutAllSessionsRequest(accessToken: string) {
+  return requestJson<MessageResponse>({
+    path: "/api/auth/logout/all",
+    method: "POST",
+    accessToken,
+  });
+}
+
+export async function getAuthSessionsRequest(accessToken: string) {
+  return requestJson<AuthSession[]>({
+    path: "/api/auth/sessions",
+    method: "GET",
+    accessToken,
+  });
+}
+
+export async function deleteAuthSessionRequest({
+  accessToken,
+  sessionId,
+}: {
+  accessToken: string;
+  sessionId: string;
+}) {
+  return requestJson<MessageResponse>({
+    path: `/api/auth/sessions/${sessionId}`,
+    method: "DELETE",
+    accessToken,
+  });
+}
+
+export async function deleteAccountRequest(accessToken: string) {
+  return requestJson<MessageResponse>({
+    path: "/api/users/me/account",
+    method: "DELETE",
+    accessToken,
+  });
+}
+
+export async function getTwoFactorSettingsRequest(accessToken: string) {
+  return requestJson<TwoFactorSettingsResponse>({
+    path: "/api/auth/2fa/settings",
+    method: "GET",
+    accessToken,
+  });
+}
+
+export async function updateTwoFactorMethodRequest({
+  accessToken,
+  method,
+}: {
+  accessToken: string;
+  method: TwoFactorMethod;
+}) {
+  return requestJson<TwoFactorSettingsResponse>({
+    path: "/api/auth/2fa/method",
+    method: "PATCH",
+    accessToken,
+    body: {
+      method,
+    },
+  });
+}
+
+export async function startTotpSetupRequest({
+  accessToken,
+}: {
+  accessToken: string;
+}): Promise<TotpSetupResult & { setupKey: string }> {
+  const response = await requestJson<TotpSetupResult>({
+    path: "/api/auth/2fa/totp/setup",
+    method: "POST",
+    accessToken,
+  });
 
   return {
-    otpauthUrl:
-      "otpauth://totp/TradeMatrix:demo%40tradematrix.app?secret=EQQNMKTBY3MF4DWFYITCIWM5YM2FFBZJ&issuer=TradeMatrix&algorithm=SHA1&digits=6&period=30",
-    setupKey: "EQQNMKTBY3MF4DWFYITCIWM5YM2FFBZJ",
+    ...response,
+    setupKey: response.secret,
   };
 }
 
 export async function verifyTotpSetupRequest({
+  accessToken,
   code,
-}: VerifyCodeValues): Promise<TotpSetupVerificationResult> {
-  await wait(900);
-
-  if (code === "000000") {
-    throw new AuthFlowError(
-      "That authenticator code has expired. Enter the latest code from your app and try again.",
-      "expired_code",
-    );
-  }
-
-  if (code !== "123456") {
-    throw new AuthFlowError(
-      "That code is invalid. Check the current code in your authenticator app and try again.",
-      "invalid_code",
-    );
-  }
+}: {
+  accessToken: string;
+  code: string;
+}): Promise<TotpSetupVerificationResult> {
+  const response = await requestJson<MessageResponse>({
+    path: "/api/auth/2fa/totp/verify-setup",
+    method: "POST",
+    accessToken,
+    body: {
+      code,
+    },
+  }).catch((error: unknown) => {
+    throw toAuthFlowError(error);
+  });
 
   return {
     redirectTo: "/app/settings/security",
+    message: response.message,
   };
 }
 
 export function getGoogleAuthHref() {
-  return "/api/auth/google";
+  return `${process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, "") ?? ""}/api/auth/google`;
 }

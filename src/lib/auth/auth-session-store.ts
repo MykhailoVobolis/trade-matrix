@@ -3,25 +3,26 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 
+import { refreshSessionRequest } from "@/lib/auth/auth-api";
 import type { AuthUser, PendingVerification } from "@/lib/auth/auth-model";
+import { setAuthSessionSyncHandlers } from "@/lib/auth/auth-session-sync";
 
 type AuthBootstrapStatus = "idle" | "bootstrapping" | "ready";
 
 type AuthSessionPayload = {
   accessToken: string;
-  refreshToken: string | null;
   currentUser: AuthUser;
 };
 
 type AuthSessionStore = {
   accessToken: string | null;
-  refreshToken: string | null;
   currentUser: AuthUser | null;
   pendingVerification: PendingVerification | null;
   isAuthenticated: boolean;
   isAuthReady: boolean;
   bootstrapStatus: AuthBootstrapStatus;
   bootstrapSession: () => Promise<void>;
+  restoreSessionFromRefresh: () => Promise<boolean>;
   completeSignIn: (payload: AuthSessionPayload) => void;
   signOut: () => void;
   setPendingVerification: (email: string) => void;
@@ -34,7 +35,6 @@ export const useAuthSessionStore = create<AuthSessionStore>()(
   persist(
     (set, get) => ({
       accessToken: null,
-      refreshToken: null,
       currentUser: null,
       pendingVerification: null,
       isAuthenticated: false,
@@ -49,14 +49,11 @@ export const useAuthSessionStore = create<AuthSessionStore>()(
           bootstrapStatus: "bootstrapping",
         });
 
-        await Promise.resolve();
-
-        const { accessToken, currentUser, refreshToken } = get();
+        const { accessToken, currentUser } = get();
 
         if (!accessToken || !currentUser) {
           set({
             accessToken: null,
-            refreshToken: null,
             currentUser: null,
             isAuthenticated: false,
             isAuthReady: true,
@@ -65,19 +62,63 @@ export const useAuthSessionStore = create<AuthSessionStore>()(
           return;
         }
 
-        set({
-          accessToken,
-          refreshToken,
-          currentUser,
-          isAuthenticated: true,
-          isAuthReady: true,
-          bootstrapStatus: "ready",
-        });
+        try {
+          const session = await refreshSessionRequest();
+
+          set({
+            accessToken: session.accessToken,
+            currentUser: session.currentUser,
+            isAuthenticated: true,
+            isAuthReady: true,
+            bootstrapStatus: "ready",
+          });
+        } catch {
+          set({
+            accessToken: null,
+            currentUser: null,
+            isAuthenticated: false,
+            isAuthReady: true,
+            bootstrapStatus: "ready",
+          });
+        }
       },
-      completeSignIn({ accessToken, refreshToken, currentUser }) {
+      async restoreSessionFromRefresh() {
+        if (get().bootstrapStatus === "bootstrapping") {
+          return false;
+        }
+
+        set({
+          bootstrapStatus: "bootstrapping",
+          isAuthReady: false,
+        });
+
+        try {
+          const session = await refreshSessionRequest();
+
+          set({
+            accessToken: session.accessToken,
+            currentUser: session.currentUser,
+            isAuthenticated: true,
+            isAuthReady: true,
+            bootstrapStatus: "ready",
+          });
+
+          return true;
+        } catch {
+          set({
+            accessToken: null,
+            currentUser: null,
+            isAuthenticated: false,
+            isAuthReady: true,
+            bootstrapStatus: "ready",
+          });
+
+          return false;
+        }
+      },
+      completeSignIn({ accessToken, currentUser }) {
         set({
           accessToken,
-          refreshToken,
           currentUser,
           isAuthenticated: true,
           isAuthReady: true,
@@ -87,7 +128,6 @@ export const useAuthSessionStore = create<AuthSessionStore>()(
       signOut() {
         set({
           accessToken: null,
-          refreshToken: null,
           currentUser: null,
           pendingVerification: null,
           isAuthenticated: false,
@@ -144,10 +184,31 @@ export const useAuthSessionStore = create<AuthSessionStore>()(
       skipHydration: true,
       partialize: (state) => ({
         accessToken: state.accessToken,
-        refreshToken: state.refreshToken,
         currentUser: state.currentUser,
         pendingVerification: state.pendingVerification,
       }),
     },
   ),
 );
+
+setAuthSessionSyncHandlers({
+  onSessionRefreshed: ({ accessToken, currentUser }) => {
+    useAuthSessionStore.setState({
+      accessToken,
+      currentUser,
+      isAuthenticated: true,
+      isAuthReady: true,
+      bootstrapStatus: "ready",
+    });
+  },
+  onSessionInvalidated: () => {
+    useAuthSessionStore.setState({
+      accessToken: null,
+      currentUser: null,
+      pendingVerification: null,
+      isAuthenticated: false,
+      isAuthReady: true,
+      bootstrapStatus: "ready",
+    });
+  },
+});

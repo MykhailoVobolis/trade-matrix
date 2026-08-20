@@ -1,6 +1,9 @@
 "use client";
 
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { format } from "date-fns";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ArrowLeftIcon,
   LaptopIcon,
@@ -8,16 +11,10 @@ import {
   Trash2Icon,
 } from "lucide-react";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 
+import { AuthInlineMessage } from "@/components/auth/auth-inline-message";
 import { GeneralSettingsForm } from "@/components/settings/general-settings-form";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
@@ -27,6 +24,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
   Table,
   TableBody,
   TableCell,
@@ -34,23 +37,30 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { demoAuthUser } from "@/lib/auth/auth-model";
+import {
+  deleteAccountRequest,
+  deleteAuthSessionRequest,
+  getAuthSessionsRequest,
+  getTwoFactorSettingsRequest,
+  logoutAllSessionsRequest,
+  updateTwoFactorMethodRequest,
+} from "@/lib/auth/auth-api";
+import { demoAuthUser, type AuthSession } from "@/lib/auth/auth-model";
 import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
 import { useAuthTwoFactorStore } from "@/lib/auth/auth-two-factor-store";
 import { cn } from "@/lib/utils";
 
 type SettingsTab = "general" | "security";
 
-const activeSessions = [
-  {
-    id: "session-macos-current",
-    device: "Macintosh (macOS)",
-    location: "Dnipro",
-    created: "Aug 19, 2026, 12:54 PM",
-    updated: "Aug 19, 2026, 12:54 PM",
-    status: "Active",
-  },
-] as const;
+function formatSessionDate(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return format(date, "MMM d, yyyy, h:mm a");
+}
 
 function SettingsTabLink({
   href,
@@ -108,31 +118,126 @@ function GeneralSettingsPanel() {
 
 function SecuritySettingsPanel() {
   const router = useRouter();
-  const preferredMethod = useAuthTwoFactorStore(
-    (state) => state.preferredMethod,
+  const queryClient = useQueryClient();
+  const accessToken = useAuthSessionStore((state) => state.accessToken);
+  const signOut = useAuthSessionStore((state) => state.signOut);
+  const setPreferredMethod = useAuthTwoFactorStore(
+    (state) => state.setPreferredMethod,
   );
   const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
-  const [sessionPendingDeletion, setSessionPendingDeletion] = useState<
-    (typeof activeSessions)[number] | null
-  >(null);
+  const [sessionPendingDeletion, setSessionPendingDeletion] =
+    useState<AuthSession | null>(null);
+
+  const twoFactorSettingsQuery = useQuery({
+    queryKey: ["two-factor-settings", accessToken],
+    queryFn: () => {
+      if (!accessToken) {
+        throw new Error("Authentication required.");
+      }
+
+      return getTwoFactorSettingsRequest(accessToken);
+    },
+    enabled: Boolean(accessToken),
+  });
+
+  const sessionsQuery = useQuery({
+    queryKey: ["auth-sessions", accessToken],
+    queryFn: () => {
+      if (!accessToken) {
+        throw new Error("Authentication required.");
+      }
+
+      return getAuthSessionsRequest(accessToken);
+    },
+    enabled: Boolean(accessToken),
+  });
+
+  const updateTwoFactorMutation = useMutation({
+    mutationFn: (method: "email" | "totp") => {
+      if (!accessToken) {
+        throw new Error("Authentication required.");
+      }
+
+      return updateTwoFactorMethodRequest({
+        accessToken,
+        method,
+      });
+    },
+    onSuccess: (response) => {
+      setPreferredMethod(response.method);
+      void queryClient.invalidateQueries({
+        queryKey: ["two-factor-settings", accessToken],
+      });
+    },
+  });
+
+  const logoutAllMutation = useMutation({
+    mutationFn: () => {
+      if (!accessToken) {
+        throw new Error("Authentication required.");
+      }
+
+      return logoutAllSessionsRequest(accessToken);
+    },
+    onSuccess: () => {
+      signOut();
+      router.replace("/app/sign-in");
+    },
+  });
+
+  const deleteAccountMutation = useMutation({
+    mutationFn: () => {
+      if (!accessToken) {
+        throw new Error("Authentication required.");
+      }
+
+      return deleteAccountRequest(accessToken);
+    },
+    onSuccess: () => {
+      signOut();
+      setIsDeleteDialogOpen(false);
+      router.replace("/app/sign-in");
+    },
+  });
+
+  const deleteSessionMutation = useMutation({
+    mutationFn: (sessionId: string) => {
+      if (!accessToken) {
+        throw new Error("Authentication required.");
+      }
+
+      return deleteAuthSessionRequest({
+        accessToken,
+        sessionId,
+      });
+    },
+    onSuccess: () => {
+      setSessionPendingDeletion(null);
+      void queryClient.invalidateQueries({
+        queryKey: ["auth-sessions", accessToken],
+      });
+    },
+  });
+
+  const currentMethod = twoFactorSettingsQuery.data?.method ?? "email";
+  const isTotpEnabled = twoFactorSettingsQuery.data?.isTotpEnabled ?? false;
   const twoFactorOptions = [
     {
-      value: "email",
+      value: "email" as const,
       title: "Two-Factor Authentication (2FA) - Email",
       description:
-        "A security code will be sent to your email address for Two-Factor Authentication (2FA) when you sign in. You will need to check the email address associated with this account for this code in order to sign in.",
-      checked: preferredMethod === "email",
+        "A security code will be sent to your email address for Two-Factor Authentication (2FA) when you sign in.",
+      checked: currentMethod === "email",
     },
     {
-      value: "authenticator",
+      value: "totp" as const,
       title: "Two-Factor Authentication (2FA) - Authenticator",
       description:
-        "Configure your Authenticator App to generate time-sensitive codes for signing into TradeMatrix. You will need to install an Authenticator app from your mobile device app store to generate codes.",
-      checked: preferredMethod === "totp",
-      href: "/app/setup-2fa",
+        "Use an authenticator app to generate time-sensitive verification codes for sign-in.",
+      checked: currentMethod === "totp",
     },
-  ] as const;
+  ];
 
   return (
     <>
@@ -150,8 +255,7 @@ function SecuritySettingsPanel() {
             <div className="space-y-1">
               <h3 className="text-xl font-semibold tracking-tight">Password</h3>
               <p className="text-sm text-muted-foreground">
-                Update your password using the recovery flow and confirm the new
-                credentials before the next sign-in.
+                Update the password for the current authenticated account.
               </p>
             </div>
             <Button
@@ -160,7 +264,7 @@ function SecuritySettingsPanel() {
               className="px-6"
               onClick={() => setIsResetDialogOpen(true)}
             >
-              Reset password
+              Change password
             </Button>
           </div>
 
@@ -175,18 +279,32 @@ function SecuritySettingsPanel() {
               </p>
             </div>
 
+            {twoFactorSettingsQuery.isError ? (
+              <AuthInlineMessage
+                variant="error"
+                title="2FA settings unavailable"
+                className="mt-6"
+              >
+                {twoFactorSettingsQuery.error.message}
+              </AuthInlineMessage>
+            ) : null}
+
             <div className="mt-6 space-y-5">
               {twoFactorOptions.map((option) => {
+                const isPending =
+                  updateTwoFactorMutation.isPending &&
+                  updateTwoFactorMutation.variables === option.value;
+
                 return (
                   <div
                     key={option.value}
                     className="flex items-start gap-4 rounded-2xl border border-border/70 px-5 py-5"
                   >
-                    {option.href ? (
+                    {option.value === "totp" && !isTotpEnabled ? (
                       <Link
-                        href={option.href}
+                        href="/app/setup-2fa"
                         className="mt-0.5"
-                        aria-label={`Select ${option.title}`}
+                        aria-label={`Set up ${option.title}`}
                       >
                         <div
                           className={cn(
@@ -207,13 +325,19 @@ function SecuritySettingsPanel() {
                         </div>
                       </Link>
                     ) : (
-                      <div
+                      <button
+                        type="button"
                         className={cn(
                           "mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full border transition-colors",
                           option.checked
                             ? "border-sidebar-primary"
                             : "border-border/80",
                         )}
+                        aria-label={`Select ${option.title}`}
+                        disabled={updateTwoFactorMutation.isPending}
+                        onClick={() =>
+                          updateTwoFactorMutation.mutate(option.value)
+                        }
                       >
                         <span
                           className={cn(
@@ -223,22 +347,33 @@ function SecuritySettingsPanel() {
                               : "bg-transparent",
                           )}
                         />
-                      </div>
+                      </button>
                     )}
                     <div className="min-w-0 flex-1 space-y-2">
                       <div className="flex items-center gap-2">
                         <p className="text-lg font-medium tracking-tight">
                           {option.title}
                         </p>
-                        {option.value === "email" ? (
+                        {option.checked ? (
                           <span className="rounded-full bg-sidebar-primary/10 px-2.5 py-0.5 text-xs font-medium text-sidebar-primary">
                             Active
+                          </span>
+                        ) : null}
+                        {isPending ? (
+                          <span className="text-xs text-muted-foreground">
+                            Updating...
                           </span>
                         ) : null}
                       </div>
                       <p className="max-w-4xl text-sm leading-7 text-muted-foreground">
                         {option.description}
                       </p>
+                      {option.value === "totp" && !isTotpEnabled ? (
+                        <p className="text-sm text-muted-foreground">
+                          Set up an authenticator app first, then switch the
+                          active method to TOTP.
+                        </p>
+                      ) : null}
                     </div>
                   </div>
                 );
@@ -256,6 +391,16 @@ function SecuritySettingsPanel() {
               </p>
             </div>
 
+            {sessionsQuery.isError ? (
+              <AuthInlineMessage
+                variant="error"
+                title="Sessions unavailable"
+                className="mt-6"
+              >
+                {sessionsQuery.error.message}
+              </AuthInlineMessage>
+            ) : null}
+
             <div className="mt-6 overflow-hidden rounded-2xl border border-border/80">
               <Table>
                 <TableHeader className="bg-muted/35">
@@ -268,7 +413,7 @@ function SecuritySettingsPanel() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {activeSessions.map((session) => (
+                  {(sessionsQuery.data ?? []).map((session) => (
                     <TableRow key={session.id} className="hover:bg-transparent">
                       <TableCell className="px-6 py-5">
                         <div className="flex items-center gap-3">
@@ -280,21 +425,23 @@ function SecuritySettingsPanel() {
                               <span className="font-medium">
                                 {session.device}
                               </span>
-                              <span className="rounded-full bg-sidebar-primary/10 px-2.5 py-0.5 text-xs font-medium text-sidebar-primary">
-                                {session.status}
-                              </span>
+                              {session.isActive ? (
+                                <span className="rounded-full bg-sidebar-primary/10 px-2.5 py-0.5 text-xs font-medium text-sidebar-primary">
+                                  Active
+                                </span>
+                              ) : null}
                             </div>
                           </div>
                         </div>
                       </TableCell>
                       <TableCell className="px-6 py-5 text-muted-foreground">
-                        {session.location}
+                        {session.location?.trim() || "Unknown"}
                       </TableCell>
                       <TableCell className="px-6 py-5 text-muted-foreground">
-                        {session.created}
+                        {formatSessionDate(session.createdAt)}
                       </TableCell>
                       <TableCell className="px-6 py-5 text-muted-foreground">
-                        {session.updated}
+                        {formatSessionDate(session.updatedAt)}
                       </TableCell>
                       <TableCell className="px-4 py-5 text-right">
                         <DropdownMenu>
@@ -327,6 +474,17 @@ function SecuritySettingsPanel() {
                       </TableCell>
                     </TableRow>
                   ))}
+                  {!sessionsQuery.isPending &&
+                  (sessionsQuery.data?.length ?? 0) === 0 ? (
+                    <TableRow className="hover:bg-transparent">
+                      <TableCell
+                        colSpan={5}
+                        className="px-6 py-8 text-center text-sm text-muted-foreground"
+                      >
+                        No active sessions were returned by the backend.
+                      </TableCell>
+                    </TableRow>
+                  ) : null}
                 </TableBody>
               </Table>
             </div>
@@ -338,11 +496,17 @@ function SecuritySettingsPanel() {
                 Log out of all devices
               </h3>
               <p className="text-sm text-muted-foreground">
-                End all active sessions except the current workspace session.
+                End all active sessions and require a fresh sign-in.
               </p>
             </div>
-            <Button variant="outline" size="lg" className="px-6">
-              Log out
+            <Button
+              variant="outline"
+              size="lg"
+              className="px-6"
+              disabled={logoutAllMutation.isPending}
+              onClick={() => logoutAllMutation.mutate()}
+            >
+              {logoutAllMutation.isPending ? "Logging out..." : "Log out"}
             </Button>
           </div>
 
@@ -376,10 +540,10 @@ function SecuritySettingsPanel() {
         >
           <DialogHeader className="gap-3">
             <DialogTitle className="text-3xl font-semibold tracking-tight">
-              Reset password
+              Change password
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
-              You will be redirected to the password reset page. Continue?
+              You will be redirected to the password change page. Continue?
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-3 border-t-0 bg-transparent p-0 sm:grid sm:grid-cols-2 sm:gap-4">
@@ -419,12 +583,20 @@ function SecuritySettingsPanel() {
               This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
+          {deleteAccountMutation.error ? (
+            <AuthInlineMessage variant="error" title="Delete failed">
+              {deleteAccountMutation.error.message}
+            </AuthInlineMessage>
+          ) : null}
           <DialogFooter className="mt-3 border-t-0 bg-transparent p-0 sm:grid sm:grid-cols-2 sm:gap-4">
             <Button
               variant="outline"
               size="lg"
               className="px-5"
-              onClick={() => setIsDeleteDialogOpen(false)}
+              onClick={() => {
+                deleteAccountMutation.reset();
+                setIsDeleteDialogOpen(false);
+              }}
             >
               Cancel
             </Button>
@@ -432,9 +604,10 @@ function SecuritySettingsPanel() {
               variant="destructive"
               size="lg"
               className="px-5"
-              onClick={() => setIsDeleteDialogOpen(false)}
+              disabled={deleteAccountMutation.isPending}
+              onClick={() => deleteAccountMutation.mutate()}
             >
-              Delete
+              {deleteAccountMutation.isPending ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -458,7 +631,7 @@ function SecuritySettingsPanel() {
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
               {sessionPendingDeletion
-                ? `This will remove the ${sessionPendingDeletion.device} session from the active sessions list. This action will later call the session deletion endpoint.`
+                ? `This will remove the ${sessionPendingDeletion.device} session from the active sessions list.`
                 : "This will remove the selected session from the active sessions list."}
             </DialogDescription>
           </DialogHeader>
@@ -475,9 +648,16 @@ function SecuritySettingsPanel() {
               variant="destructive"
               size="lg"
               className="px-5"
-              onClick={() => setSessionPendingDeletion(null)}
+              disabled={deleteSessionMutation.isPending}
+              onClick={() => {
+                if (!sessionPendingDeletion) {
+                  return;
+                }
+
+                deleteSessionMutation.mutate(sessionPendingDeletion.id);
+              }}
             >
-              Delete
+              {deleteSessionMutation.isPending ? "Deleting..." : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -1,10 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { ChevronLeftIcon, LoaderCircleIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import QRCode from "qrcode";
 
 import { AuthFormShell } from "@/components/auth/auth-form-shell";
 import { AuthInlineMessage } from "@/components/auth/auth-inline-message";
@@ -12,55 +14,23 @@ import { AuthOtpFields } from "@/components/auth/auth-otp-fields";
 import { AuthWithVisualLayout } from "@/components/auth/auth-with-visual-layout";
 import { Button } from "@/components/ui/button";
 import {
-  AuthFlowError,
   startTotpSetupRequest,
+  updateTwoFactorMethodRequest,
   verifyTotpSetupRequest,
 } from "@/lib/auth/auth-api";
+import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
 import { useAuthTwoFactorStore } from "@/lib/auth/auth-two-factor-store";
-import { cn } from "@/lib/utils";
-
-function createMockQrCells(value: string) {
-  const size = 25;
-  let seed = 0;
-
-  for (const char of value) {
-    seed = (seed * 31 + char.charCodeAt(0)) >>> 0;
-  }
-
-  return Array.from({ length: size * size }, (_, index) => {
-    const row = Math.floor(index / size);
-    const column = index % size;
-    const inTopLeftFinder = row < 7 && column < 7;
-    const inTopRightFinder = row < 7 && column >= size - 7;
-    const inBottomLeftFinder = row >= size - 7 && column < 7;
-
-    if (inTopLeftFinder || inTopRightFinder || inBottomLeftFinder) {
-      const localRow = row % 7;
-      const localColumn = column % 7;
-      const outer =
-        localRow === 0 ||
-        localRow === 6 ||
-        localColumn === 0 ||
-        localColumn === 6;
-      const inner =
-        localRow >= 2 && localRow <= 4 && localColumn >= 2 && localColumn <= 4;
-
-      return outer || inner;
-    }
-
-    const noise = (seed + row * 17 + column * 29 + row * column * 13) % 5;
-    return noise === 0 || noise === 2;
-  });
-}
 
 export function SetupTwoFactorVerification() {
   const router = useRouter();
+  const accessToken = useAuthSessionStore((state) => state.accessToken);
   const setPreferredMethod = useAuthTwoFactorStore(
     (state) => state.setPreferredMethod,
   );
   const [code, setCode] = useState("");
   const [isCodeComplete, setIsCodeComplete] = useState(false);
   const [hasInvalidCode, setHasInvalidCode] = useState(false);
+  const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string | null>(null);
   const [status, setStatus] = useState<{
     title: string;
     message: string;
@@ -69,48 +39,38 @@ export function SetupTwoFactorVerification() {
 
   const setupQuery = useQuery({
     queryKey: ["totp-setup"],
-    queryFn: startTotpSetupRequest,
+    queryFn: () => {
+      if (!accessToken) {
+        throw new Error("Authentication required.");
+      }
+
+      return startTotpSetupRequest({ accessToken });
+    },
+    enabled: Boolean(accessToken),
   });
 
   const verifyMutation = useMutation({
-    mutationFn: verifyTotpSetupRequest,
-    onSuccess: ({ redirectTo }) => {
-      setPreferredMethod("totp");
-      setHasInvalidCode(false);
-      setStatus({
-        title: "Authenticator connected",
-        message:
-          "Two-factor authentication is ready. Returning you to Security settings.",
-        variant: "success",
-      });
-
-      window.setTimeout(() => {
-        router.replace(redirectTo);
-      }, 900);
-    },
-    onError: (error) => {
-      if (error instanceof AuthFlowError) {
-        if (error.code === "invalid_code") {
-          setHasInvalidCode(true);
-          setStatus({
-            title: "Invalid code",
-            message: error.message,
-            variant: "error",
-          });
-          return;
-        }
-
-        if (error.code === "expired_code") {
-          setHasInvalidCode(false);
-          setStatus({
-            title: "Code expired",
-            message: error.message,
-            variant: "warning",
-          });
-          return;
-        }
+    mutationFn: ({ code }: { code: string }) => {
+      if (!accessToken) {
+        throw new Error("Authentication required.");
       }
 
+      return verifyTotpSetupRequest({ accessToken, code });
+    },
+    onSuccess: async ({ redirectTo }) => {
+      if (!accessToken) {
+        throw new Error("Authentication required.");
+      }
+
+      const response = await updateTwoFactorMethodRequest({
+        accessToken,
+        method: "totp",
+      });
+
+      setPreferredMethod(response.method);
+      router.replace(redirectTo);
+    },
+    onError: (error) => {
       setHasInvalidCode(false);
       setStatus({
         title: "Setup failed",
@@ -123,10 +83,44 @@ export function SetupTwoFactorVerification() {
     },
   });
 
-  const qrCells = useMemo(
-    () => createMockQrCells(setupQuery.data?.otpauthUrl ?? ""),
-    [setupQuery.data?.otpauthUrl],
-  );
+  useEffect(() => {
+    const otpauthUrl = setupQuery.data?.otpauthUrl;
+
+    if (!otpauthUrl) {
+      return;
+    }
+
+    let isCancelled = false;
+
+    void QRCode.toDataURL(otpauthUrl, {
+      width: 176,
+      margin: 1,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+    })
+      .then((dataUrl: string) => {
+        if (!isCancelled) {
+          setQrCodeDataUrl(dataUrl);
+        }
+      })
+      .catch(() => {
+        if (!isCancelled) {
+          setQrCodeDataUrl(null);
+          setStatus({
+            title: "QR generation failed",
+            message:
+              "We couldn't generate a scannable QR code. Use the setup key below instead.",
+            variant: "warning",
+          });
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [setupQuery.data?.otpauthUrl]);
 
   const fieldErrorMessage =
     status?.variant === "error" ? status.message : undefined;
@@ -210,17 +204,20 @@ export function SetupTwoFactorVerification() {
             ) : (
               <div className="mx-auto flex w-fit flex-col items-center gap-6">
                 <div className="rounded-[1.5rem] border border-border/80 bg-white p-4 shadow-sm">
-                  <div className="grid size-40 grid-cols-25 gap-px sm:size-44">
-                    {qrCells.map((filled, index) => (
-                      <div
-                        key={index}
-                        className={cn(
-                          "rounded-[1px]",
-                          filled ? "bg-black" : "bg-white",
-                        )}
-                      />
-                    ))}
-                  </div>
+                  {setupQuery.data?.otpauthUrl && qrCodeDataUrl ? (
+                    <Image
+                      src={qrCodeDataUrl}
+                      alt="Authenticator setup QR code"
+                      width={176}
+                      height={176}
+                      unoptimized
+                      className="size-40 sm:size-44"
+                    />
+                  ) : (
+                    <div className="flex size-40 items-center justify-center sm:size-44">
+                      <LoaderCircleIcon className="size-7 animate-spin text-muted-foreground" />
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-3">

@@ -18,6 +18,9 @@ export const signUpSchema = z.object({
     .min(2, "Last name must contain at least 2 characters."),
   email: z.email("Enter a valid email address.").trim(),
   password: z.string().min(8, "Password must contain at least 8 characters."),
+  terms: z.boolean().refine((value) => value, {
+    message: "You must accept the terms to create an account.",
+  }),
 });
 
 export type SignUpValues = z.infer<typeof signUpSchema>;

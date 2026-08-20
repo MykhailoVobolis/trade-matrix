@@ -29,6 +29,8 @@ export function GeneralSettingsForm({
   defaultValues,
 }: GeneralSettingsFormProps) {
   const { resolvedTheme, setTheme } = useTheme();
+  const accessToken = useAuthSessionStore((state) => state.accessToken);
+  const currentUser = useAuthSessionStore((state) => state.currentUser);
   const updateCurrentUser = useAuthSessionStore(
     (state) => state.updateCurrentUser,
   );
@@ -58,20 +60,29 @@ export function GeneralSettingsForm({
   const updateMutation = useMutation({
     mutationFn: updateGeneralSettingsRequest,
     onSuccess: ({ profile }) => {
-      form.reset(profile);
+      form.reset({
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+      });
       setAvatarFile(null);
       setAvatarError(null);
       updateCurrentUser({
         firstName: profile.firstName,
         lastName: profile.lastName,
         email: profile.email,
+        avatarUrl: profile.avatarUrl,
       });
     },
   });
 
   const handleSubmit = form.handleSubmit((values) => {
     updateMutation.reset();
-    return updateMutation.mutateAsync({ values, avatarFile });
+    return updateMutation.mutateAsync({
+      values,
+      avatarFile,
+      accessToken: accessToken ?? "",
+    });
   });
 
   function handleAvatarPickerOpen() {
@@ -114,9 +125,8 @@ export function GeneralSettingsForm({
       ) : null}
 
       {updateMutation.isSuccess ? (
-        <AuthInlineMessage variant="success" title="Changes ready">
-          General settings were prepared successfully and are ready for backend
-          persistence.
+        <AuthInlineMessage variant="success" title="Changes saved">
+          Your profile details were updated successfully.
         </AuthInlineMessage>
       ) : null}
 
@@ -127,11 +137,19 @@ export function GeneralSettingsForm({
 
         <div className="flex items-end gap-4">
           <div className="relative">
-            <div className="flex size-26 items-center justify-center overflow-hidden rounded-full bg-sidebar-primary text-5xl font-medium text-sidebar-primary-foreground">
+            <div className="relative flex size-26 items-center justify-center overflow-hidden rounded-full bg-sidebar-primary text-5xl font-medium text-sidebar-primary-foreground">
               {avatarPreviewUrl ? (
                 <Image
                   src={avatarPreviewUrl}
                   alt="Profile avatar preview"
+                  fill
+                  unoptimized
+                  className="object-cover"
+                />
+              ) : currentUser?.avatarUrl ? (
+                <Image
+                  src={currentUser.avatarUrl}
+                  alt="Profile avatar"
                   fill
                   unoptimized
                   className="object-cover"

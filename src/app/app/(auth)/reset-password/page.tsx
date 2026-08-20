@@ -11,10 +11,11 @@ import { AuthFormOnlyLayout } from "@/components/auth/auth-form-only-layout";
 import { AuthFormShell } from "@/components/auth/auth-form-shell";
 import { AuthInlineMessage } from "@/components/auth/auth-inline-message";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { resetPasswordRequest } from "@/lib/auth/auth-api";
 import { useAuthRecoveryStore } from "@/lib/auth/auth-recovery-store";
+import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
 import {
   resetPasswordSchema,
   type ResetPasswordValues,
@@ -22,6 +23,8 @@ import {
 
 export default function ResetPasswordPage() {
   const router = useRouter();
+  const signOut = useAuthSessionStore((state) => state.signOut);
+  const recoveryToken = useAuthRecoveryStore((state) => state.recoveryToken);
   const markRecoveryCompleted = useAuthRecoveryStore(
     (state) => state.markRecoveryCompleted,
   );
@@ -37,8 +40,12 @@ export default function ResetPasswordPage() {
 
   const resetPasswordMutation = useMutation({
     mutationFn: (values: ResetPasswordValues) =>
-      resetPasswordRequest({ values }),
+      resetPasswordRequest({
+        values,
+        recoveryToken: recoveryToken ?? "",
+      }),
     onSuccess: ({ redirectTo }) => {
+      signOut();
       markRecoveryCompleted();
       router.replace(redirectTo);
       window.setTimeout(() => {
@@ -67,12 +74,10 @@ export default function ResetPasswordPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="reset-password-new">New password</Label>
-              <Input
+              <PasswordInput
                 {...form.register("password")}
                 id="reset-password-new"
-                type="password"
                 placeholder="Create a new password"
-                className="h-12 rounded-xl text-base"
                 aria-invalid={Boolean(form.formState.errors.password)}
                 disabled={resetPasswordMutation.isPending}
               />
@@ -82,12 +87,10 @@ export default function ResetPasswordPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="reset-password-confirm">Confirm password</Label>
-              <Input
+              <PasswordInput
                 {...form.register("confirmPassword")}
                 id="reset-password-confirm"
-                type="password"
                 placeholder="Repeat the new password"
-                className="h-12 rounded-xl text-base"
                 aria-invalid={Boolean(form.formState.errors.confirmPassword)}
                 disabled={resetPasswordMutation.isPending}
               />

@@ -188,7 +188,7 @@ export function AuthOtpFields({
             </button>
           ) : (
             <Link
-              href={resendHref}
+              href={resendHref ?? "#"}
               className="font-medium text-sidebar-primary transition-colors hover:text-sidebar-primary/80"
             >
               Resend

@@ -1,13 +1,14 @@
 export type TwoFactorMethod = "email" | "totp";
 
+export type UserRole = "member" | "admin";
+
 export type AuthUser = {
   id: string;
   firstName: string;
   lastName: string;
   email: string;
+  role: UserRole;
   avatarUrl: string | null;
-  workspaceName: string;
-  roleLabel: string;
 };
 
 export type PendingVerificationState = "code_sent" | "verified";
@@ -19,10 +20,20 @@ export type PendingVerification = {
 };
 
 export type PendingTwoFactorChallenge = {
-  email: string;
   method: TwoFactorMethod;
+  twoFactorToken: string | null;
   redirectTo: string;
   issuedAt: string;
+};
+
+export type AuthSession = {
+  id: string;
+  device: string;
+  location: string;
+  createdAt: string;
+  updatedAt: string;
+  isCurrent: boolean;
+  isActive: boolean;
 };
 
 export const demoAuthUser: AuthUser = {
@@ -30,9 +41,8 @@ export const demoAuthUser: AuthUser = {
   firstName: "Mykhailo",
   lastName: "Vobolis",
   email: "mvobolis@gmail.com",
+  role: "admin",
   avatarUrl: null,
-  workspaceName: "TradeMatrix",
-  roleLabel: "Admin",
 };
 
 export function createMockAuthUser(

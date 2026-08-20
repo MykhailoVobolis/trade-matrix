@@ -13,7 +13,7 @@ import { AuthWithVisualLayout } from "@/components/auth/auth-with-visual-layout"
 import { Button } from "@/components/ui/button";
 import {
   AuthFlowError,
-  resendVerificationCodeRequest,
+  resendTwoFactorCodeRequest,
   verifyTwoFactorRequest,
 } from "@/lib/auth/auth-api";
 import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
@@ -51,10 +51,9 @@ export function TwoFactorVerification({ method }: TwoFactorVerificationProps) {
 
   const verifyMutation = useMutation({
     mutationFn: verifyTwoFactorRequest,
-    onSuccess: ({ redirectTo, accessToken, refreshToken, currentUser }) => {
+    onSuccess: ({ redirectTo, accessToken, currentUser }) => {
       completeSignIn({
         accessToken,
-        refreshToken,
         currentUser,
       });
       completeChallenge();
@@ -118,12 +117,20 @@ export function TwoFactorVerification({ method }: TwoFactorVerificationProps) {
   });
 
   const resendMutation = useMutation({
-    mutationFn: resendVerificationCodeRequest,
-    onSuccess: () => {
+    mutationFn: () =>
+      resendTwoFactorCodeRequest({
+        twoFactorToken: challenge?.twoFactorToken ?? null,
+      }),
+    onSuccess: (response) => {
       setAttemptCount(0);
       setIsLocked(false);
       setHasInvalidCode(false);
       setStatus(null);
+      useAuthTwoFactorStore.getState().startChallenge({
+        method: response.method,
+        twoFactorToken: response.twoFactorToken,
+        redirectTo: challenge?.redirectTo ?? "/app",
+      });
     },
   });
 
@@ -147,9 +154,7 @@ export function TwoFactorVerification({ method }: TwoFactorVerificationProps) {
     try {
       await verifyMutation.mutateAsync({
         code: parsed.data.code,
-        attempt: attemptCount,
-        method,
-        email: challenge?.email ?? "mvobolis@gmail.com",
+        twoFactorToken: challenge?.twoFactorToken ?? null,
       });
     } catch {
       // The mutation error is handled via onError state updates.
@@ -190,7 +195,11 @@ export function TwoFactorVerification({ method }: TwoFactorVerificationProps) {
         ) : null}
         <AuthOtpFields
           onResend={
-            method === "email" ? () => resendMutation.mutateAsync() : undefined
+            method === "email"
+              ? async () => {
+                  await resendMutation.mutateAsync();
+                }
+              : undefined
           }
           resendCountdownSeconds={30}
           disabled={verifyMutation.isPending}

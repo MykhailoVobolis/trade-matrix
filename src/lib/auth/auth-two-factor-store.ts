@@ -13,8 +13,8 @@ type AuthTwoFactorStore = {
   pendingChallenge: PendingTwoFactorChallenge | null;
   verifiedAt: string | null;
   startChallenge: (payload: {
-    email: string;
     method: TwoFactorMethod;
+    twoFactorToken: string | null;
     redirectTo: string;
   }) => void;
   completeChallenge: () => void;
@@ -28,12 +28,12 @@ export const useAuthTwoFactorStore = create<AuthTwoFactorStore>()(
       preferredMethod: "email",
       pendingChallenge: null,
       verifiedAt: null,
-      startChallenge({ email, method, redirectTo }) {
+      startChallenge({ method, twoFactorToken, redirectTo }) {
         set({
           preferredMethod: method,
           pendingChallenge: {
-            email: email.trim().toLowerCase(),
             method,
+            twoFactorToken,
             redirectTo,
             issuedAt: new Date().toISOString(),
           },

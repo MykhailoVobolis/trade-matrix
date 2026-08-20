@@ -13,6 +13,7 @@ import { AuthWithVisualLayout } from "@/components/auth/auth-with-visual-layout"
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PasswordInput } from "@/components/ui/password-input";
 import { getGoogleAuthHref, signUpRequest } from "@/lib/auth/auth-api";
 import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
 import { signUpSchema, type SignUpValues } from "@/lib/auth/auth-schemas";
@@ -32,6 +33,7 @@ export default function SignUpPage() {
       lastName: "",
       email: "",
       password: "",
+      terms: false,
     },
   });
 
@@ -107,17 +109,35 @@ export default function SignUpPage() {
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label htmlFor="sign-up-password">Password</Label>
-                <Input
+                <PasswordInput
                   {...form.register("password")}
                   id="sign-up-password"
-                  type="password"
                   placeholder="Create a secure password"
-                  className="h-12 rounded-xl text-base"
                   aria-invalid={Boolean(form.formState.errors.password)}
                   disabled={signUpMutation.isPending}
                 />
                 <AuthFieldError>
                   {form.formState.errors.password?.message}
+                </AuthFieldError>
+              </div>
+              <div className="space-y-2 sm:col-span-2">
+                <label
+                  htmlFor="sign-up-terms"
+                  className="flex items-start gap-3 rounded-xl border border-border/70 px-4 py-3 text-sm"
+                >
+                  <input
+                    {...form.register("terms")}
+                    id="sign-up-terms"
+                    type="checkbox"
+                    className="mt-0.5 size-4 rounded border-border"
+                    disabled={signUpMutation.isPending}
+                  />
+                  <span className="text-muted-foreground">
+                    I agree to the TradeMatrix terms and account access rules.
+                  </span>
+                </label>
+                <AuthFieldError>
+                  {form.formState.errors.terms?.message}
                 </AuthFieldError>
               </div>
             </div>

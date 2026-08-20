@@ -11,10 +11,10 @@ import { AuthFormOnlyLayout } from "@/components/auth/auth-form-only-layout";
 import { AuthFormShell } from "@/components/auth/auth-form-shell";
 import { AuthInlineMessage } from "@/components/auth/auth-inline-message";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { resetPasswordRequest } from "@/lib/auth/auth-api";
-import { useAuthRecoveryStore } from "@/lib/auth/auth-recovery-store";
+import { PasswordInput } from "@/components/ui/password-input";
+import { changePasswordRequest } from "@/lib/auth/auth-api";
+import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
 import {
   resetPasswordSchema,
   type ResetPasswordValues,
@@ -22,10 +22,8 @@ import {
 
 export default function ChangePasswordPage() {
   const router = useRouter();
-  const markRecoveryCompleted = useAuthRecoveryStore(
-    (state) => state.markRecoveryCompleted,
-  );
-  const clearRecovery = useAuthRecoveryStore((state) => state.clearRecovery);
+  const accessToken = useAuthSessionStore((state) => state.accessToken);
+  const signOut = useAuthSessionStore((state) => state.signOut);
 
   const form = useForm<ResetPasswordValues>({
     resolver: zodResolver(resetPasswordSchema),
@@ -37,13 +35,13 @@ export default function ChangePasswordPage() {
 
   const changePasswordMutation = useMutation({
     mutationFn: (values: ResetPasswordValues) =>
-      resetPasswordRequest({ values }),
+      changePasswordRequest({
+        newPassword: values.password,
+        accessToken: accessToken ?? "",
+      }),
     onSuccess: ({ redirectTo }) => {
-      markRecoveryCompleted();
+      signOut();
       router.replace(redirectTo);
-      window.setTimeout(() => {
-        clearRecovery();
-      }, 0);
     },
   });
 
@@ -67,12 +65,10 @@ export default function ChangePasswordPage() {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="change-password-new">Password</Label>
-              <Input
+              <PasswordInput
                 {...form.register("password")}
                 id="change-password-new"
-                type="password"
                 placeholder="Enter password"
-                className="h-12 rounded-xl text-base"
                 aria-invalid={Boolean(form.formState.errors.password)}
                 disabled={changePasswordMutation.isPending}
               />
@@ -82,12 +78,10 @@ export default function ChangePasswordPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="change-password-confirm">Re-enter password</Label>
-              <Input
+              <PasswordInput
                 {...form.register("confirmPassword")}
                 id="change-password-confirm"
-                type="password"
                 placeholder="Enter password"
-                className="h-12 rounded-xl text-base"
                 aria-invalid={Boolean(form.formState.errors.confirmPassword)}
                 disabled={changePasswordMutation.isPending}
               />

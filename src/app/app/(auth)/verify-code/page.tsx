@@ -23,6 +23,10 @@ const maxAttempts = 3;
 
 export default function VerifyCodePage() {
   const router = useRouter();
+  const pendingVerification = useAuthSessionStore(
+    (state) => state.pendingVerification,
+  );
+  const completeSignIn = useAuthSessionStore((state) => state.completeSignIn);
   const clearPendingVerification = useAuthSessionStore(
     (state) => state.clearPendingVerification,
   );
@@ -42,7 +46,11 @@ export default function VerifyCodePage() {
 
   const verifyMutation = useMutation({
     mutationFn: verifyCodeRequest,
-    onSuccess: ({ redirectTo }) => {
+    onSuccess: ({ redirectTo, accessToken, currentUser }) => {
+      completeSignIn({
+        accessToken,
+        currentUser,
+      });
       clearPendingVerification();
       router.replace(redirectTo);
     },
@@ -96,7 +104,17 @@ export default function VerifyCodePage() {
   });
 
   const resendMutation = useMutation({
-    mutationFn: resendVerificationCodeRequest,
+    mutationFn: () => {
+      if (!pendingVerification?.email) {
+        throw new Error(
+          "Missing verification email. Start the sign-up flow again.",
+        );
+      }
+
+      return resendVerificationCodeRequest({
+        email: pendingVerification.email,
+      });
+    },
     onSuccess: () => {
       setAttemptCount(0);
       setIsLocked(false);
@@ -106,6 +124,16 @@ export default function VerifyCodePage() {
   });
 
   async function handleSubmit() {
+    if (!pendingVerification?.email) {
+      setStatus({
+        title: "Missing verification context",
+        message:
+          "Start the sign-up flow again to receive a new verification code.",
+        variant: "warning",
+      });
+      return;
+    }
+
     const parsed = verifyCodeSchema.safeParse({ code });
 
     if (!parsed.success) {
@@ -123,8 +151,8 @@ export default function VerifyCodePage() {
     verifyMutation.reset();
     try {
       await verifyMutation.mutateAsync({
+        email: pendingVerification.email,
         code: parsed.data.code,
-        attempt: attemptCount,
       });
     } catch {
       // The mutation error is handled via onError state updates.
@@ -159,7 +187,9 @@ export default function VerifyCodePage() {
           </AuthInlineMessage>
         ) : null}
         <AuthOtpFields
-          onResend={() => resendMutation.mutateAsync()}
+          onResend={async () => {
+            await resendMutation.mutateAsync();
+          }}
           resendCountdownSeconds={30}
           disabled={verifyMutation.isPending}
           invalid={hasInvalidCode}
