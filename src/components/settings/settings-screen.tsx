@@ -213,6 +213,13 @@ function SecuritySettingsPanel() {
       });
     },
     onSuccess: () => {
+      if (sessionPendingDeletion?.isCurrent) {
+        signOut();
+        setSessionPendingDeletion(null);
+        router.replace("/app/sign-in");
+        return;
+      }
+
       setSessionPendingDeletion(null);
       void queryClient.invalidateQueries({
         queryKey: ["auth-sessions", accessToken],
@@ -463,7 +470,8 @@ function SecuritySettingsPanel() {
                             className="min-w-36 rounded-xl"
                           >
                             <DropdownMenuItem
-                              className="text-destructive hover:text-destructive focus:text-destructive"
+                              variant="destructive"
+                              className="data-[highlighted]:text-destructive data-[highlighted]:*:[svg]:text-destructive hover:*:[svg]:text-destructive focus:*:[svg]:text-destructive"
                               onClick={() => setSessionPendingDeletion(session)}
                             >
                               <Trash2Icon className="size-4" />
