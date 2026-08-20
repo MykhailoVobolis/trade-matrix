@@ -200,7 +200,12 @@ export function AppSidebar() {
           <SidebarMenuItem>
             <DropdownMenu>
               <DropdownMenuTrigger
-                render={<SidebarMenuButton size="lg" tooltip="Demo User" />}
+                render={
+                  <SidebarMenuButton
+                    size="lg"
+                    tooltip={`${user.firstName} ${user.lastName}`}
+                  />
+                }
               >
                 <div className="relative flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-sidebar-primary text-sidebar-primary-foreground">
                   {user.avatarUrl ? (
