@@ -234,14 +234,14 @@ function SecuritySettingsPanel() {
       value: "email" as const,
       title: "Two-Factor Authentication (2FA) - Email",
       description:
-        "A security code will be sent to your email address for Two-Factor Authentication (2FA) when you sign in.",
+        "A security code will be sent to your email address for Two-Factor Authentication (2FA) when you sign in. You will need to check the email address associated with this account for this code in order to sign in.",
       checked: currentMethod === "email",
     },
     {
       value: "totp" as const,
       title: "Two-Factor Authentication (2FA) - Authenticator",
       description:
-        "Use an authenticator app to generate time-sensitive verification codes for sign-in.",
+        "Configure your Authenticator App to generate time-sensitive codes for signing into TradeMatrix. You will need to install an Authenticator app from your mobile device app store to generate codes.",
       checked: currentMethod === "totp",
     },
   ];
@@ -375,12 +375,6 @@ function SecuritySettingsPanel() {
                       <p className="max-w-4xl text-sm leading-7 text-muted-foreground">
                         {option.description}
                       </p>
-                      {option.value === "totp" && !isTotpEnabled ? (
-                        <p className="text-sm text-muted-foreground">
-                          Set up an authenticator app first, then switch the
-                          active method to TOTP.
-                        </p>
-                      ) : null}
                     </div>
                   </div>
                 );
