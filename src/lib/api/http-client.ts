@@ -197,6 +197,7 @@ export async function requestJson<T>({
     headers,
     body: requestBody,
     credentials,
+    accessToken,
   });
 
   if (
