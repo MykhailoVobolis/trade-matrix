@@ -1,74 +1,330 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   CalendarRangeIcon,
+  CheckIcon,
+  ChevronsUpDownIcon,
   DownloadIcon,
   SlidersHorizontalIcon,
   ChevronDownIcon,
+  XIcon,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type {
+  OverviewComparisonMode,
+  OverviewFilterState,
+  OverviewFilterValues,
+} from "@/lib/overview/overview-url-state";
+import { cn } from "@/lib/utils";
 
 const primaryFilters = [
-  "UKTZED",
-  "Продукт / Номенклатура",
-  "Регіон покупця",
-  "Покупець",
-  "Постачальник",
+  {
+    key: "uktzed",
+    label: "UKTZED",
+    placeholder: "Наприклад: 2710, 1001",
+  },
+  {
+    key: "products",
+    label: "Продукт / Номенклатура",
+    placeholder: "Наприклад: ДП, Бензин",
+  },
+  {
+    key: "buyerRegionCodes",
+    label: "Регіон покупця",
+    placeholder: "Наприклад: 32, 80",
+  },
+  {
+    key: "buyerTaxNumbers",
+    label: "Покупець",
+    placeholder: "Наприклад: 38333525, 0",
+  },
+  {
+    key: "supplierTaxNumbers",
+    label: "Постачальник",
+    placeholder: "Наприклад: 41784512, 0",
+  },
 ] as const;
 
-function FilterShell({ label, icon }: { label: string; icon?: ReactNode }) {
+function formatDateLabel(value: string) {
+  if (!value) {
+    return "Select date";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("uk-UA", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatFilterSummary(values: string[]) {
+  if (values.length === 0) {
+    return "All";
+  }
+
+  if (values.length === 1) {
+    return values[0];
+  }
+
+  return `${values.length} selected`;
+}
+
+function FilterShell({
+  label,
+  value,
+  icon,
+  children,
+}: {
+  label: string;
+  value: string;
+  icon?: ReactNode;
+  children?: ReactNode;
+}) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <div className="flex h-11 items-center justify-between gap-2 rounded-lg border border-border/70 bg-background px-3 text-sm text-foreground shadow-sm shadow-black/[0.02]">
-        <div className="flex items-center gap-2">
+        <div className="flex min-w-0 items-center gap-2">
           {icon}
-          <Skeleton className="h-4 w-24" />
+          <span className="truncate">{value}</span>
         </div>
-        <ChevronDownIcon className="size-4 text-muted-foreground" />
+        {children ?? (
+          <ChevronDownIcon className="size-4 text-muted-foreground" />
+        )}
       </div>
     </div>
   );
 }
 
-function ComparisonShell() {
+function MultiValueFilterPopover({
+  label,
+  value,
+  values,
+  placeholder,
+  onApply,
+}: {
+  label: string;
+  value: string;
+  values: string[];
+  placeholder: string;
+  onApply: (values: string[]) => void;
+}) {
+  const [draft, setDraft] = useState(values.join(", "));
+
   return (
-    <div className="space-y-2">
-      <p className="text-xs font-medium text-muted-foreground">Порівняти з</p>
-      <div className="flex h-11 items-center justify-between gap-3 rounded-lg border border-border/70 bg-background px-3 text-sm shadow-sm shadow-black/[0.02]">
-        <div className="flex min-w-0 flex-1 items-center gap-2">
-          <Skeleton className="h-4 w-16" />
-          <span className="text-muted-foreground">:</span>
-          <div className="flex flex-1 items-center justify-between gap-3">
-            <Skeleton className="h-4 w-36" />
-          </div>
+    <Popover
+      onOpenChange={(open) => {
+        if (open) {
+          setDraft(values.join(", "));
+        }
+      }}
+    >
+      <PopoverTrigger className="block text-left">
+        <span className="block">
+          <FilterShell label={label} value={value}>
+            <ChevronsUpDownIcon className="size-4 text-muted-foreground" />
+          </FilterShell>
+        </span>
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-80 space-y-3 p-3">
+        <div className="space-y-1">
+          <p className="text-sm font-medium text-foreground">{label}</p>
+          <p className="text-xs text-muted-foreground">
+            Тимчасово редагується списком через кому. URL already stays
+            canonical.
+          </p>
         </div>
-        <ChevronDownIcon className="size-4 text-muted-foreground" />
-      </div>
-    </div>
+        <Input
+          value={draft}
+          onChange={(event) => setDraft(event.target.value)}
+          placeholder={placeholder}
+        />
+        <div className="flex items-center justify-between gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setDraft("");
+              onApply([]);
+            }}
+          >
+            <XIcon />
+            Clear
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => {
+              onApply(
+                draft
+                  .split(",")
+                  .map((item) => item.trim())
+                  .filter(Boolean),
+              );
+            }}
+          >
+            <CheckIcon />
+            Apply
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 }
 
-export function OverviewFilters() {
+const comparisonModeLabels: Record<OverviewComparisonMode, string> = {
+  NONE: "Без порівняння",
+  PREVIOUS_PERIOD: "Попередній період",
+  CUSTOM: "Кастомний період",
+};
+
+export function OverviewFilters({
+  state,
+  onUpdateOverviewFilters,
+  onResetFilters,
+}: {
+  state: OverviewFilterState;
+  onUpdateOverviewFilters: (patch: Partial<OverviewFilterValues>) => void;
+  onResetFilters: () => void;
+}) {
+  const hasOverviewFilters =
+    state.comparisonMode !== "PREVIOUS_PERIOD" ||
+    state.compareDateFrom.length > 0 ||
+    state.compareDateTo.length > 0 ||
+    state.uktzed.length > 0 ||
+    state.products.length > 0 ||
+    state.buyerRegionCodes.length > 0 ||
+    state.buyerTaxNumbers.length > 0 ||
+    state.supplierTaxNumbers.length > 0 ||
+    state.timeGrain.length > 0;
+
   return (
     <div className="space-y-3">
-      <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-        <div className="grid gap-3 md:grid-cols-[minmax(220px,320px)_minmax(260px,360px)] xl:flex xl:flex-wrap xl:items-center">
-          <FilterShell
-            label="Період"
-            icon={
-              <CalendarRangeIcon className="size-4 text-muted-foreground" />
-            }
-          />
-          <ComparisonShell />
+      <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
+        <div className="grid gap-3 md:grid-cols-[minmax(220px,320px)_minmax(260px,360px)] xl:flex xl:flex-wrap xl:items-start">
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">Період</p>
+            <div className="flex flex-col gap-2 rounded-lg border border-border/70 bg-background px-3 py-2.5 shadow-sm shadow-black/[0.02] md:flex-row md:items-center">
+              <div className="flex items-center gap-2 text-sm text-foreground">
+                <CalendarRangeIcon className="size-4 text-muted-foreground" />
+                <span>{formatDateLabel(state.dateFrom)}</span>
+                <span className="text-muted-foreground">—</span>
+                <span>{formatDateLabel(state.dateTo)}</span>
+              </div>
+              <div className="grid flex-1 gap-2 md:grid-cols-2">
+                <Input
+                  type="date"
+                  value={state.dateFrom}
+                  max={state.dateTo}
+                  onChange={(event) =>
+                    onUpdateOverviewFilters({ dateFrom: event.target.value })
+                  }
+                  className="h-9 rounded-md"
+                />
+                <Input
+                  type="date"
+                  value={state.dateTo}
+                  min={state.dateFrom}
+                  onChange={(event) =>
+                    onUpdateOverviewFilters({ dateTo: event.target.value })
+                  }
+                  className="h-9 rounded-md"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <p className="text-xs font-medium text-muted-foreground">
+              Порівняти з
+            </p>
+            <div className="grid gap-2 rounded-lg border border-border/70 bg-background px-3 py-2.5 shadow-sm shadow-black/[0.02]">
+              <Select
+                value={state.comparisonMode}
+                onValueChange={(value) =>
+                  onUpdateOverviewFilters({
+                    comparisonMode: value as OverviewComparisonMode,
+                    compareDateFrom:
+                      value === "CUSTOM" ? state.compareDateFrom : "",
+                    compareDateTo:
+                      value === "CUSTOM" ? state.compareDateTo : "",
+                  })
+                }
+              >
+                <SelectTrigger className="h-9 rounded-md">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(comparisonModeLabels).map(
+                    ([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ),
+                  )}
+                </SelectContent>
+              </Select>
+
+              {state.comparisonMode === "CUSTOM" ? (
+                <div className="grid gap-2 md:grid-cols-2">
+                  <Input
+                    type="date"
+                    value={state.compareDateFrom}
+                    max={state.compareDateTo || undefined}
+                    onChange={(event) =>
+                      onUpdateOverviewFilters({
+                        compareDateFrom: event.target.value,
+                      })
+                    }
+                    className="h-9 rounded-md"
+                  />
+                  <Input
+                    type="date"
+                    value={state.compareDateTo}
+                    min={state.compareDateFrom || undefined}
+                    onChange={(event) =>
+                      onUpdateOverviewFilters({
+                        compareDateTo: event.target.value,
+                      })
+                    }
+                    className="h-9 rounded-md"
+                  />
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {comparisonModeLabels[state.comparisonMode]}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-2">
           <Button
             variant="outline"
             className="px-3 shadow-sm shadow-black/[0.02]"
-            disabled
+            disabled={!hasOverviewFilters}
+            onClick={onResetFilters}
           >
             Очистити фільтри
           </Button>
@@ -80,17 +336,47 @@ export function OverviewFilters() {
       </div>
 
       <div className="grid gap-2.5 xl:grid-cols-[repeat(5,minmax(150px,1fr))_minmax(156px,0.95fr)]">
-        {primaryFilters.map((filterName) => (
-          <FilterShell key={filterName} label={filterName} />
+        {primaryFilters.map((filter) => (
+          <MultiValueFilterPopover
+            key={filter.key}
+            label={filter.label}
+            value={formatFilterSummary(state[filter.key])}
+            values={state[filter.key]}
+            placeholder={filter.placeholder}
+            onApply={(values) =>
+              onUpdateOverviewFilters({
+                [filter.key]: values,
+              } as Partial<OverviewFilterValues>)
+            }
+          />
         ))}
 
-        <FilterShell
-          label="Більше фільтрів"
-          icon={
-            <SlidersHorizontalIcon className="size-4 text-muted-foreground" />
-          }
-        />
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">
+            Більше фільтрів
+          </p>
+          <div className="flex h-11 items-center justify-between gap-2 rounded-lg border border-dashed border-border/70 bg-background px-3 text-sm text-muted-foreground shadow-sm shadow-black/[0.02]">
+            <div className="flex min-w-0 items-center gap-2">
+              <SlidersHorizontalIcon className="size-4" />
+              <span>Pending next commit</span>
+            </div>
+            <ChevronDownIcon className="size-4" />
+          </div>
+        </div>
       </div>
+
+      {state.timeGrain ? (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">Time grain:</span>
+          <span
+            className={cn(
+              "inline-flex items-center rounded-full border border-border/70 bg-background px-2.5 py-1",
+            )}
+          >
+            {state.timeGrain}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
