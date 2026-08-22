@@ -26,21 +26,21 @@ const tableColumns = [
 export function OverviewMarketTable() {
   return (
     <Card className="border border-border/70 shadow-none">
-      <CardHeader className="flex flex-col gap-4 border-b border-border/70 pb-4 lg:flex-row lg:items-start lg:justify-between">
+      <CardHeader className="flex flex-col gap-3 border-b border-border/70 pb-3.5 lg:flex-row lg:items-start lg:justify-between">
         <CardTitle>Огляд ринку</CardTitle>
 
         <div className="flex flex-wrap gap-2">
-          <div className="flex h-9 items-center rounded-lg border border-border/70 bg-background px-3 text-sm text-muted-foreground">
+          <div className="flex h-9 items-center rounded-md border border-border/70 bg-background px-3 text-sm text-muted-foreground">
             <Skeleton className="h-4 w-24" />
           </div>
-          <div className="flex h-9 items-center rounded-lg border border-border/70 bg-background px-3 text-sm text-muted-foreground">
+          <div className="flex h-9 items-center rounded-md border border-border/70 bg-background px-3 text-sm text-muted-foreground">
             <Skeleton className="h-4 w-20" />
           </div>
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 pt-4">
-        <div className="overflow-hidden rounded-lg border border-border/70 bg-background">
+      <CardContent className="space-y-3.5 pt-3.5">
+        <div className="overflow-hidden rounded-md border border-border/70 bg-background">
           <Table>
             <TableHeader className="bg-muted/30">
               <TableRow className="hover:bg-transparent">
@@ -76,11 +76,11 @@ export function OverviewMarketTable() {
           </Table>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 border-t border-border/70 pt-3.5 sm:flex-row sm:items-center sm:justify-between">
           <Skeleton className="h-4 w-36" />
           <div className="flex items-center gap-2">
-            <Skeleton className="h-8 w-44 rounded-lg" />
-            <Skeleton className="h-8 w-36 rounded-lg" />
+            <Skeleton className="h-8 w-44 rounded-md" />
+            <Skeleton className="h-8 w-36 rounded-md" />
           </div>
         </div>
       </CardContent>

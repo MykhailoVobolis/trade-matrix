@@ -51,7 +51,7 @@ const kpiCards = [
 
 export function OverviewKpiGrid() {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
+    <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-6">
       {kpiCards.map((card) => {
         const Icon = card.icon;
 
@@ -61,10 +61,10 @@ export function OverviewKpiGrid() {
             size="sm"
             className="border border-border/70 shadow-none"
           >
-            <CardHeader className="gap-2.5 pb-3">
+            <CardHeader className="gap-2 pb-2.5">
               <div className="flex items-start justify-between gap-3">
-                <div className="space-y-2">
-                  <CardDescription className="text-[0.8rem]">
+                <div className="space-y-1.5">
+                  <CardDescription className="text-[0.78rem] leading-snug">
                     {card.title}
                   </CardDescription>
                   <CardTitle>
@@ -72,7 +72,7 @@ export function OverviewKpiGrid() {
                   </CardTitle>
                 </div>
                 <div
-                  className={`flex size-10 shrink-0 items-center justify-center rounded-lg ${card.iconClassName}`}
+                  className={`flex size-10 shrink-0 items-center justify-center rounded-md ${card.iconClassName}`}
                 >
                   <Icon className="size-4" />
                 </div>

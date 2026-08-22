@@ -52,7 +52,7 @@ function ComparisonShell() {
 
 export function OverviewFilters() {
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
         <div className="grid gap-3 md:grid-cols-[minmax(220px,320px)_minmax(260px,360px)] xl:flex xl:flex-wrap xl:items-center">
           <FilterShell
@@ -79,7 +79,7 @@ export function OverviewFilters() {
         </div>
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-[repeat(5,minmax(150px,1fr))_minmax(156px,0.95fr)]">
+      <div className="grid gap-2.5 xl:grid-cols-[repeat(5,minmax(150px,1fr))_minmax(156px,0.95fr)]">
         {primaryFilters.map((filterName) => (
           <FilterShell key={filterName} label={filterName} />
         ))}

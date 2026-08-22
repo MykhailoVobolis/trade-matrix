@@ -13,14 +13,14 @@ const structureItems = [
 export function OverviewMarketStructureCard() {
   return (
     <Card className="border border-border/70 shadow-none">
-      <CardHeader className="pb-4">
+      <CardHeader className="pb-3.5">
         <CardTitle>Структура ринку</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2 border-t border-border/70 pt-4">
+      <CardContent className="space-y-2 border-t border-border/70 pt-3.5">
         {structureItems.map((item) => (
           <div
             key={item}
-            className="rounded-lg border border-border/70 bg-muted/10 px-4 py-3"
+            className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3"
           >
             <p className="text-xs font-medium text-muted-foreground">{item}</p>
             <div className="mt-2 space-y-2">

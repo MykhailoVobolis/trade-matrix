@@ -467,11 +467,11 @@ export function TablesScreen() {
   const isInitialTableLoading = importsQuery.isLoading;
 
   return (
-    <section className="flex w-full flex-1 flex-col gap-6">
-      <Card className="overflow-hidden rounded-[1.75rem] border border-border/70 bg-card">
-        <CardHeader className="flex flex-col gap-6 border-b border-border/70 pb-6 md:flex-row md:items-center md:justify-between">
+    <section className="flex w-full flex-1 flex-col gap-5">
+      <Card className="overflow-hidden rounded-xl border border-border/70 bg-card">
+        <CardHeader className="flex flex-col gap-5 border-b border-border/70 pb-5 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-4">
-            <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-sidebar-primary/10 text-sidebar-primary">
+            <div className="flex size-14 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary/10 text-sidebar-primary">
               <DatabaseIcon className="size-6" />
             </div>
             <div className="space-y-2">
@@ -522,7 +522,7 @@ export function TablesScreen() {
           </Button>
         </CardHeader>
 
-        <CardContent className="space-y-5 pt-6">
+        <CardContent className="space-y-4 pt-5">
           {feedback ? (
             <AuthInlineMessage
               variant={feedback.variant}
@@ -614,7 +614,7 @@ export function TablesScreen() {
             ))}
           </div>
 
-          <div className="overflow-hidden rounded-[1.5rem] border border-border/70 bg-background">
+          <div className="overflow-hidden rounded-xl border border-border/70 bg-background">
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
@@ -635,7 +635,7 @@ export function TablesScreen() {
                     >
                       <TableCell className="px-5 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="flex size-9 shrink-0 items-center justify-center rounded-xl border border-border/70 bg-muted/40 text-muted-foreground">
+                          <div className="flex size-9 shrink-0 items-center justify-center rounded-md border border-border/70 bg-muted/40 text-muted-foreground">
                             <FileSpreadsheetIcon className="size-4" />
                           </div>
                           <div className="space-y-1">
@@ -806,7 +806,7 @@ export function TablesScreen() {
       >
         <DialogContent
           showCloseButton={false}
-          className="max-w-md rounded-[1.75rem] p-8"
+          className="max-w-md rounded-xl p-8"
         >
           <DialogHeader className="gap-3">
             <DialogTitle className="text-3xl font-semibold tracking-tight">
