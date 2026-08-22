@@ -1,12 +1,15 @@
 "use client";
 
-import { startTransition } from "react";
+import { startTransition, useEffect, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { OverviewDashboardScreen } from "@/components/overview/overview-dashboard-screen";
 import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
-import { exportOverviewRequest } from "@/lib/overview/overview-api";
+import {
+  exportOverviewRequest,
+  type OverviewExportFormat,
+} from "@/lib/overview/overview-api";
 import {
   useOverviewQuery,
   useOverviewTableQuery,
@@ -15,6 +18,8 @@ import {
   getDefaultOverviewFilterState,
   normalizeOverviewFilterState,
   parseOverviewSearchParams,
+  persistOverviewFilterState,
+  readPersistedOverviewFilterState,
   serializeOverviewSearchParams,
   type OverviewFilterState,
   type OverviewFilterValues,
@@ -35,7 +40,36 @@ export function OverviewDashboardClient() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const accessToken = useAuthSessionStore((state) => state.accessToken);
-  const state = parseOverviewSearchParams(searchParams);
+  const parsedState = useMemo(
+    () => parseOverviewSearchParams(searchParams),
+    [searchParams],
+  );
+  const searchParamsString = searchParams.toString();
+  const persistedState = useMemo(
+    () =>
+      typeof window !== "undefined" && !searchParamsString
+        ? readPersistedOverviewFilterState()
+        : null,
+    [searchParamsString],
+  );
+  const state = persistedState ?? parsedState;
+
+  useEffect(() => {
+    persistOverviewFilterState(state);
+  }, [state]);
+
+  useEffect(() => {
+    if (searchParamsString || !persistedState) {
+      return;
+    }
+
+    startTransition(() => {
+      router.replace(createUrl(pathname, persistedState), {
+        scroll: false,
+      });
+    });
+  }, [pathname, persistedState, router, searchParamsString]);
+
   const overviewQuery = useOverviewQuery({
     state,
     accessToken,
@@ -45,14 +79,14 @@ export function OverviewDashboardClient() {
     accessToken,
   });
   const exportMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (format: OverviewExportFormat) => {
       if (!accessToken) {
         throw new Error("Authentication required.");
       }
 
       return exportOverviewRequest({
         state,
-        format: "xlsx",
+        format,
         accessToken,
       });
     },
@@ -69,6 +103,8 @@ export function OverviewDashboardClient() {
   });
 
   function replaceState(nextState: OverviewFilterState) {
+    persistOverviewFilterState(nextState);
+
     startTransition(() => {
       router.replace(createUrl(pathname, nextState), { scroll: false });
     });
@@ -111,10 +147,16 @@ export function OverviewDashboardClient() {
       isOverviewTableLoading={overviewTableQuery.isLoading}
       isOverviewTableFetching={overviewTableQuery.isFetching}
       overviewTableError={overviewTableQuery.error?.message ?? null}
+      onRetryOverview={() => {
+        void overviewQuery.refetch();
+      }}
+      onRetryOverviewTable={() => {
+        void overviewTableQuery.refetch();
+      }}
       onUpdateOverviewFilters={updateOverviewFilters}
       onUpdateTableState={updateTableState}
       onResetFilters={resetFilters}
-      onExport={() => exportMutation.mutate()}
+      onExport={(format) => exportMutation.mutate(format)}
       isExportPending={exportMutation.isPending}
     />
   );

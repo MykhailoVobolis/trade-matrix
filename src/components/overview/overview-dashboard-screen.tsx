@@ -6,6 +6,7 @@ import { OverviewMarketTable } from "@/components/overview/overview-market-table
 import { OverviewTopCardsGrid } from "@/components/overview/overview-top-cards-grid";
 import { OverviewTrendCard } from "@/components/overview/overview-trend-card";
 import type {
+  OverviewExportFormat,
   OverviewResponse,
   OverviewTableResponse,
 } from "@/lib/overview/overview-api";
@@ -26,6 +27,8 @@ export function OverviewDashboardScreen({
   isOverviewTableLoading,
   isOverviewTableFetching,
   overviewTableError,
+  onRetryOverview,
+  onRetryOverviewTable,
   onUpdateOverviewFilters,
   onUpdateTableState,
   onResetFilters,
@@ -42,10 +45,12 @@ export function OverviewDashboardScreen({
   isOverviewTableLoading: boolean;
   isOverviewTableFetching: boolean;
   overviewTableError: string | null;
+  onRetryOverview: () => void;
+  onRetryOverviewTable: () => void;
   onUpdateOverviewFilters: (patch: Partial<OverviewFilterValues>) => void;
   onUpdateTableState: (patch: Partial<OverviewTableState>) => void;
   onResetFilters: () => void;
-  onExport: () => void;
+  onExport: (format: OverviewExportFormat) => void;
   isExportPending: boolean;
 }) {
   return (
@@ -62,6 +67,7 @@ export function OverviewDashboardScreen({
         kpi={overview?.kpi}
         isLoading={isOverviewLoading}
         error={overviewError}
+        onRetry={onRetryOverview}
       />
 
       <OverviewTrendCard
@@ -70,6 +76,7 @@ export function OverviewDashboardScreen({
         isFetching={isOverviewFetching}
         error={overviewError}
         timeGrain={state.timeGrain}
+        onRetry={onRetryOverview}
         onTimeGrainChange={(timeGrain) =>
           onUpdateOverviewFilters({ timeGrain })
         }
@@ -78,6 +85,7 @@ export function OverviewDashboardScreen({
         data={overview?.marketStructure}
         isLoading={isOverviewLoading}
         error={overviewError}
+        onRetry={onRetryOverview}
       />
 
       <OverviewTopCardsGrid
@@ -88,6 +96,7 @@ export function OverviewDashboardScreen({
         topRegions={overview?.topRegions ?? []}
         isLoading={isOverviewLoading}
         error={overviewError}
+        onRetry={onRetryOverview}
       />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.8fr)_minmax(0,1.7fr)]">
@@ -95,6 +104,7 @@ export function OverviewDashboardScreen({
           insights={overview?.insights ?? []}
           isLoading={isOverviewLoading}
           error={overviewError}
+          onRetry={onRetryOverview}
         />
         <OverviewMarketTable
           rows={overviewTable?.items ?? []}
@@ -103,6 +113,7 @@ export function OverviewDashboardScreen({
           isFetching={isOverviewTableFetching}
           error={overviewTableError}
           tableState={state.table}
+          onRetry={onRetryOverviewTable}
           onUpdateTableState={onUpdateTableState}
         />
       </div>

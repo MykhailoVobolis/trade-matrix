@@ -126,6 +126,7 @@ export type OverviewTableItem = {
   uktzed: string | null;
   unit: string | null;
   quantity: number | null;
+  priceWithVat: number | null;
   salesWithVat: number | null;
   purchasesWithVat: number | null;
   marketShare: number | null;

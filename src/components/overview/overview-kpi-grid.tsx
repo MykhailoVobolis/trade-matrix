@@ -20,6 +20,7 @@ import {
   formatDelta,
   formatNumber,
 } from "@/lib/overview/overview-format";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const kpiCards = [
@@ -59,10 +60,12 @@ export function OverviewKpiGrid({
   kpi,
   isLoading,
   error,
+  onRetry,
 }: {
   kpi?: OverviewResponse["kpi"];
   isLoading: boolean;
   error: string | null;
+  onRetry?: () => void;
 }) {
   return (
     <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-6">
@@ -113,7 +116,14 @@ export function OverviewKpiGrid({
                   <Skeleton className="h-3.5 w-20" />
                 </>
               ) : error ? (
-                <p className="text-xs text-destructive">{error}</p>
+                <div className="space-y-2">
+                  <p className="text-xs text-destructive">{error}</p>
+                  {onRetry ? (
+                    <Button size="xs" variant="outline" onClick={onRetry}>
+                      Retry
+                    </Button>
+                  ) : null}
+                </div>
               ) : metric ? (
                 <p className="text-xs text-muted-foreground">
                   {formatDelta(metric)}

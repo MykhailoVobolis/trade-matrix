@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import type { OverviewInsight } from "@/lib/overview/overview-api";
 import { formatOverviewInsight } from "@/lib/overview/overview-format";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -7,10 +8,12 @@ export function OverviewMarketInsightsCard({
   insights,
   isLoading,
   error,
+  onRetry,
 }: {
   insights: OverviewInsight[];
   isLoading: boolean;
   error: string | null;
+  onRetry?: () => void;
 }) {
   return (
     <Card className="border border-border/70 shadow-none">
@@ -28,8 +31,13 @@ export function OverviewMarketInsightsCard({
             </div>
           ))
         ) : error ? (
-          <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3.5 py-3 text-sm text-destructive">
-            {error}
+          <div className="space-y-3 rounded-md border border-destructive/30 bg-destructive/5 px-3.5 py-3 text-sm text-destructive">
+            <p>{error}</p>
+            {onRetry ? (
+              <Button size="sm" variant="outline" onClick={onRetry}>
+                Retry
+              </Button>
+            ) : null}
           </div>
         ) : insights.length ? (
           insights.slice(0, 5).map((insight, index) => (

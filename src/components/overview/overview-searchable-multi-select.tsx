@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import type { OverviewFilterOption } from "@/lib/overview/overview-api";
+import { OverflowTooltipText } from "@/components/overview/overflow-tooltip-text";
 import { Button } from "@/components/ui/button";
 import {
   Command,
@@ -20,7 +21,6 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-
 type OverviewSearchableMultiSelectProps = {
   label: string;
   placeholder: string;
@@ -78,6 +78,7 @@ export function OverviewSearchableMultiSelect({
   const rootRef = useRef<HTMLDivElement | null>(null);
   const triggerRef = useRef<HTMLButtonElement | null>(null);
   const popupRef = useRef<HTMLDivElement | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
   const [popupStyle, setPopupStyle] = useState<{
     top: number;
     left: number;
@@ -102,6 +103,11 @@ export function OverviewSearchableMultiSelect({
 
     return Array.from(map.values());
   }, [options, selectedLabels, selectedValues]);
+  const triggerLabel = getTriggerLabel({
+    selectedValues,
+    selectedLabels,
+    placeholder,
+  });
 
   useEffect(() => {
     if (!isOpen) {
@@ -168,6 +174,30 @@ export function OverviewSearchableMultiSelect({
     };
   }, [isOpen]);
 
+  const handleListScroll = () => {
+    const listElement = listRef.current;
+
+    if (
+      !listElement ||
+      !isOpen ||
+      !hasMore ||
+      isLoading ||
+      isLoadingMore ||
+      !onLoadMore
+    ) {
+      return;
+    }
+
+    const distanceToBottom =
+      listElement.scrollHeight -
+      listElement.scrollTop -
+      listElement.clientHeight;
+
+    if (distanceToBottom <= 48) {
+      onLoadMore();
+    }
+  };
+
   return (
     <div ref={rootRef} className="relative w-full space-y-2">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
@@ -180,13 +210,7 @@ export function OverviewSearchableMultiSelect({
       >
         <span className="block w-full">
           <span className="flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-border/70 bg-background px-3 text-sm text-foreground shadow-sm shadow-black/[0.02] transition-colors aria-expanded:border-sidebar-primary/30 aria-expanded:bg-accent/30">
-            <span className="truncate">
-              {getTriggerLabel({
-                selectedValues,
-                selectedLabels,
-                placeholder,
-              })}
-            </span>
+            <OverflowTooltipText text={triggerLabel} className="truncate" />
             <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
           </span>
         </span>
@@ -209,7 +233,7 @@ export function OverviewSearchableMultiSelect({
                   onValueChange={onSearchChange}
                   placeholder={`Search ${label.toLowerCase()}...`}
                 />
-                <CommandList>
+                <CommandList ref={listRef} onScroll={handleListScroll}>
                   {isLoading ? (
                     <div className="flex items-center gap-2 px-3 py-6 text-sm text-muted-foreground">
                       <LoaderCircleIcon className="size-4 animate-spin" />
@@ -253,32 +277,29 @@ export function OverviewSearchableMultiSelect({
                                   <SquareIcon className="size-3 text-transparent" />
                                 )}
                               </span>
-                              <span className="min-w-0 flex-1 truncate">
-                                {option.label}
+                              <span className="min-w-0 flex-1">
+                                <OverflowTooltipText
+                                  text={option.label}
+                                  className="block truncate"
+                                />
                               </span>
                             </CommandItem>
                           );
                         })}
                       </CommandGroup>
 
-                      {hasMore ? (
-                        <div className="border-t border-border/70 p-2">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            className="w-full justify-center"
-                            disabled={isLoadingMore}
-                            onClick={onLoadMore}
-                          >
-                            {isLoadingMore ? (
-                              <>
-                                <LoaderCircleIcon className="size-4 animate-spin" />
-                                Loading more...
-                              </>
-                            ) : (
-                              "Load more"
-                            )}
-                          </Button>
+                      {hasMore || isLoadingMore ? (
+                        <div className="border-t border-border/70 px-3 py-3">
+                          <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                            <LoaderCircleIcon
+                              className={`size-4 ${isLoadingMore ? "animate-spin" : ""}`}
+                            />
+                            <span>
+                              {isLoadingMore
+                                ? "Loading more..."
+                                : "Scroll to load more"}
+                            </span>
+                          </div>
                         </div>
                       ) : null}
                     </>

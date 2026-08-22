@@ -1,4 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -25,6 +26,7 @@ export function OverviewTrendCard({
   isFetching,
   error,
   timeGrain,
+  onRetry,
   onTimeGrainChange,
 }: {
   trend: OverviewTrendItem[];
@@ -32,6 +34,7 @@ export function OverviewTrendCard({
   isFetching: boolean;
   error: string | null;
   timeGrain: OverviewTimeGrain | "";
+  onRetry?: () => void;
   onTimeGrainChange: (timeGrain: OverviewTimeGrain | "") => void;
 }) {
   const resolvedTimeGrain: OverviewTimeGrain = timeGrain || "MONTH";
@@ -106,8 +109,13 @@ export function OverviewTrendCard({
           {isLoading ? (
             <Skeleton className="h-[320px] w-full rounded-md" />
           ) : error ? (
-            <div className="flex h-[320px] items-center justify-center text-sm text-destructive">
-              {error}
+            <div className="flex h-[320px] flex-col items-center justify-center gap-3 text-sm text-destructive">
+              <span>{error}</span>
+              {onRetry ? (
+                <Button variant="outline" size="sm" onClick={onRetry}>
+                  Retry
+                </Button>
+              ) : null}
             </div>
           ) : trend.length === 0 ? (
             <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
@@ -126,14 +134,12 @@ export function OverviewTrendCard({
                       style={{
                         height: `${Math.max(8, (item.salesWithVat / maxValue) * 100)}%`,
                       }}
-                      title={formatCompactCurrency(item.salesWithVat)}
                     />
                     <div
                       className={`${barWidthClass} rounded-t-[4px] bg-sidebar-primary/25`}
                       style={{
                         height: `${Math.max(8, (item.purchasesWithVat / maxValue) * 100)}%`,
                       }}
-                      title={formatCompactCurrency(item.purchasesWithVat)}
                     />
                   </div>
                   <div className="w-full space-y-1 text-center">

@@ -17,6 +17,18 @@ export function formatCompactCurrency(value: number | null | undefined) {
   }).format(value);
 }
 
+export function formatFullCurrency(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "—";
+  }
+
+  return new Intl.NumberFormat("uk-UA", {
+    style: "currency",
+    currency: "UAH",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
 export function formatPercent(value: number | null | undefined) {
   if (typeof value !== "number" || !Number.isFinite(value)) {
     return "—";
@@ -52,6 +64,48 @@ export function formatQuantity(value: number | null | undefined) {
   }).format(value);
 }
 
+export function formatFullPercent(value: number | null | undefined) {
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    return "—";
+  }
+
+  return `${value.toFixed(2)}%`;
+}
+
+export function formatInsightPercent(
+  value: number | string | null | undefined,
+) {
+  const numericValue =
+    typeof value === "number"
+      ? value
+      : typeof value === "string"
+        ? Number(value)
+        : NaN;
+
+  if (!Number.isFinite(numericValue)) {
+    return "—";
+  }
+
+  const roundedValue = Math.round(numericValue * 10) / 10;
+
+  return Number.isInteger(roundedValue)
+    ? String(roundedValue)
+    : roundedValue.toFixed(1);
+}
+
+export function formatQuantityWithUnit(
+  quantity: number | null | undefined,
+  unit: string | null | undefined,
+) {
+  const formattedQuantity = formatQuantity(quantity);
+
+  if (formattedQuantity === "—") {
+    return formattedQuantity;
+  }
+
+  return unit ? `${formattedQuantity} ${unit}` : formattedQuantity;
+}
+
 export function formatOverviewInsight(insight: OverviewInsight) {
   const payload = insight.payload;
 
@@ -65,9 +119,9 @@ export function formatOverviewInsight(insight: OverviewInsight) {
     case "PEAK_PURCHASES_PERIOD":
       return `Пік закупівель — ${payload.periodLabel ?? "—"}`;
     case "BUYER_CONCENTRATION":
-      return `TOP-5 покупців формують ${payload.share ?? "—"}% продажів`;
+      return `TOP-5 покупців формують ${formatInsightPercent(payload.top5Share)}% продажів`;
     case "SUPPLIER_CONCENTRATION":
-      return `TOP-5 постачальників формують ${payload.share ?? "—"}% закупівель`;
+      return `TOP-5 постачальників формують ${formatInsightPercent(payload.top5Share)}% закупівель`;
     case "TOP_REGION":
       return `Найбільший регіон попиту — ${payload.regionName ?? "—"}`;
     case "TOP_UKTZED":

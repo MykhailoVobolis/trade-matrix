@@ -6,6 +6,7 @@ import {
   UsersIcon,
 } from "lucide-react";
 
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { OverviewMarketStructure } from "@/lib/overview/overview-api";
 import {
@@ -51,10 +52,12 @@ export function OverviewMarketStructureCard({
   data,
   isLoading,
   error,
+  onRetry,
 }: {
   data?: OverviewMarketStructure;
   isLoading: boolean;
   error: string | null;
+  onRetry?: () => void;
 }) {
   const values = data
     ? [
@@ -131,7 +134,14 @@ export function OverviewMarketStructureCard({
                     <Skeleton className="h-4 w-1/2" />
                   </>
                 ) : error ? (
-                  <p className="text-xs text-destructive">{error}</p>
+                  <div className="space-y-2">
+                    <p className="text-xs text-destructive">{error}</p>
+                    {onRetry ? (
+                      <Button size="xs" variant="outline" onClick={onRetry}>
+                        Retry
+                      </Button>
+                    ) : null}
+                  </div>
                 ) : (
                   (() => {
                     const value = values[index];

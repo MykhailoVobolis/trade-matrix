@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarRangeIcon, ChevronDownIcon, DownloadIcon } from "lucide-react";
+import {
+  CalendarRangeIcon,
+  ChevronDownIcon,
+  DownloadIcon,
+  FileSpreadsheetIcon,
+  FileTextIcon,
+} from "lucide-react";
 
 import { OverviewSearchableMultiSelect } from "@/components/overview/overview-searchable-multi-select";
 import { Button } from "@/components/ui/button";
@@ -10,11 +16,18 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type {
   OverviewFilterState,
   OverviewFilterValues,
 } from "@/lib/overview/overview-url-state";
 import { useOverviewFilterOptionsInfiniteQuery } from "@/lib/overview/overview-query";
+import type { OverviewExportFormat } from "@/lib/overview/overview-api";
 
 const primaryFilters = [
   {
@@ -48,6 +61,40 @@ const primaryFilters = [
     dimension: "suppliers",
   },
 ] as const;
+
+const overviewFilterLabelStorageKeyPrefix = "overview-filter-labels";
+
+function getFilterLabelStorageKey(
+  dimension: "buyers" | "suppliers" | "products" | "uktzed" | "buyerRegions",
+) {
+  return `${overviewFilterLabelStorageKeyPrefix}:${dimension}`;
+}
+
+function readFilterLabelCache(
+  dimension: "buyers" | "suppliers" | "products" | "uktzed" | "buyerRegions",
+) {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  const rawValue = window.localStorage.getItem(
+    getFilterLabelStorageKey(dimension),
+  );
+
+  if (!rawValue) {
+    return {};
+  }
+
+  try {
+    const parsedValue = JSON.parse(rawValue);
+
+    if (parsedValue && typeof parsedValue === "object") {
+      return parsedValue as Record<string, string>;
+    }
+  } catch {}
+
+  return {};
+}
 
 function formatDateLabel(value: string) {
   if (!value) {
@@ -206,6 +253,9 @@ function SearchableFilterField({
 }) {
   const selectedValues = state[filterKey];
   const [searchValue, setSearchValue] = useState("");
+  const [labelCache, setLabelCache] = useState<Record<string, string>>(() =>
+    readFilterLabelCache(dimension),
+  );
   const debouncedSearchValue = useDebouncedValue(searchValue, 350);
   const optionsState = useMemo(
     () => ({
@@ -231,23 +281,49 @@ function SearchableFilterField({
   const selectedLabels = useMemo(() => {
     const labels: Record<string, string> = {};
 
-    optionItems.forEach((item) => {
-      if (selectedValues.includes(item.value)) {
-        labels[item.value] = item.label;
+    selectedValues.forEach((value) => {
+      const matchedOption = optionItems.find((item) => item.value === value);
+      const resolvedLabel = matchedOption?.label ?? labelCache[value];
+
+      if (resolvedLabel) {
+        labels[value] = resolvedLabel;
       }
     });
 
     return labels;
-  }, [optionItems, selectedValues]);
+  }, [labelCache, optionItems, selectedValues]);
 
   const handleChange = useCallback(
     (values: string[]) => {
+      setLabelCache((current) => {
+        const next = { ...current };
+
+        optionItems.forEach((item) => {
+          if (values.includes(item.value)) {
+            next[item.value] = item.label;
+          }
+        });
+
+        return next;
+      });
+
       onUpdateOverviewFilters({
         [filterKey]: values,
       } as Partial<OverviewFilterValues>);
     },
-    [filterKey, onUpdateOverviewFilters],
+    [filterKey, onUpdateOverviewFilters, optionItems],
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(
+      getFilterLabelStorageKey(dimension),
+      JSON.stringify(labelCache),
+    );
+  }, [dimension, labelCache]);
 
   return (
     <OverviewSearchableMultiSelect
@@ -283,7 +359,7 @@ export function OverviewFilters({
   accessToken: string | null;
   onUpdateOverviewFilters: (patch: Partial<OverviewFilterValues>) => void;
   onResetFilters: () => void;
-  onExport: () => void;
+  onExport: (format: OverviewExportFormat) => void;
   isExportPending: boolean;
 }) {
   const hasOverviewFilters =
@@ -346,14 +422,28 @@ export function OverviewFilters({
           >
             Очистити фільтри
           </Button>
-          <Button
-            className="px-3 shadow-sm shadow-black/[0.02]"
-            disabled={!accessToken || isExportPending}
-            onClick={onExport}
-          >
-            <DownloadIcon />
-            {isExportPending ? "Exporting..." : "Експорт"}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              disabled={!accessToken || isExportPending}
+              render={
+                <Button className="px-3 shadow-sm shadow-black/[0.02]">
+                  <DownloadIcon />
+                  {isExportPending ? "Exporting..." : "Експорт"}
+                  <ChevronDownIcon className="size-4 text-current/75" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end" className="min-w-40">
+              <DropdownMenuItem onClick={() => onExport("xlsx")}>
+                <FileSpreadsheetIcon />
+                XLSX
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => onExport("csv")}>
+                <FileTextIcon />
+                CSV
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

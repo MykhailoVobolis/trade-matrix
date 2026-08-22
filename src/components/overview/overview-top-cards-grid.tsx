@@ -1,6 +1,8 @@
 import Link from "next/link";
 
+import { OverflowTooltipText } from "@/components/overview/overflow-tooltip-text";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import type {
   OverviewProductRankingItem,
   OverviewRankingItem,
@@ -41,6 +43,7 @@ export function OverviewTopCardsGrid({
   topRegions,
   isLoading,
   error,
+  onRetry,
 }: {
   state: OverviewFilterState;
   topBuyers: OverviewRankingItem[];
@@ -49,6 +52,7 @@ export function OverviewTopCardsGrid({
   topRegions: OverviewRegionRankingItem[];
   isLoading: boolean;
   error: string | null;
+  onRetry?: () => void;
 }) {
   const rows = [topBuyers, topSuppliers, topProducts, topRegions];
   const gridClassName =
@@ -107,7 +111,14 @@ export function OverviewTopCardsGrid({
                 </div>
               ))
             ) : error ? (
-              <p className="text-sm text-destructive">{error}</p>
+              <div className="space-y-3">
+                <p className="text-sm text-destructive">{error}</p>
+                {onRetry ? (
+                  <Button size="sm" variant="outline" onClick={onRetry}>
+                    Retry
+                  </Button>
+                ) : null}
+              </div>
             ) : rows[cardIndex].length ? (
               rows[cardIndex].slice(0, 5).map((item, index) => {
                 const href =
@@ -161,13 +172,15 @@ export function OverviewTopCardsGrid({
                     className={`grid ${gridClassName} items-center gap-4 rounded-md border-b border-border/60 px-1 py-2 transition-colors hover:bg-sidebar-accent/45 last:border-b-0`}
                   >
                     <span className="min-w-0">
-                      <span className="block truncate text-sm text-foreground">
-                        {name}
-                      </span>
+                      <OverflowTooltipText
+                        text={name}
+                        className="block truncate text-sm text-foreground"
+                      />
                       {secondaryText ? (
-                        <span className="mt-0.5 block truncate text-[11px] text-muted-foreground">
-                          {secondaryText}
-                        </span>
+                        <OverflowTooltipText
+                          text={secondaryText}
+                          className="mt-0.5 block truncate text-[11px] text-muted-foreground"
+                        />
                       ) : null}
                     </span>
                     <span className="whitespace-nowrap text-sm text-foreground">

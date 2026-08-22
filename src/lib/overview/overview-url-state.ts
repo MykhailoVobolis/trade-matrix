@@ -38,12 +38,14 @@ export type OverviewFilterState = {
 
 export type OverviewFilterValues = Omit<OverviewFilterState, "table">;
 
+export const OVERVIEW_FILTER_STATE_STORAGE_KEY = "overview-filter-state";
+
 type SearchParamsReader = {
   get(name: string): string | null;
   getAll(name: string): string[];
 };
 
-const TABLE_LIMIT_OPTIONS = new Set([5, 10, 20]);
+const TABLE_LIMIT_OPTIONS = new Set([5, 10, 20, 50, 100]);
 const SORT_BY_OPTIONS = new Set<OverviewTableSortBy>([
   "period",
   "buyerRegion",
@@ -313,4 +315,37 @@ export function normalizeOverviewFilterState(
       sortDirection: state.table.sortDirection === "asc" ? "asc" : "desc",
     },
   };
+}
+
+export function readPersistedOverviewFilterState() {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const rawValue = window.localStorage.getItem(
+    OVERVIEW_FILTER_STATE_STORAGE_KEY,
+  );
+
+  if (!rawValue) {
+    return null;
+  }
+
+  try {
+    return normalizeOverviewFilterState(
+      JSON.parse(rawValue) as OverviewFilterState,
+    );
+  } catch {
+    return null;
+  }
+}
+
+export function persistOverviewFilterState(state: OverviewFilterState) {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.localStorage.setItem(
+    OVERVIEW_FILTER_STATE_STORAGE_KEY,
+    JSON.stringify(normalizeOverviewFilterState(state)),
+  );
 }
