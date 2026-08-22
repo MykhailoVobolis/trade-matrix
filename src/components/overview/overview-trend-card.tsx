@@ -6,6 +6,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { OverviewTrendItem } from "@/lib/overview/overview-api";
+import { formatCompactCurrency } from "@/lib/overview/overview-format";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { OverviewTimeGrain } from "@/lib/overview/overview-url-state";
 
@@ -20,12 +22,30 @@ const timeGrainOptions: Array<{
 ];
 
 export function OverviewTrendCard({
+  trend,
+  isLoading,
+  isFetching,
+  error,
   timeGrain,
   onTimeGrainChange,
 }: {
+  trend: OverviewTrendItem[];
+  isLoading: boolean;
+  isFetching: boolean;
+  error: string | null;
   timeGrain: OverviewTimeGrain | "";
   onTimeGrainChange: (timeGrain: OverviewTimeGrain | "") => void;
 }) {
+  const maxValue = Math.max(
+    1,
+    ...trend.flatMap((item) => [
+      item.salesWithVat,
+      item.purchasesWithVat,
+      item.comparisonSalesWithVat ?? 0,
+      item.comparisonPurchasesWithVat ?? 0,
+    ]),
+  );
+
   return (
     <Card className="border border-border/70 shadow-none">
       <CardHeader className="flex flex-col gap-3 border-b border-border/70 pb-4 lg:flex-row lg:items-center lg:justify-between">
@@ -75,8 +95,55 @@ export function OverviewTrendCard({
         </div>
 
         <div className="rounded-md border border-border/70 bg-muted/15 p-4">
-          <Skeleton className="h-[320px] w-full rounded-md" />
+          {isLoading ? (
+            <Skeleton className="h-[320px] w-full rounded-md" />
+          ) : error ? (
+            <div className="flex h-[320px] items-center justify-center text-sm text-destructive">
+              {error}
+            </div>
+          ) : trend.length === 0 ? (
+            <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
+              No trend data
+            </div>
+          ) : (
+            <div className="flex h-[320px] items-end gap-3 overflow-x-auto">
+              {trend.map((item) => (
+                <div
+                  key={`${item.periodStart}-${item.periodLabel}`}
+                  className="flex min-w-24 flex-1 flex-col items-center gap-2"
+                >
+                  <div className="flex h-60 items-end gap-2">
+                    <div
+                      className="w-7 rounded-t-md bg-sidebar-primary"
+                      style={{
+                        height: `${Math.max(8, (item.salesWithVat / maxValue) * 100)}%`,
+                      }}
+                      title={formatCompactCurrency(item.salesWithVat)}
+                    />
+                    <div
+                      className="w-7 rounded-t-md bg-sidebar-primary/25"
+                      style={{
+                        height: `${Math.max(8, (item.purchasesWithVat / maxValue) * 100)}%`,
+                      }}
+                      title={formatCompactCurrency(item.purchasesWithVat)}
+                    />
+                  </div>
+                  <div className="space-y-1 text-center">
+                    <p className="text-[11px] font-medium text-foreground">
+                      {item.periodLabel}
+                    </p>
+                    <p className="text-[10px] text-muted-foreground">
+                      {formatCompactCurrency(item.salesWithVat)}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
+        {isFetching && !isLoading ? (
+          <p className="text-xs text-muted-foreground">Updating overview...</p>
+        ) : null}
       </CardContent>
     </Card>
   );

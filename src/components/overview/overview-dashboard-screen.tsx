@@ -6,6 +6,10 @@ import { OverviewMarketTable } from "@/components/overview/overview-market-table
 import { OverviewTopCardsGrid } from "@/components/overview/overview-top-cards-grid";
 import { OverviewTrendCard } from "@/components/overview/overview-trend-card";
 import type {
+  OverviewResponse,
+  OverviewTableResponse,
+} from "@/lib/overview/overview-api";
+import type {
   OverviewFilterState,
   OverviewFilterValues,
   OverviewTableState,
@@ -13,39 +17,92 @@ import type {
 
 export function OverviewDashboardScreen({
   state,
+  accessToken,
+  overview,
+  overviewTable,
+  isOverviewLoading,
+  isOverviewFetching,
+  overviewError,
+  isOverviewTableLoading,
+  isOverviewTableFetching,
+  overviewTableError,
   onUpdateOverviewFilters,
   onUpdateTableState,
   onResetFilters,
+  onExport,
+  isExportPending,
 }: {
   state: OverviewFilterState;
+  accessToken: string | null;
+  overview?: OverviewResponse;
+  overviewTable?: OverviewTableResponse;
+  isOverviewLoading: boolean;
+  isOverviewFetching: boolean;
+  overviewError: string | null;
+  isOverviewTableLoading: boolean;
+  isOverviewTableFetching: boolean;
+  overviewTableError: string | null;
   onUpdateOverviewFilters: (patch: Partial<OverviewFilterValues>) => void;
   onUpdateTableState: (patch: Partial<OverviewTableState>) => void;
   onResetFilters: () => void;
+  onExport: () => void;
+  isExportPending: boolean;
 }) {
   return (
     <section className="flex w-full flex-1 flex-col gap-4">
       <OverviewFilters
         state={state}
+        accessToken={accessToken}
         onUpdateOverviewFilters={onUpdateOverviewFilters}
         onResetFilters={onResetFilters}
+        onExport={onExport}
+        isExportPending={isExportPending}
       />
-      <OverviewKpiGrid />
+      <OverviewKpiGrid
+        kpi={overview?.kpi}
+        isLoading={isOverviewLoading}
+        error={overviewError}
+      />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.9fr)_minmax(320px,0.95fr)]">
         <OverviewTrendCard
+          trend={overview?.trend ?? []}
+          isLoading={isOverviewLoading}
+          isFetching={isOverviewFetching}
+          error={overviewError}
           timeGrain={state.timeGrain}
           onTimeGrainChange={(timeGrain) =>
             onUpdateOverviewFilters({ timeGrain })
           }
         />
-        <OverviewMarketStructureCard />
+        <OverviewMarketStructureCard
+          data={overview?.marketStructure}
+          isLoading={isOverviewLoading}
+          error={overviewError}
+        />
       </div>
 
-      <OverviewTopCardsGrid />
+      <OverviewTopCardsGrid
+        topBuyers={overview?.topBuyers ?? []}
+        topSuppliers={overview?.topSuppliers ?? []}
+        topProducts={overview?.topProducts ?? []}
+        topRegions={overview?.topRegions ?? []}
+        isLoading={isOverviewLoading}
+        error={overviewError}
+      />
 
       <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.8fr)_minmax(0,1.7fr)]">
-        <OverviewMarketInsightsCard />
+        <OverviewMarketInsightsCard
+          insights={overview?.insights ?? []}
+          isLoading={isOverviewLoading}
+          error={overviewError}
+        />
         <OverviewMarketTable
+          rows={overviewTable?.items ?? []}
+          total={overviewTable?.total ?? 0}
+          isLoading={isOverviewTableLoading}
+          isFetching={isOverviewTableFetching}
+          error={overviewTableError}
           tableState={state.table}
           onUpdateTableState={onUpdateTableState}
         />

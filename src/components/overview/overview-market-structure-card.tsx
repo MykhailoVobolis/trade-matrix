@@ -1,4 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { OverviewMarketStructure } from "@/lib/overview/overview-api";
+import {
+  formatCompactCurrency,
+  formatPercent,
+} from "@/lib/overview/overview-format";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const structureItems = [
@@ -10,7 +15,38 @@ const structureItems = [
   "Частка TOP-5 постачальників",
 ] as const;
 
-export function OverviewMarketStructureCard() {
+export function OverviewMarketStructureCard({
+  data,
+  isLoading,
+  error,
+}: {
+  data?: OverviewMarketStructure;
+  isLoading: boolean;
+  error: string | null;
+}) {
+  const values = data
+    ? [
+        data.topBuyer
+          ? `${data.topBuyer.name} • ${formatCompactCurrency(data.topBuyer.amount)}`
+          : null,
+        data.topSupplier
+          ? `${data.topSupplier.name} • ${formatCompactCurrency(data.topSupplier.amount)}`
+          : null,
+        data.topBuyerRegion
+          ? `${data.topBuyerRegion.name} • ${formatCompactCurrency(data.topBuyerRegion.amount)}`
+          : null,
+        data.topUKTZED
+          ? `${data.topUKTZED.code ?? data.topUKTZED.name} • ${formatCompactCurrency(data.topUKTZED.amount)}`
+          : null,
+        data.top5BuyersShare !== null
+          ? `${formatPercent(data.top5BuyersShare)} від продажів`
+          : null,
+        data.top5SuppliersShare !== null
+          ? `${formatPercent(data.top5SuppliersShare)} від закупівель`
+          : null,
+      ]
+    : [];
+
   return (
     <Card className="border border-border/70 shadow-none">
       <CardHeader className="pb-3.5">
@@ -24,8 +60,18 @@ export function OverviewMarketStructureCard() {
           >
             <p className="text-xs font-medium text-muted-foreground">{item}</p>
             <div className="mt-2 space-y-2">
-              <Skeleton className="h-5 w-2/3" />
-              <Skeleton className="h-4 w-1/2" />
+              {isLoading ? (
+                <>
+                  <Skeleton className="h-5 w-2/3" />
+                  <Skeleton className="h-4 w-1/2" />
+                </>
+              ) : error ? (
+                <p className="text-xs text-destructive">{error}</p>
+              ) : (
+                <p className="text-sm text-foreground">
+                  {values[structureItems.indexOf(item)] ?? "—"}
+                </p>
+              )}
             </div>
           </div>
         ))}

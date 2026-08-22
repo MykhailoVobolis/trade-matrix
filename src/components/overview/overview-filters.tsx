@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useDeferredValue, useState, type ReactNode } from "react";
 import {
   CalendarRangeIcon,
   CheckIcon,
@@ -23,6 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { OverviewFilterOptionsDimension } from "@/lib/overview/overview-api";
+import { useOverviewFilterOptionsQuery } from "@/lib/overview/overview-query";
 import type {
   OverviewComparisonMode,
   OverviewFilterState,
@@ -35,26 +37,31 @@ const primaryFilters = [
     key: "uktzed",
     label: "UKTZED",
     placeholder: "Наприклад: 2710, 1001",
+    dimension: "uktzed",
   },
   {
     key: "products",
     label: "Продукт / Номенклатура",
     placeholder: "Наприклад: ДП, Бензин",
+    dimension: "products",
   },
   {
     key: "buyerRegionCodes",
     label: "Регіон покупця",
     placeholder: "Наприклад: 32, 80",
+    dimension: "buyerRegions",
   },
   {
     key: "buyerTaxNumbers",
     label: "Покупець",
     placeholder: "Наприклад: 38333525, 0",
+    dimension: "buyers",
   },
   {
     key: "supplierTaxNumbers",
     label: "Постачальник",
     placeholder: "Наприклад: 41784512, 0",
+    dimension: "suppliers",
   },
 ] as const;
 
@@ -120,19 +127,38 @@ function MultiValueFilterPopover({
   value,
   values,
   placeholder,
+  dimension,
+  filterState,
+  accessToken,
   onApply,
 }: {
   label: string;
   value: string;
   values: string[];
   placeholder: string;
+  dimension: OverviewFilterOptionsDimension;
+  filterState: OverviewFilterState;
+  accessToken: string | null;
   onApply: (values: string[]) => void;
 }) {
+  const [isOpen, setIsOpen] = useState(false);
   const [draft, setDraft] = useState(values.join(", "));
+  const deferredDraft = useDeferredValue(draft);
+  const optionsQuery = useOverviewFilterOptionsQuery({
+    state: filterState,
+    dimension,
+    search: deferredDraft,
+    page: 1,
+    limit: 8,
+    accessToken,
+    enabled: isOpen,
+  });
 
   return (
     <Popover
+      open={isOpen}
       onOpenChange={(open) => {
+        setIsOpen(open);
         if (open) {
           setDraft(values.join(", "));
         }
@@ -149,8 +175,8 @@ function MultiValueFilterPopover({
         <div className="space-y-1">
           <p className="text-sm font-medium text-foreground">{label}</p>
           <p className="text-xs text-muted-foreground">
-            Тимчасово редагується списком через кому. URL already stays
-            canonical.
+            Значення зберігаються по `value`, а options already scoped current
+            filters.
           </p>
         </div>
         <Input
@@ -158,6 +184,47 @@ function MultiValueFilterPopover({
           onChange={(event) => setDraft(event.target.value)}
           placeholder={placeholder}
         />
+        <div className="space-y-2">
+          <p className="text-xs font-medium text-muted-foreground">
+            Suggested options
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {optionsQuery.isLoading ? (
+              <span className="text-xs text-muted-foreground">Loading...</span>
+            ) : optionsQuery.error ? (
+              <span className="text-xs text-destructive">
+                {optionsQuery.error.message}
+              </span>
+            ) : optionsQuery.data?.items.length ? (
+              optionsQuery.data.items.map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  className={cn(
+                    "inline-flex items-center rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs transition-colors hover:border-sidebar-primary/50 hover:text-foreground",
+                    values.includes(item.value) &&
+                      "border-sidebar-primary text-foreground",
+                  )}
+                  onClick={() => {
+                    const nextValues = values.includes(item.value)
+                      ? values.filter(
+                          (currentValue) => currentValue !== item.value,
+                        )
+                      : [...values, item.value];
+                    setDraft(nextValues.join(", "));
+                    onApply(nextValues);
+                  }}
+                >
+                  {item.label}
+                </button>
+              ))
+            ) : (
+              <span className="text-xs text-muted-foreground">
+                No options found.
+              </span>
+            )}
+          </div>
+        </div>
         <div className="flex items-center justify-between gap-2">
           <Button
             type="button"
@@ -200,12 +267,18 @@ const comparisonModeLabels: Record<OverviewComparisonMode, string> = {
 
 export function OverviewFilters({
   state,
+  accessToken,
   onUpdateOverviewFilters,
   onResetFilters,
+  onExport,
+  isExportPending,
 }: {
   state: OverviewFilterState;
+  accessToken: string | null;
   onUpdateOverviewFilters: (patch: Partial<OverviewFilterValues>) => void;
   onResetFilters: () => void;
+  onExport: () => void;
+  isExportPending: boolean;
 }) {
   const hasOverviewFilters =
     state.comparisonMode !== "PREVIOUS_PERIOD" ||
@@ -328,9 +401,13 @@ export function OverviewFilters({
           >
             Очистити фільтри
           </Button>
-          <Button className="px-3 shadow-sm shadow-black/[0.02]" disabled>
+          <Button
+            className="px-3 shadow-sm shadow-black/[0.02]"
+            disabled={!accessToken || isExportPending}
+            onClick={onExport}
+          >
             <DownloadIcon />
-            Експорт
+            {isExportPending ? "Exporting..." : "Експорт"}
           </Button>
         </div>
       </div>
@@ -343,6 +420,9 @@ export function OverviewFilters({
             value={formatFilterSummary(state[filter.key])}
             values={state[filter.key]}
             placeholder={filter.placeholder}
+            dimension={filter.dimension}
+            filterState={state}
+            accessToken={accessToken}
             onApply={(values) =>
               onUpdateOverviewFilters({
                 [filter.key]: values,

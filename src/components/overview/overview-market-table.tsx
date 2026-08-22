@@ -21,6 +21,8 @@ import type {
   OverviewTableSortBy,
   OverviewTableState,
 } from "@/lib/overview/overview-url-state";
+import type { OverviewTableItem } from "@/lib/overview/overview-api";
+import { formatOverviewTableCell } from "@/lib/overview/overview-format";
 
 const tableColumns = [
   "Період",
@@ -59,12 +61,26 @@ const sortDirectionLabels: Record<OverviewSortDirection, string> = {
 };
 
 export function OverviewMarketTable({
+  rows,
+  total,
+  isLoading,
+  isFetching,
+  error,
   tableState,
   onUpdateTableState,
 }: {
+  rows: OverviewTableItem[];
+  total: number;
+  isLoading: boolean;
+  isFetching: boolean;
+  error: string | null;
   tableState: OverviewTableState;
   onUpdateTableState: (patch: Partial<OverviewTableState>) => void;
 }) {
+  const pageSummaryStart =
+    total === 0 ? 0 : (tableState.page - 1) * tableState.limit + 1;
+  const pageSummaryEnd = Math.min(tableState.page * tableState.limit, total);
+
   return (
     <Card className="border border-border/70 shadow-none">
       <CardHeader className="flex flex-col gap-3 border-b border-border/70 pb-3.5 lg:flex-row lg:items-start lg:justify-between">
@@ -128,34 +144,89 @@ export function OverviewMarketTable({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {Array.from({ length: 5 }).map((_, rowIndex) => (
-                <TableRow key={rowIndex} className="border-border/70">
-                  {tableColumns.map((column, columnIndex) => (
-                    <TableCell
-                      key={`${column}-${columnIndex}`}
-                      className="px-4 py-3"
-                    >
-                      <span className="inline-block h-4 rounded bg-muted/70 align-middle text-transparent">
-                        {columnIndex === 0
-                          ? "01.01.2025 — 31.01.2025"
-                          : columnIndex === 1
-                            ? "Київська обл."
-                            : columnIndex === 5
-                              ? "2710"
-                              : columnIndex > 7
-                                ? "₴818.17M"
-                                : "— — — — — —"}
-                      </span>
-                    </TableCell>
-                  ))}
+              {isLoading ? (
+                Array.from({ length: tableState.limit }).map((_, rowIndex) => (
+                  <TableRow key={rowIndex} className="border-border/70">
+                    {tableColumns.map((column, columnIndex) => (
+                      <TableCell
+                        key={`${column}-${columnIndex}`}
+                        className="px-4 py-3"
+                      >
+                        <span className="inline-block h-4 rounded bg-muted/70 align-middle text-transparent">
+                          loading
+                        </span>
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                ))
+              ) : error ? (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell
+                    colSpan={tableColumns.length}
+                    className="px-4 py-10 text-center text-sm text-destructive"
+                  >
+                    {error}
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : rows.length ? (
+                rows.map((row, rowIndex) => (
+                  <TableRow
+                    key={`${row.period}-${rowIndex}`}
+                    className="border-border/70"
+                  >
+                    <TableCell className="px-4 py-3">
+                      {formatOverviewTableCell(row, "period")}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {formatOverviewTableCell(row, "buyerRegion")}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {formatOverviewTableCell(row, "buyer")}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {formatOverviewTableCell(row, "supplier")}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {formatOverviewTableCell(row, "product")}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {formatOverviewTableCell(row, "uktzed")}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {formatOverviewTableCell(row, "quantity")}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {formatOverviewTableCell(row, "unit")}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {formatOverviewTableCell(row, "salesWithVat")}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {formatOverviewTableCell(row, "purchasesWithVat")}
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      {formatOverviewTableCell(row, "marketShare")}
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow className="hover:bg-transparent">
+                  <TableCell
+                    colSpan={tableColumns.length}
+                    className="px-4 py-10 text-center text-sm text-muted-foreground"
+                  >
+                    No overview rows match the current filters.
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
 
         <div className="flex flex-col gap-3 border-t border-border/70 pt-3.5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">Showing 1-5 of 5 rows</p>
+          <p className="text-sm text-muted-foreground">
+            Showing {pageSummaryStart}-{pageSummaryEnd} of {total} rows
+          </p>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <div className="flex items-center gap-1">
               <Button
@@ -182,6 +253,7 @@ export function OverviewMarketTable({
               <Button
                 variant="outline"
                 size="icon-sm"
+                disabled={total === 0 || pageSummaryEnd >= total}
                 onClick={() =>
                   onUpdateTableState({
                     page: tableState.page + 1,
@@ -212,6 +284,9 @@ export function OverviewMarketTable({
             </Select>
           </div>
         </div>
+        {isFetching && !isLoading ? (
+          <p className="text-xs text-muted-foreground">Updating table...</p>
+        ) : null}
       </CardContent>
     </Card>
   );

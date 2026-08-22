@@ -14,6 +14,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import type { OverviewResponse } from "@/lib/overview/overview-api";
+import {
+  formatCompactCurrency,
+  formatDelta,
+  formatNumber,
+} from "@/lib/overview/overview-format";
 import { Skeleton } from "@/components/ui/skeleton";
 
 const kpiCards = [
@@ -49,11 +55,33 @@ const kpiCards = [
   },
 ] as const;
 
-export function OverviewKpiGrid() {
+export function OverviewKpiGrid({
+  kpi,
+  isLoading,
+  error,
+}: {
+  kpi?: OverviewResponse["kpi"];
+  isLoading: boolean;
+  error: string | null;
+}) {
   return (
     <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-6">
-      {kpiCards.map((card) => {
+      {kpiCards.map((card, index) => {
         const Icon = card.icon;
+        const metric = kpi
+          ? [
+              kpi.salesWithVat,
+              kpi.purchasesWithVat,
+              kpi.balance,
+              kpi.activeBuyers,
+              kpi.activeSuppliers,
+              kpi.salesRegions,
+            ][index]
+          : undefined;
+        const value =
+          index < 3
+            ? formatCompactCurrency(metric?.current)
+            : formatNumber(metric?.current);
 
         return (
           <Card
@@ -68,7 +96,7 @@ export function OverviewKpiGrid() {
                     {card.title}
                   </CardDescription>
                   <CardTitle>
-                    <Skeleton className="h-8 w-24" />
+                    {isLoading ? <Skeleton className="h-8 w-24" /> : value}
                   </CardTitle>
                 </div>
                 <div
@@ -79,8 +107,20 @@ export function OverviewKpiGrid() {
               </div>
             </CardHeader>
             <CardContent className="space-y-1.5 pt-0">
-              <Skeleton className="h-3.5 w-28" />
-              <Skeleton className="h-3.5 w-20" />
+              {isLoading ? (
+                <>
+                  <Skeleton className="h-3.5 w-28" />
+                  <Skeleton className="h-3.5 w-20" />
+                </>
+              ) : error ? (
+                <p className="text-xs text-destructive">{error}</p>
+              ) : metric ? (
+                <p className="text-xs text-muted-foreground">
+                  {formatDelta(metric)}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">No data</p>
+              )}
             </CardContent>
           </Card>
         );
