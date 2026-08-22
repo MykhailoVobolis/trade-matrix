@@ -106,33 +106,33 @@ export function OverviewTrendCard({
               No trend data
             </div>
           ) : (
-            <div className="flex h-[320px] items-end gap-3 overflow-x-auto">
+            <div className="grid h-[320px] grid-flow-col auto-cols-fr items-end gap-2 overflow-hidden">
               {trend.map((item) => (
                 <div
                   key={`${item.periodStart}-${item.periodLabel}`}
-                  className="flex min-w-24 flex-1 flex-col items-center gap-2"
+                  className="flex min-w-0 flex-col items-center gap-2"
                 >
-                  <div className="flex h-60 items-end gap-2">
+                  <div className="flex h-60 items-end gap-1.5">
                     <div
-                      className="w-7 rounded-t-md bg-sidebar-primary"
+                      className="w-4 rounded-t-md bg-sidebar-primary xl:w-5"
                       style={{
                         height: `${Math.max(8, (item.salesWithVat / maxValue) * 100)}%`,
                       }}
                       title={formatCompactCurrency(item.salesWithVat)}
                     />
                     <div
-                      className="w-7 rounded-t-md bg-sidebar-primary/25"
+                      className="w-4 rounded-t-md bg-sidebar-primary/25 xl:w-5"
                       style={{
                         height: `${Math.max(8, (item.purchasesWithVat / maxValue) * 100)}%`,
                       }}
                       title={formatCompactCurrency(item.purchasesWithVat)}
                     />
                   </div>
-                  <div className="space-y-1 text-center">
-                    <p className="text-[11px] font-medium text-foreground">
+                  <div className="w-full space-y-1 text-center">
+                    <p className="truncate text-[11px] font-medium text-foreground">
                       {item.periodLabel}
                     </p>
-                    <p className="text-[10px] text-muted-foreground">
+                    <p className="truncate text-[10px] text-muted-foreground">
                       {formatCompactCurrency(item.salesWithVat)}
                     </p>
                   </div>

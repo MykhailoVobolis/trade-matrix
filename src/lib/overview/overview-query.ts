@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import {
   buildOverviewBaseSearchParams,
@@ -137,6 +137,54 @@ export function useOverviewFilterOptionsQuery({
         limit,
         accessToken,
       });
+    },
+    enabled: Boolean(accessToken) && enabled,
+    placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useOverviewFilterOptionsInfiniteQuery({
+  state,
+  dimension,
+  search,
+  limit = 50,
+  accessToken,
+  enabled = true,
+}: {
+  state: OverviewFilterState;
+  dimension: OverviewFilterOptionsDimension;
+  search: string;
+  limit?: number;
+  accessToken: string | null;
+  enabled?: boolean;
+}) {
+  return useInfiniteQuery<OverviewFilterOptionsResponse>({
+    queryKey: overviewQueryKeys.filterOptions({
+      state,
+      dimension,
+      search,
+      page: 1,
+      limit,
+    }),
+    queryFn: ({ pageParam }) => {
+      if (!accessToken) {
+        throw new Error("Authentication required.");
+      }
+
+      return getOverviewFilterOptionsRequest({
+        state,
+        dimension,
+        search,
+        page: typeof pageParam === "number" ? pageParam : 1,
+        limit,
+        accessToken,
+      });
+    },
+    initialPageParam: 1,
+    getNextPageParam: (lastPage) => {
+      const loadedCount = lastPage.page * lastPage.limit;
+
+      return loadedCount < lastPage.total ? lastPage.page + 1 : undefined;
     },
     enabled: Boolean(accessToken) && enabled,
     placeholderData: (previousData) => previousData,

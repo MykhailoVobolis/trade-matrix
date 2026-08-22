@@ -1,66 +1,50 @@
-import { useDeferredValue, useState, type ReactNode } from "react";
-import {
-  CalendarRangeIcon,
-  CheckIcon,
-  ChevronsUpDownIcon,
-  DownloadIcon,
-  SlidersHorizontalIcon,
-  ChevronDownIcon,
-  XIcon,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { CalendarRangeIcon, ChevronDownIcon, DownloadIcon } from "lucide-react";
 
+import { OverviewSearchableMultiSelect } from "@/components/overview/overview-searchable-multi-select";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Calendar } from "@/components/ui/calendar";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { OverviewFilterOptionsDimension } from "@/lib/overview/overview-api";
-import { useOverviewFilterOptionsQuery } from "@/lib/overview/overview-query";
+import { Switch } from "@/components/ui/switch";
 import type {
-  OverviewComparisonMode,
   OverviewFilterState,
   OverviewFilterValues,
 } from "@/lib/overview/overview-url-state";
-import { cn } from "@/lib/utils";
+import { useOverviewFilterOptionsInfiniteQuery } from "@/lib/overview/overview-query";
 
 const primaryFilters = [
   {
     key: "uktzed",
     label: "UKTZED",
-    placeholder: "Наприклад: 2710, 1001",
+    placeholder: "All UKTZED",
     dimension: "uktzed",
   },
   {
     key: "products",
-    label: "Продукт / Номенклатура",
-    placeholder: "Наприклад: ДП, Бензин",
+    label: "Product / Nomenclature",
+    placeholder: "All products",
     dimension: "products",
   },
   {
     key: "buyerRegionCodes",
-    label: "Регіон покупця",
-    placeholder: "Наприклад: 32, 80",
+    label: "Buyer Region",
+    placeholder: "All regions",
     dimension: "buyerRegions",
   },
   {
     key: "buyerTaxNumbers",
-    label: "Покупець",
-    placeholder: "Наприклад: 38333525, 0",
+    label: "Buyer",
+    placeholder: "All buyers",
     dimension: "buyers",
   },
   {
     key: "supplierTaxNumbers",
-    label: "Постачальник",
-    placeholder: "Наприклад: 41784512, 0",
+    label: "Supplier",
+    placeholder: "All suppliers",
     dimension: "suppliers",
   },
 ] as const;
@@ -83,187 +67,209 @@ function formatDateLabel(value: string) {
   }).format(date);
 }
 
-function formatFilterSummary(values: string[]) {
-  if (values.length === 0) {
-    return "All";
-  }
+function toIsoDate(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
 
-  if (values.length === 1) {
-    return values[0];
-  }
-
-  return `${values.length} selected`;
+  return `${year}-${month}-${day}`;
 }
 
-function FilterShell({
+function useDebouncedValue<T>(value: T, delayMs = 350) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedValue(value);
+    }, delayMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [delayMs, value]);
+
+  return debouncedValue;
+}
+
+function DateRangeFilter({
   label,
-  value,
-  icon,
-  children,
+  dateFrom,
+  dateTo,
+  onChange,
 }: {
   label: string;
-  value: string;
-  icon?: ReactNode;
-  children?: ReactNode;
+  dateFrom: string;
+  dateTo: string;
+  onChange: (next: { dateFrom: string; dateTo: string }) => void;
 }) {
   return (
     <div className="space-y-2">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
-      <div className="flex h-11 items-center justify-between gap-2 rounded-lg border border-border/70 bg-background px-3 text-sm text-foreground shadow-sm shadow-black/[0.02]">
-        <div className="flex min-w-0 items-center gap-2">
-          {icon}
-          <span className="truncate">{value}</span>
-        </div>
-        {children ?? (
-          <ChevronDownIcon className="size-4 text-muted-foreground" />
-        )}
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Popover modal={false}>
+          <PopoverTrigger className="block w-full text-left">
+            <span className="block">
+              <span className="flex h-11 items-center justify-between gap-2 rounded-lg border border-border/70 bg-background px-3 text-sm text-foreground shadow-sm shadow-black/[0.02]">
+                <span className="flex min-w-0 items-center gap-2">
+                  <CalendarRangeIcon className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{formatDateLabel(dateFrom)}</span>
+                </span>
+                <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+              </span>
+            </span>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-auto p-3">
+            <Calendar
+              mode="single"
+              captionLayout="dropdown"
+              selected={dateFrom ? new Date(dateFrom) : undefined}
+              endMonth={new Date("2035-12-31")}
+              startMonth={new Date("2020-01-01")}
+              onSelect={(date) => {
+                if (!date) {
+                  return;
+                }
+
+                const nextDateFrom = toIsoDate(date);
+                onChange({
+                  dateFrom: nextDateFrom,
+                  dateTo: nextDateFrom > dateTo ? nextDateFrom : dateTo,
+                });
+              }}
+              className="rounded-lg border"
+            />
+          </PopoverContent>
+        </Popover>
+
+        <Popover modal={false}>
+          <PopoverTrigger className="block w-full text-left">
+            <span className="block">
+              <span className="flex h-11 items-center justify-between gap-2 rounded-lg border border-border/70 bg-background px-3 text-sm text-foreground shadow-sm shadow-black/[0.02]">
+                <span className="flex min-w-0 items-center gap-2">
+                  <CalendarRangeIcon className="size-4 shrink-0 text-muted-foreground" />
+                  <span className="truncate">{formatDateLabel(dateTo)}</span>
+                </span>
+                <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+              </span>
+            </span>
+          </PopoverTrigger>
+          <PopoverContent align="start" className="w-auto p-3">
+            <Calendar
+              mode="single"
+              captionLayout="dropdown"
+              selected={dateTo ? new Date(dateTo) : undefined}
+              endMonth={new Date("2035-12-31")}
+              startMonth={new Date("2020-01-01")}
+              onSelect={(date) => {
+                if (!date) {
+                  return;
+                }
+
+                const nextDateTo = toIsoDate(date);
+                onChange({
+                  dateFrom: nextDateTo < dateFrom ? nextDateTo : dateFrom,
+                  dateTo: nextDateTo,
+                });
+              }}
+              className="rounded-lg border"
+            />
+          </PopoverContent>
+        </Popover>
       </div>
     </div>
   );
 }
 
-function MultiValueFilterPopover({
+function SearchableFilterField({
+  filterKey,
   label,
-  value,
-  values,
   placeholder,
   dimension,
-  filterState,
+  state,
   accessToken,
-  onApply,
+  onUpdateOverviewFilters,
 }: {
+  filterKey: keyof Pick<
+    OverviewFilterState,
+    | "uktzed"
+    | "products"
+    | "buyerRegionCodes"
+    | "buyerTaxNumbers"
+    | "supplierTaxNumbers"
+  >;
   label: string;
-  value: string;
-  values: string[];
   placeholder: string;
-  dimension: OverviewFilterOptionsDimension;
-  filterState: OverviewFilterState;
+  dimension: "buyers" | "suppliers" | "products" | "uktzed" | "buyerRegions";
+  state: OverviewFilterState;
   accessToken: string | null;
-  onApply: (values: string[]) => void;
+  onUpdateOverviewFilters: (patch: Partial<OverviewFilterValues>) => void;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [draft, setDraft] = useState(values.join(", "));
-  const deferredDraft = useDeferredValue(draft);
-  const optionsQuery = useOverviewFilterOptionsQuery({
-    state: filterState,
+  const selectedValues = state[filterKey];
+  const [searchValue, setSearchValue] = useState("");
+  const debouncedSearchValue = useDebouncedValue(searchValue, 350);
+  const optionsState = useMemo(
+    () => ({
+      ...state,
+      [filterKey]: [],
+    }),
+    [filterKey, state],
+  );
+  const optionsQuery = useOverviewFilterOptionsInfiniteQuery({
+    state: optionsState,
     dimension,
-    search: deferredDraft,
-    page: 1,
-    limit: 8,
+    search: debouncedSearchValue,
+    limit: 50,
     accessToken,
-    enabled: isOpen,
+    enabled: true,
   });
 
+  const optionItems = useMemo(
+    () => optionsQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [optionsQuery.data?.pages],
+  );
+
+  const selectedLabels = useMemo(() => {
+    const labels: Record<string, string> = {};
+
+    optionItems.forEach((item) => {
+      if (selectedValues.includes(item.value)) {
+        labels[item.value] = item.label;
+      }
+    });
+
+    return labels;
+  }, [optionItems, selectedValues]);
+
+  const handleChange = useCallback(
+    (values: string[]) => {
+      onUpdateOverviewFilters({
+        [filterKey]: values,
+      } as Partial<OverviewFilterValues>);
+    },
+    [filterKey, onUpdateOverviewFilters],
+  );
+
   return (
-    <Popover
-      open={isOpen}
-      onOpenChange={(open) => {
-        setIsOpen(open);
-        if (open) {
-          setDraft(values.join(", "));
-        }
+    <OverviewSearchableMultiSelect
+      label={label}
+      placeholder={placeholder}
+      selectedValues={selectedValues}
+      selectedLabels={selectedLabels}
+      options={optionItems}
+      isLoading={optionsQuery.isLoading}
+      isError={Boolean(optionsQuery.error)}
+      errorMessage={optionsQuery.error?.message}
+      searchValue={searchValue}
+      onSearchChange={setSearchValue}
+      onChange={handleChange}
+      hasMore={optionsQuery.hasNextPage}
+      isLoadingMore={optionsQuery.isFetchingNextPage}
+      onLoadMore={() => {
+        void optionsQuery.fetchNextPage();
       }}
-    >
-      <PopoverTrigger className="block text-left">
-        <span className="block">
-          <FilterShell label={label} value={value}>
-            <ChevronsUpDownIcon className="size-4 text-muted-foreground" />
-          </FilterShell>
-        </span>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 space-y-3 p-3">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-foreground">{label}</p>
-          <p className="text-xs text-muted-foreground">
-            Значення зберігаються по `value`, а options already scoped current
-            filters.
-          </p>
-        </div>
-        <Input
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          placeholder={placeholder}
-        />
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">
-            Suggested options
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {optionsQuery.isLoading ? (
-              <span className="text-xs text-muted-foreground">Loading...</span>
-            ) : optionsQuery.error ? (
-              <span className="text-xs text-destructive">
-                {optionsQuery.error.message}
-              </span>
-            ) : optionsQuery.data?.items.length ? (
-              optionsQuery.data.items.map((item) => (
-                <button
-                  key={item.value}
-                  type="button"
-                  className={cn(
-                    "inline-flex items-center rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs transition-colors hover:border-sidebar-primary/50 hover:text-foreground",
-                    values.includes(item.value) &&
-                      "border-sidebar-primary text-foreground",
-                  )}
-                  onClick={() => {
-                    const nextValues = values.includes(item.value)
-                      ? values.filter(
-                          (currentValue) => currentValue !== item.value,
-                        )
-                      : [...values, item.value];
-                    setDraft(nextValues.join(", "));
-                    onApply(nextValues);
-                  }}
-                >
-                  {item.label}
-                </button>
-              ))
-            ) : (
-              <span className="text-xs text-muted-foreground">
-                No options found.
-              </span>
-            )}
-          </div>
-        </div>
-        <div className="flex items-center justify-between gap-2">
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setDraft("");
-              onApply([]);
-            }}
-          >
-            <XIcon />
-            Clear
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            onClick={() => {
-              onApply(
-                draft
-                  .split(",")
-                  .map((item) => item.trim())
-                  .filter(Boolean),
-              );
-            }}
-          >
-            <CheckIcon />
-            Apply
-          </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
+    />
   );
 }
-
-const comparisonModeLabels: Record<OverviewComparisonMode, string> = {
-  NONE: "Без порівняння",
-  PREVIOUS_PERIOD: "Попередній період",
-  CUSTOM: "Кастомний період",
-};
 
 export function OverviewFilters({
   state,
@@ -294,100 +300,39 @@ export function OverviewFilters({
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
-        <div className="grid gap-3 md:grid-cols-[minmax(220px,320px)_minmax(260px,360px)] xl:flex xl:flex-wrap xl:items-start">
-          <div className="space-y-2">
-            <p className="text-xs font-medium text-muted-foreground">Період</p>
-            <div className="flex flex-col gap-2 rounded-lg border border-border/70 bg-background px-3 py-2.5 shadow-sm shadow-black/[0.02] md:flex-row md:items-center">
-              <div className="flex items-center gap-2 text-sm text-foreground">
-                <CalendarRangeIcon className="size-4 text-muted-foreground" />
-                <span>{formatDateLabel(state.dateFrom)}</span>
-                <span className="text-muted-foreground">—</span>
-                <span>{formatDateLabel(state.dateTo)}</span>
-              </div>
-              <div className="grid flex-1 gap-2 md:grid-cols-2">
-                <Input
-                  type="date"
-                  value={state.dateFrom}
-                  max={state.dateTo}
-                  onChange={(event) =>
-                    onUpdateOverviewFilters({ dateFrom: event.target.value })
-                  }
-                  className="h-9 rounded-md"
-                />
-                <Input
-                  type="date"
-                  value={state.dateTo}
-                  min={state.dateFrom}
-                  onChange={(event) =>
-                    onUpdateOverviewFilters({ dateTo: event.target.value })
-                  }
-                  className="h-9 rounded-md"
-                />
-              </div>
-            </div>
-          </div>
+        <div className="grid gap-3 md:grid-cols-[minmax(240px,320px)_minmax(260px,360px)] xl:flex xl:flex-wrap xl:items-start">
+          <DateRangeFilter
+            label="Period"
+            dateFrom={state.dateFrom}
+            dateTo={state.dateTo}
+            onChange={({ dateFrom, dateTo }) =>
+              onUpdateOverviewFilters({
+                dateFrom,
+                dateTo,
+              })
+            }
+          />
 
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground">
-              Порівняти з
+              Comparison Period
             </p>
-            <div className="grid gap-2 rounded-lg border border-border/70 bg-background px-3 py-2.5 shadow-sm shadow-black/[0.02]">
-              <Select
-                value={state.comparisonMode}
-                onValueChange={(value) =>
+            <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border/70 bg-background px-3 py-2.5 shadow-sm shadow-black/[0.02]">
+              <div className="space-y-0.5">
+                <p className="text-sm text-foreground">
+                  Same selected period, previous year
+                </p>
+              </div>
+              <Switch
+                checked={state.comparisonMode === "PREVIOUS_PERIOD"}
+                onCheckedChange={(checked) =>
                   onUpdateOverviewFilters({
-                    comparisonMode: value as OverviewComparisonMode,
-                    compareDateFrom:
-                      value === "CUSTOM" ? state.compareDateFrom : "",
-                    compareDateTo:
-                      value === "CUSTOM" ? state.compareDateTo : "",
+                    comparisonMode: checked ? "PREVIOUS_PERIOD" : "NONE",
+                    compareDateFrom: "",
+                    compareDateTo: "",
                   })
                 }
-              >
-                <SelectTrigger className="h-9 rounded-md">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.entries(comparisonModeLabels).map(
-                    ([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ),
-                  )}
-                </SelectContent>
-              </Select>
-
-              {state.comparisonMode === "CUSTOM" ? (
-                <div className="grid gap-2 md:grid-cols-2">
-                  <Input
-                    type="date"
-                    value={state.compareDateFrom}
-                    max={state.compareDateTo || undefined}
-                    onChange={(event) =>
-                      onUpdateOverviewFilters({
-                        compareDateFrom: event.target.value,
-                      })
-                    }
-                    className="h-9 rounded-md"
-                  />
-                  <Input
-                    type="date"
-                    value={state.compareDateTo}
-                    min={state.compareDateFrom || undefined}
-                    onChange={(event) =>
-                      onUpdateOverviewFilters({
-                        compareDateTo: event.target.value,
-                      })
-                    }
-                    className="h-9 rounded-md"
-                  />
-                </div>
-              ) : (
-                <p className="text-xs text-muted-foreground">
-                  {comparisonModeLabels[state.comparisonMode]}
-                </p>
-              )}
+              />
             </div>
           </div>
         </div>
@@ -412,51 +357,20 @@ export function OverviewFilters({
         </div>
       </div>
 
-      <div className="grid gap-2.5 xl:grid-cols-[repeat(5,minmax(150px,1fr))_minmax(156px,0.95fr)]">
+      <div className="grid gap-2.5 xl:grid-cols-5">
         {primaryFilters.map((filter) => (
-          <MultiValueFilterPopover
+          <SearchableFilterField
             key={filter.key}
+            filterKey={filter.key}
             label={filter.label}
-            value={formatFilterSummary(state[filter.key])}
-            values={state[filter.key]}
             placeholder={filter.placeholder}
             dimension={filter.dimension}
-            filterState={state}
+            state={state}
             accessToken={accessToken}
-            onApply={(values) =>
-              onUpdateOverviewFilters({
-                [filter.key]: values,
-              } as Partial<OverviewFilterValues>)
-            }
+            onUpdateOverviewFilters={onUpdateOverviewFilters}
           />
         ))}
-
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-muted-foreground">
-            Більше фільтрів
-          </p>
-          <div className="flex h-11 items-center justify-between gap-2 rounded-lg border border-dashed border-border/70 bg-background px-3 text-sm text-muted-foreground shadow-sm shadow-black/[0.02]">
-            <div className="flex min-w-0 items-center gap-2">
-              <SlidersHorizontalIcon className="size-4" />
-              <span>Pending next commit</span>
-            </div>
-            <ChevronDownIcon className="size-4" />
-          </div>
-        </div>
       </div>
-
-      {state.timeGrain ? (
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">Time grain:</span>
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full border border-border/70 bg-background px-2.5 py-1",
-            )}
-          >
-            {state.timeGrain}
-          </span>
-        </div>
-      ) : null}
     </div>
   );
 }
