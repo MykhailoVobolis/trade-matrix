@@ -64,25 +64,24 @@ export function OverviewDashboardScreen({
         error={overviewError}
       />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.9fr)_minmax(320px,0.95fr)]">
-        <OverviewTrendCard
-          trend={overview?.trend ?? []}
-          isLoading={isOverviewLoading}
-          isFetching={isOverviewFetching}
-          error={overviewError}
-          timeGrain={state.timeGrain}
-          onTimeGrainChange={(timeGrain) =>
-            onUpdateOverviewFilters({ timeGrain })
-          }
-        />
-        <OverviewMarketStructureCard
-          data={overview?.marketStructure}
-          isLoading={isOverviewLoading}
-          error={overviewError}
-        />
-      </div>
+      <OverviewTrendCard
+        trend={overview?.trend ?? []}
+        isLoading={isOverviewLoading}
+        isFetching={isOverviewFetching}
+        error={overviewError}
+        timeGrain={state.timeGrain}
+        onTimeGrainChange={(timeGrain) =>
+          onUpdateOverviewFilters({ timeGrain })
+        }
+      />
+      <OverviewMarketStructureCard
+        data={overview?.marketStructure}
+        isLoading={isOverviewLoading}
+        error={overviewError}
+      />
 
       <OverviewTopCardsGrid
+        state={state}
         topBuyers={overview?.topBuyers ?? []}
         topSuppliers={overview?.topSuppliers ?? []}
         topProducts={overview?.topProducts ?? []}

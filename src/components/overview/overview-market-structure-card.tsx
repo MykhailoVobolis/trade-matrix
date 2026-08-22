@@ -1,3 +1,11 @@
+import {
+  BriefcaseBusinessIcon,
+  MapPinnedIcon,
+  TagIcon,
+  TrophyIcon,
+  UsersIcon,
+} from "lucide-react";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { OverviewMarketStructure } from "@/lib/overview/overview-api";
 import {
@@ -7,12 +15,36 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 
 const structureItems = [
-  "Топ покупець",
-  "Топ постачальник",
-  "Топ регіон збуту",
-  "Топ UKTZED",
-  "Частка TOP-5 покупців",
-  "Частка TOP-5 постачальників",
+  {
+    title: "Топ покупець",
+    icon: UsersIcon,
+    iconClassName: "bg-blue-500/10 text-blue-600",
+  },
+  {
+    title: "Топ постачальник",
+    icon: BriefcaseBusinessIcon,
+    iconClassName: "bg-cyan-500/10 text-cyan-600",
+  },
+  {
+    title: "Топ регіон збуту",
+    icon: MapPinnedIcon,
+    iconClassName: "bg-amber-500/10 text-amber-600",
+  },
+  {
+    title: "Топ UKTZED",
+    icon: TagIcon,
+    iconClassName: "bg-violet-500/10 text-violet-600",
+  },
+  {
+    title: "Частка TOP-5 покупців",
+    icon: TrophyIcon,
+    iconClassName: "bg-blue-500/10 text-blue-600",
+  },
+  {
+    title: "Частка TOP-5 постачальників",
+    icon: TrophyIcon,
+    iconClassName: "bg-cyan-500/10 text-cyan-600",
+  },
 ] as const;
 
 export function OverviewMarketStructureCard({
@@ -27,22 +59,43 @@ export function OverviewMarketStructureCard({
   const values = data
     ? [
         data.topBuyer
-          ? `${data.topBuyer.name} • ${formatCompactCurrency(data.topBuyer.amount)}`
+          ? {
+              primary: data.topBuyer.name,
+              secondary: `${formatCompactCurrency(data.topBuyer.amount)} • ${formatPercent(data.topBuyer.share)}`,
+            }
           : null,
         data.topSupplier
-          ? `${data.topSupplier.name} • ${formatCompactCurrency(data.topSupplier.amount)}`
+          ? {
+              primary: data.topSupplier.name,
+              secondary: `${formatCompactCurrency(data.topSupplier.amount)} • ${formatPercent(data.topSupplier.share)}`,
+            }
           : null,
         data.topBuyerRegion
-          ? `${data.topBuyerRegion.name} • ${formatCompactCurrency(data.topBuyerRegion.amount)}`
+          ? {
+              primary:
+                data.topBuyerRegion.name &&
+                data.topBuyerRegion.name.trim() !== "undefined"
+                  ? data.topBuyerRegion.name
+                  : "Не визначено",
+              secondary: `${formatCompactCurrency(data.topBuyerRegion.amount)} • ${formatPercent(data.topBuyerRegion.share)}`,
+            }
           : null,
         data.topUKTZED
-          ? `${data.topUKTZED.code ?? data.topUKTZED.name} • ${formatCompactCurrency(data.topUKTZED.amount)}`
+          ? {
+              primary: data.topUKTZED.code ?? data.topUKTZED.name,
+              secondary: `${formatCompactCurrency(data.topUKTZED.amount)} • ${formatPercent(data.topUKTZED.share)}`,
+              tertiary: data.topUKTZED.description ?? null,
+            }
           : null,
         data.top5BuyersShare !== null
-          ? `${formatPercent(data.top5BuyersShare)} від продажів`
+          ? {
+              primary: `${formatPercent(data.top5BuyersShare)} від продажів`,
+            }
           : null,
         data.top5SuppliersShare !== null
-          ? `${formatPercent(data.top5SuppliersShare)} від закупівель`
+          ? {
+              primary: `${formatPercent(data.top5SuppliersShare)} від закупівель`,
+            }
           : null,
       ]
     : [];
@@ -52,29 +105,64 @@ export function OverviewMarketStructureCard({
       <CardHeader className="pb-3.5">
         <CardTitle>Структура ринку</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2 border-t border-border/70 pt-3.5">
-        {structureItems.map((item) => (
-          <div
-            key={item}
-            className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3"
-          >
-            <p className="text-xs font-medium text-muted-foreground">{item}</p>
-            <div className="mt-2 space-y-2">
-              {isLoading ? (
-                <>
-                  <Skeleton className="h-5 w-2/3" />
-                  <Skeleton className="h-4 w-1/2" />
-                </>
-              ) : error ? (
-                <p className="text-xs text-destructive">{error}</p>
-              ) : (
-                <p className="text-sm text-foreground">
-                  {values[structureItems.indexOf(item)] ?? "—"}
+      <CardContent className="grid gap-3 border-t border-border/70 pt-3.5 md:grid-cols-2 xl:grid-cols-3">
+        {structureItems.map((item, index) => {
+          const Icon = item.icon;
+
+          return (
+            <div
+              key={item.title}
+              className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3"
+            >
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-xs font-medium text-muted-foreground">
+                  {item.title}
                 </p>
-              )}
+                <div
+                  className={`flex size-10 shrink-0 items-center justify-center rounded-md ${item.iconClassName}`}
+                >
+                  <Icon className="size-4" />
+                </div>
+              </div>
+              <div className="mt-2 space-y-2">
+                {isLoading ? (
+                  <>
+                    <Skeleton className="h-5 w-2/3" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </>
+                ) : error ? (
+                  <p className="text-xs text-destructive">{error}</p>
+                ) : (
+                  (() => {
+                    const value = values[index];
+
+                    if (!value) {
+                      return <p className="text-sm text-foreground">—</p>;
+                    }
+
+                    return (
+                      <div className="space-y-1">
+                        <p className="text-sm text-foreground">
+                          {value.primary}
+                        </p>
+                        {"secondary" in value && value.secondary ? (
+                          <p className="text-xs text-muted-foreground">
+                            {value.secondary}
+                          </p>
+                        ) : null}
+                        {"tertiary" in value && value.tertiary ? (
+                          <p className="text-xs text-muted-foreground">
+                            {value.tertiary}
+                          </p>
+                        ) : null}
+                      </div>
+                    );
+                  })()
+                )}
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </CardContent>
     </Card>
   );

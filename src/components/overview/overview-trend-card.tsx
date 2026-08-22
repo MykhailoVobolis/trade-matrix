@@ -15,8 +15,6 @@ const timeGrainOptions: Array<{
   value: OverviewTimeGrain;
   label: string;
 }> = [
-  { value: "DAY", label: "День" },
-  { value: "WEEK", label: "Тиждень" },
   { value: "MONTH", label: "Місяць" },
   { value: "QUARTER", label: "Квартал" },
 ];
@@ -36,6 +34,10 @@ export function OverviewTrendCard({
   timeGrain: OverviewTimeGrain | "";
   onTimeGrainChange: (timeGrain: OverviewTimeGrain | "") => void;
 }) {
+  const resolvedTimeGrain: OverviewTimeGrain = timeGrain || "MONTH";
+  const resolvedTimeGrainLabel =
+    timeGrainOptions.find((option) => option.value === resolvedTimeGrain)
+      ?.label ?? "Місяць";
   const maxValue = Math.max(
     1,
     ...trend.flatMap((item) => [
@@ -45,6 +47,15 @@ export function OverviewTrendCard({
       item.comparisonPurchasesWithVat ?? 0,
     ]),
   );
+  const pointCount = trend.length || 1;
+  const barWidthClass =
+    pointCount <= 4
+      ? "w-8 xl:w-10"
+      : pointCount <= 8
+        ? "w-6 xl:w-7"
+        : pointCount <= 12
+          ? "w-4 xl:w-5"
+          : "w-3.5 xl:w-4";
 
   return (
     <Card className="border border-border/70 shadow-none">
@@ -53,18 +64,15 @@ export function OverviewTrendCard({
 
         <div className="flex flex-wrap items-center gap-2">
           <Select
-            value={timeGrain || "__AUTO__"}
+            value={resolvedTimeGrain}
             onValueChange={(value) =>
-              onTimeGrainChange(
-                value === "__AUTO__" ? "" : (value as OverviewTimeGrain),
-              )
+              onTimeGrainChange(value as OverviewTimeGrain)
             }
           >
             <SelectTrigger className="h-9 min-w-36 rounded-md">
-              <SelectValue placeholder="Групування" />
+              <SelectValue>{resolvedTimeGrainLabel}</SelectValue>
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__AUTO__">Авто</SelectItem>
+            <SelectContent className="p-1">
               {timeGrainOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -114,14 +122,14 @@ export function OverviewTrendCard({
                 >
                   <div className="flex h-60 items-end gap-1.5">
                     <div
-                      className="w-4 rounded-t-md bg-sidebar-primary xl:w-5"
+                      className={`${barWidthClass} rounded-t-[4px] bg-sidebar-primary`}
                       style={{
                         height: `${Math.max(8, (item.salesWithVat / maxValue) * 100)}%`,
                       }}
                       title={formatCompactCurrency(item.salesWithVat)}
                     />
                     <div
-                      className="w-4 rounded-t-md bg-sidebar-primary/25 xl:w-5"
+                      className={`${barWidthClass} rounded-t-[4px] bg-sidebar-primary/25`}
                       style={{
                         height: `${Math.max(8, (item.purchasesWithVat / maxValue) * 100)}%`,
                       }}

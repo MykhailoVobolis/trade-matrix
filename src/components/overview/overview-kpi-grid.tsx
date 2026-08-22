@@ -87,7 +87,7 @@ export function OverviewKpiGrid({
           <Card
             key={card.title}
             size="sm"
-            className="border border-border/70 shadow-none"
+            className="flex h-full border border-border/70 shadow-none"
           >
             <CardHeader className="gap-2 pb-2.5">
               <div className="flex items-start justify-between gap-3">
@@ -106,7 +106,7 @@ export function OverviewKpiGrid({
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-1.5 pt-0">
+            <CardContent className="flex flex-1 flex-col justify-end space-y-1.5 pt-0">
               {isLoading ? (
                 <>
                   <Skeleton className="h-3.5 w-28" />
