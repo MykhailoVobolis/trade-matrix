@@ -18,6 +18,11 @@ type RequestOptions = {
   retryOnUnauthorized?: boolean;
 };
 
+type BlobResponsePayload = {
+  blob: Blob;
+  headers: Headers;
+};
+
 type ApiValidationIssue = {
   path?: string;
   message?: string;
@@ -70,6 +75,10 @@ async function parseResponse(response: Response) {
 
   const text = await response.text();
   return text ? text : null;
+}
+
+async function parseBlobResponse(response: Response) {
+  return response.blob();
 }
 
 function getErrorMessage(payload: unknown, fallback: string) {
@@ -232,4 +241,85 @@ export async function requestJson<T>({
   }
 
   return payload as T;
+}
+
+export async function requestBlob({
+  path,
+  method = "GET",
+  body,
+  headers,
+  accessToken,
+  credentials = "include",
+  retryOnUnauthorized = true,
+}: RequestOptions): Promise<BlobResponsePayload> {
+  let requestBody: BodyInit | undefined;
+
+  if (body !== undefined) {
+    if (isFormData(body)) {
+      requestBody = body;
+    } else if (
+      typeof body === "string" ||
+      body instanceof Blob ||
+      body instanceof URLSearchParams ||
+      body instanceof ArrayBuffer
+    ) {
+      requestBody = body as BodyInit;
+    } else {
+      const requestHeaders = new Headers(headers);
+      requestHeaders.set("Content-Type", "application/json");
+      headers = requestHeaders;
+      requestBody = JSON.stringify(body);
+    }
+  }
+
+  let response = await fetch(buildUrl(path), {
+    method,
+    headers: (() => {
+      const requestHeaders = new Headers(headers);
+
+      if (accessToken) {
+        requestHeaders.set("Authorization", `Bearer ${accessToken}`);
+      }
+
+      return requestHeaders;
+    })(),
+    body: requestBody,
+    credentials,
+  });
+
+  if (
+    response.status === 401 &&
+    retryOnUnauthorized &&
+    accessToken &&
+    path !== "/api/auth/refresh"
+  ) {
+    const refreshedAccessToken = await refreshAccessToken(credentials);
+
+    if (refreshedAccessToken) {
+      const retryHeaders = new Headers(headers);
+      retryHeaders.set("Authorization", `Bearer ${refreshedAccessToken}`);
+
+      response = await fetch(buildUrl(path), {
+        method,
+        headers: retryHeaders,
+        body: requestBody,
+        credentials,
+      });
+    }
+  }
+
+  if (!response.ok) {
+    const payload = await parseResponse(response);
+
+    throw new ApiError(
+      getErrorMessage(payload, "Request failed."),
+      response.status,
+      getErrorDetails(payload),
+    );
+  }
+
+  return {
+    blob: await parseBlobResponse(response),
+    headers: response.headers,
+  };
 }

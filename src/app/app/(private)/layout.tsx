@@ -17,10 +17,10 @@ export default function PrivateAppLayout({ children }: PrivateAppLayoutProps) {
     <PrivateRouteGuard>
       <SidebarProvider>
         <AppSidebar />
-        <SidebarInset className="min-h-svh">
-          <div className="relative flex min-h-svh flex-1 flex-col">
+        <SidebarInset className="min-h-svh min-w-0 overflow-hidden">
+          <div className="relative flex min-h-svh min-w-0 flex-1 flex-col overflow-hidden">
             <SidebarTrigger className="absolute top-3 left-3 z-20 md:hidden" />
-            <div className="flex flex-1 flex-col p-6 pt-16 md:p-8">
+            <div className="flex min-w-0 flex-1 flex-col overflow-hidden p-6 pt-16 md:p-8">
               {children}
             </div>
           </div>
