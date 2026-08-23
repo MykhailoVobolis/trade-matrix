@@ -1,8 +1,60 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  BarChart3Icon,
+  Building2Icon,
+  MapPinnedIcon,
+  TagIcon,
+  TrendingDownIcon,
+  TrendingUpIcon,
+  UsersIcon,
+} from "lucide-react";
+
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import type { OverviewInsight } from "@/lib/overview/overview-api";
 import { formatOverviewInsight } from "@/lib/overview/overview-format";
-import { Skeleton } from "@/components/ui/skeleton";
+
+function getInsightIcon(type: OverviewInsight["type"]) {
+  switch (type) {
+    case "SALES_CHANGE":
+    case "PEAK_SALES_PERIOD":
+      return {
+        icon: TrendingUpIcon,
+        className: "bg-sidebar-primary/10 text-sidebar-primary",
+      };
+    case "PURCHASES_CHANGE":
+    case "PEAK_PURCHASES_PERIOD":
+      return {
+        icon: TrendingDownIcon,
+        className: "bg-sky-500/10 text-sky-600",
+      };
+    case "BUYER_CONCENTRATION":
+      return {
+        icon: UsersIcon,
+        className: "bg-blue-500/10 text-blue-600",
+      };
+    case "SUPPLIER_CONCENTRATION":
+      return {
+        icon: Building2Icon,
+        className: "bg-cyan-500/10 text-cyan-600",
+      };
+    case "TOP_REGION":
+      return {
+        icon: MapPinnedIcon,
+        className: "bg-amber-500/10 text-amber-600",
+      };
+    case "TOP_UKTZED":
+      return {
+        icon: TagIcon,
+        className: "bg-violet-500/10 text-violet-600",
+      };
+    default:
+      return {
+        icon: BarChart3Icon,
+        className: "bg-muted text-foreground",
+      };
+  }
+}
 
 export function OverviewMarketInsightsCard({
   insights,
@@ -15,21 +67,32 @@ export function OverviewMarketInsightsCard({
   error: string | null;
   onRetry?: () => void;
 }) {
+  const visibleInsights = insights.filter(
+    (insight) =>
+      insight.type !== "PURCHASES_CHANGE" &&
+      insight.type !== "PEAK_PURCHASES_PERIOD",
+  );
+
   return (
     <Card className="border border-border/70 shadow-none">
       <CardHeader className="pb-3.5">
         <CardTitle>Ринкові інсайти</CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2.5 border-t border-border/70 pt-3.5">
+      <CardContent className="border-t border-border/70 pt-3.5">
         {isLoading ? (
-          Array.from({ length: 5 }).map((_, index) => (
-            <div
-              key={index}
-              className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3"
-            >
-              <Skeleton className="h-4 w-full max-w-[280px]" />
-            </div>
-          ))
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <div
+                key={index}
+                className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3"
+              >
+                <div className="flex items-start gap-3">
+                  <Skeleton className="mt-0.5 size-10 rounded-md" />
+                  <Skeleton className="h-4 w-full max-w-[280px]" />
+                </div>
+              </div>
+            ))}
+          </div>
         ) : error ? (
           <div className="space-y-3 rounded-md border border-destructive/30 bg-destructive/5 px-3.5 py-3 text-sm text-destructive">
             <p>{error}</p>
@@ -39,15 +102,32 @@ export function OverviewMarketInsightsCard({
               </Button>
             ) : null}
           </div>
-        ) : insights.length ? (
-          insights.slice(0, 5).map((insight, index) => (
-            <div
-              key={`${insight.type}-${index}`}
-              className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3 text-sm text-foreground"
-            >
-              {formatOverviewInsight(insight)}
-            </div>
-          ))
+        ) : visibleInsights.length ? (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {visibleInsights.slice(0, 5).map((insight, index) => {
+              const { icon: InsightIcon, className } = getInsightIcon(
+                insight.type,
+              );
+
+              return (
+                <div
+                  key={`${insight.type}-${index}`}
+                  className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3"
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`flex size-10 shrink-0 items-center justify-center rounded-md ${className}`}
+                    >
+                      <InsightIcon className="size-4" />
+                    </div>
+                    <p className="text-sm leading-6 text-foreground">
+                      {formatOverviewInsight(insight)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3 text-sm text-muted-foreground">
             No insights available

@@ -76,9 +76,9 @@ export function OverviewMarketStructureCard({
         data.topBuyerRegion
           ? {
               primary:
-                data.topBuyerRegion.name &&
-                data.topBuyerRegion.name.trim() !== "undefined"
-                  ? data.topBuyerRegion.name
+                data.topBuyerRegion.regionName &&
+                data.topBuyerRegion.regionName.trim() !== "undefined"
+                  ? data.topBuyerRegion.regionName
                   : "Не визначено",
               secondary: `${formatCompactCurrency(data.topBuyerRegion.amount)} • ${formatPercent(data.topBuyerRegion.share)}`,
             }

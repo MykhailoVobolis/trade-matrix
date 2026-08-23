@@ -41,10 +41,17 @@ export type OverviewMarketStructureValue = {
   description?: string | null;
 };
 
+export type OverviewMarketStructureRegionValue = {
+  regionCode: string | null;
+  regionName: string;
+  amount: number;
+  share: number;
+};
+
 export type OverviewMarketStructure = {
   topBuyer: OverviewMarketStructureValue | null;
   topSupplier: OverviewMarketStructureValue | null;
-  topBuyerRegion: OverviewMarketStructureValue | null;
+  topBuyerRegion: OverviewMarketStructureRegionValue | null;
   topUKTZED: OverviewMarketStructureValue | null;
   top5BuyersShare: number | null;
   top5SuppliersShare: number | null;

@@ -10,6 +10,7 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table";
 import {
+  DatabaseIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronsUpDownIcon,
@@ -73,7 +74,6 @@ const columnLabels: Record<string, string> = {
   unit: "Од.",
   priceWithVat: "Ціна з ПДВ",
   salesWithVat: "Продажі з ПДВ",
-  purchasesWithVat: "Закупівлі з ПДВ",
   marketShare: "Частка ринку",
 };
 
@@ -194,7 +194,7 @@ export function OverviewMarketTable({
         cell: ({ row }) => (
           <OverflowTooltipText
             value={formatOverviewTableCell(row.original, "buyerRegion")}
-            className="block truncate"
+            className="block whitespace-normal break-words leading-snug"
           />
         ),
       },
@@ -211,7 +211,7 @@ export function OverviewMarketTable({
         cell: ({ row }) => (
           <OverflowTooltipText
             value={formatOverviewTableCell(row.original, "buyer")}
-            className="block truncate"
+            className="block whitespace-normal break-words leading-snug"
           />
         ),
       },
@@ -228,7 +228,7 @@ export function OverviewMarketTable({
         cell: ({ row }) => (
           <OverflowTooltipText
             value={formatOverviewTableCell(row.original, "supplier")}
-            className="block truncate"
+            className="block whitespace-normal break-words leading-snug"
           />
         ),
       },
@@ -245,7 +245,7 @@ export function OverviewMarketTable({
         cell: ({ row }) => (
           <OverflowTooltipText
             value={formatOverviewTableCell(row.original, "product")}
-            className="block truncate"
+            className="block whitespace-normal break-words leading-snug"
           />
         ),
       },
@@ -328,23 +328,6 @@ export function OverviewMarketTable({
         ),
       },
       {
-        id: "purchasesWithVat",
-        header: () => (
-          <TableHeaderButton
-            label="Закупівлі з ПДВ"
-            sortBy="purchasesWithVat"
-            tableState={tableState}
-            onUpdateTableState={onUpdateTableState}
-          />
-        ),
-        cell: ({ row }) => (
-          <TooltipValue
-            value={formatCompactCurrency(row.original.purchasesWithVat)}
-            tooltip={formatFullCurrency(row.original.purchasesWithVat)}
-          />
-        ),
-      },
-      {
         id: "marketShare",
         header: () => (
           <TableHeaderButton
@@ -393,213 +376,227 @@ export function OverviewMarketTable({
   ).filter((page) => page <= totalPages);
 
   return (
-    <Card className="border border-border/70 shadow-none">
-      <CardHeader className="border-b border-border/70 pb-3.5">
-        <div className="flex items-start justify-between gap-3">
-          <CardTitle>Огляд операцій</CardTitle>
-
-          <div className="shrink-0">
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button variant="outline" className="h-9 rounded-lg px-3">
-                    <EyeOffIcon />
-                    Колонки
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end" className="min-w-52">
-                {table.getAllLeafColumns().map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    checked={column.getIsVisible()}
-                    disabled={
-                      column.getIsVisible() &&
-                      table
-                        .getAllLeafColumns()
-                        .filter((tableColumn) => tableColumn.getIsVisible())
-                        .length === 1
-                    }
-                    onCheckedChange={(checked) =>
-                      column.toggleVisibility(Boolean(checked))
-                    }
-                  >
-                    {columnLabels[column.id] ?? column.id}
-                  </DropdownMenuCheckboxItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-3.5 pt-3.5">
-        <div className="overflow-hidden rounded-md border border-border/70 bg-background">
-          <Table>
-            <TableHeader className="bg-muted/30">
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                  {headerGroup.headers.map((header) => (
-                    <TableHead key={header.id} className="h-11 px-4">
-                      {header.isPlaceholder
-                        ? null
-                        : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: tableState.limit }).map((_, rowIndex) => (
-                  <TableRow key={rowIndex} className="border-border/70">
-                    {Array.from({ length: visibleColumnCount }).map(
-                      (_, cellIndex) => (
-                        <TableCell key={cellIndex} className="px-4 py-3">
-                          <span className="inline-block h-4 w-20 rounded bg-muted/70 align-middle text-transparent">
-                            loading
-                          </span>
-                        </TableCell>
-                      ),
-                    )}
-                  </TableRow>
-                ))
-              ) : error ? (
-                <TableRow className="hover:bg-transparent">
-                  <TableCell
-                    colSpan={visibleColumnCount}
-                    className="px-4 py-10 text-center"
-                  >
-                    <div className="flex flex-col items-center gap-3">
-                      <p className="text-sm text-destructive">{error}</p>
-                      {onRetry ? (
-                        <Button variant="outline" size="sm" onClick={onRetry}>
-                          <RotateCwIcon />
-                          Повторити
-                        </Button>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ) : table.getRowModel().rows.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow key={row.id} className="border-border/70">
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id} className="px-4 py-3">
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow className="hover:bg-transparent">
-                  <TableCell
-                    colSpan={visibleColumnCount}
-                    className="px-4 py-10 text-center text-sm text-muted-foreground"
-                  >
-                    Немає рядків, що відповідають поточним фільтрам.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-
-        <div className="flex flex-col gap-3 border-t border-border/70 pt-3.5 sm:flex-row sm:items-center sm:justify-between">
-          <p className="text-sm text-muted-foreground">
-            Показано {pageSummaryStart}-{pageSummaryEnd} з {total} рядків
-          </p>
-
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="flex items-center gap-1">
-              <Button
-                variant="outline"
-                size="icon-sm"
-                disabled={tableState.page <= 1}
-                onClick={() =>
-                  onUpdateTableState({
-                    page: Math.max(1, tableState.page - 1),
-                  })
-                }
-                aria-label="Попередня сторінка"
-              >
-                <ChevronLeftIcon />
-              </Button>
-
-              {pageNumbers.map((pageNumber, index) => (
-                <div key={pageNumber} className="flex items-center gap-1">
-                  {index > 0 && pageNumber - pageNumbers[index - 1] > 1 ? (
-                    <span className="px-1 text-xs text-muted-foreground">
-                      ...
-                    </span>
-                  ) : null}
-                  <Button
-                    variant="outline"
-                    size="icon-sm"
-                    className={
-                      pageNumber === tableState.page
-                        ? "border-sidebar-primary text-foreground"
-                        : ""
-                    }
-                    onClick={() =>
-                      onUpdateTableState({
-                        page: pageNumber,
-                      })
-                    }
-                  >
-                    {pageNumber}
-                  </Button>
-                </div>
-              ))}
-
-              <Button
-                variant="outline"
-                size="icon-sm"
-                disabled={tableState.page >= totalPages}
-                onClick={() =>
-                  onUpdateTableState({
-                    page: tableState.page + 1,
-                  })
-                }
-                aria-label="Наступна сторінка"
-              >
-                <ChevronRightIcon />
-              </Button>
+    <div className="min-w-0 max-w-full overflow-hidden">
+      <Card className="min-w-0 max-w-full overflow-hidden border border-border/70 shadow-none">
+        <CardHeader className="border-b border-border/70 pb-3.5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600">
+                <DatabaseIcon className="size-4" />
+              </span>
+              <CardTitle>Огляд операцій</CardTitle>
             </div>
 
-            <Select
-              value={String(tableState.limit)}
-              onValueChange={(value) =>
-                onUpdateTableState({
-                  limit: Number(value),
-                  page: 1,
-                })
-              }
-            >
-              <SelectTrigger className="h-8 min-w-28 rounded-lg px-3">
-                <SelectValue>{tableState.limit} / сторінка</SelectValue>
-              </SelectTrigger>
-              <SelectContent className="p-1">
-                {pageSizeOptions.map((size) => (
-                  <SelectItem key={size} value={String(size)}>
-                    {size} / сторінка
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="shrink-0">
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <Button variant="outline" className="h-9 rounded-lg px-3">
+                      <EyeOffIcon />
+                      Колонки
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent align="end" className="min-w-52">
+                  {table.getAllLeafColumns().map((column) => (
+                    <DropdownMenuCheckboxItem
+                      key={column.id}
+                      checked={column.getIsVisible()}
+                      disabled={
+                        column.getIsVisible() &&
+                        table
+                          .getAllLeafColumns()
+                          .filter((tableColumn) => tableColumn.getIsVisible())
+                          .length === 1
+                      }
+                      onCheckedChange={(checked) =>
+                        column.toggleVisibility(Boolean(checked))
+                      }
+                    >
+                      {columnLabels[column.id] ?? column.id}
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
-        </div>
+        </CardHeader>
 
-        {isFetching && !isLoading ? (
-          <p className="text-xs text-muted-foreground">Оновлюємо таблицю...</p>
-        ) : null}
-      </CardContent>
-    </Card>
+        <CardContent className="min-w-0 space-y-3.5 overflow-hidden pt-3.5">
+          <div className="w-full max-w-full overflow-x-auto overflow-y-hidden rounded-md border border-border/70 bg-background">
+            <Table className="min-w-[1280px]">
+              <TableHeader className="bg-muted/30">
+                {table.getHeaderGroups().map((headerGroup) => (
+                  <TableRow
+                    key={headerGroup.id}
+                    className="hover:bg-transparent"
+                  >
+                    {headerGroup.headers.map((header) => (
+                      <TableHead key={header.id} className="h-11 px-4">
+                        {header.isPlaceholder
+                          ? null
+                          : flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )}
+                      </TableHead>
+                    ))}
+                  </TableRow>
+                ))}
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  Array.from({ length: tableState.limit }).map(
+                    (_, rowIndex) => (
+                      <TableRow key={rowIndex} className="border-border/70">
+                        {Array.from({ length: visibleColumnCount }).map(
+                          (_, cellIndex) => (
+                            <TableCell key={cellIndex} className="px-4 py-3">
+                              <span className="inline-block h-4 w-20 rounded bg-muted/70 align-middle text-transparent">
+                                loading
+                              </span>
+                            </TableCell>
+                          ),
+                        )}
+                      </TableRow>
+                    ),
+                  )
+                ) : error ? (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell
+                      colSpan={visibleColumnCount}
+                      className="px-4 py-10 text-center"
+                    >
+                      <div className="flex flex-col items-center gap-3">
+                        <p className="text-sm text-destructive">{error}</p>
+                        {onRetry ? (
+                          <Button variant="outline" size="sm" onClick={onRetry}>
+                            <RotateCwIcon />
+                            Повторити
+                          </Button>
+                        ) : null}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows.length ? (
+                  table.getRowModel().rows.map((row) => (
+                    <TableRow key={row.id} className="border-border/70">
+                      {row.getVisibleCells().map((cell) => (
+                        <TableCell key={cell.id} className="px-4 py-3">
+                          {flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext(),
+                          )}
+                        </TableCell>
+                      ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow className="hover:bg-transparent">
+                    <TableCell
+                      colSpan={visibleColumnCount}
+                      className="px-4 py-10 text-center text-sm text-muted-foreground"
+                    >
+                      Немає рядків, що відповідають поточним фільтрам.
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex flex-col gap-3 border-t border-border/70 pt-3.5 sm:flex-row sm:items-center sm:justify-between">
+            <p className="text-sm text-muted-foreground">
+              Показано {pageSummaryStart}-{pageSummaryEnd} з {total} рядків
+            </p>
+
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={tableState.page <= 1}
+                  onClick={() =>
+                    onUpdateTableState({
+                      page: Math.max(1, tableState.page - 1),
+                    })
+                  }
+                  aria-label="Попередня сторінка"
+                >
+                  <ChevronLeftIcon />
+                </Button>
+
+                {pageNumbers.map((pageNumber, index) => (
+                  <div key={pageNumber} className="flex items-center gap-1">
+                    {index > 0 && pageNumber - pageNumbers[index - 1] > 1 ? (
+                      <span className="px-1 text-xs text-muted-foreground">
+                        ...
+                      </span>
+                    ) : null}
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      className={
+                        pageNumber === tableState.page
+                          ? "border-sidebar-primary text-foreground"
+                          : ""
+                      }
+                      onClick={() =>
+                        onUpdateTableState({
+                          page: pageNumber,
+                        })
+                      }
+                    >
+                      {pageNumber}
+                    </Button>
+                  </div>
+                ))}
+
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={tableState.page >= totalPages}
+                  onClick={() =>
+                    onUpdateTableState({
+                      page: tableState.page + 1,
+                    })
+                  }
+                  aria-label="Наступна сторінка"
+                >
+                  <ChevronRightIcon />
+                </Button>
+              </div>
+
+              <Select
+                value={String(tableState.limit)}
+                onValueChange={(value) =>
+                  onUpdateTableState({
+                    limit: Number(value),
+                    page: 1,
+                  })
+                }
+              >
+                <SelectTrigger className="h-8 min-w-28 rounded-lg px-3">
+                  <SelectValue>{tableState.limit} / сторінка</SelectValue>
+                </SelectTrigger>
+                <SelectContent className="p-1">
+                  {pageSizeOptions.map((size) => (
+                    <SelectItem key={size} value={String(size)}>
+                      {size} / сторінка
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          {isFetching && !isLoading ? (
+            <p className="text-xs text-muted-foreground">
+              Оновлюємо таблицю...
+            </p>
+          ) : null}
+        </CardContent>
+      </Card>
+    </div>
   );
 }

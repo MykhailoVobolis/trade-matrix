@@ -1,4 +1,10 @@
 import Link from "next/link";
+import {
+  Building2Icon,
+  MapPinnedIcon,
+  PackageIcon,
+  UsersIcon,
+} from "lucide-react";
 
 import { OverflowTooltipText } from "@/components/overview/overflow-tooltip-text";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,20 +24,28 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const topCards = [
   {
-    title: "Top Buyers",
+    title: "Топ покупців",
     columns: ["Покупець", "Продажі з ПДВ", "Частка"],
+    icon: UsersIcon,
+    iconClassName: "bg-blue-500/10 text-blue-600",
   },
   {
-    title: "Top Suppliers",
+    title: "Топ постачальників",
     columns: ["Постачальник", "Закупівлі з ПДВ", "Частка"],
+    icon: Building2Icon,
+    iconClassName: "bg-cyan-500/10 text-cyan-600",
   },
   {
-    title: "Top Products",
+    title: "Топ продуктів",
     columns: ["Продукт / Номенклатура", "Продажі з ПДВ", "Частка"],
+    icon: PackageIcon,
+    iconClassName: "bg-violet-500/10 text-violet-600",
   },
   {
-    title: "Top Regions",
+    title: "Топ регіонів збуту",
     columns: ["Регіон покупця", "Продажі з ПДВ", "Частка"],
+    icon: MapPinnedIcon,
+    iconClassName: "bg-amber-500/10 text-amber-600",
   },
 ] as const;
 
@@ -82,7 +96,14 @@ export function OverviewTopCardsGrid({
         <Card key={card.title} className="border border-border/70 shadow-none">
           <CardHeader className="gap-3 border-b border-border/70 pb-3.5">
             <div className="flex items-start justify-between gap-3">
-              <CardTitle className="text-[1.05rem]">{card.title}</CardTitle>
+              <div className="flex items-center gap-3">
+                <span
+                  className={`inline-flex size-10 shrink-0 items-center justify-center rounded-md ${card.iconClassName}`}
+                >
+                  <card.icon className="size-4" />
+                </span>
+                <CardTitle className="text-[1.05rem]">{card.title}</CardTitle>
+              </div>
               <Link
                 href={cardLinks[cardIndex]}
                 className="text-xs font-medium text-sidebar-primary transition-colors hover:text-sidebar-primary/80"
@@ -174,12 +195,12 @@ export function OverviewTopCardsGrid({
                     <span className="min-w-0">
                       <OverflowTooltipText
                         text={name}
-                        className="block truncate text-sm text-foreground"
+                        className="block whitespace-normal break-words text-sm leading-snug text-foreground"
                       />
                       {secondaryText ? (
                         <OverflowTooltipText
                           text={secondaryText}
-                          className="mt-0.5 block truncate text-[11px] text-muted-foreground"
+                          className="mt-0.5 block whitespace-normal break-words text-[11px] leading-snug text-muted-foreground"
                         />
                       ) : null}
                     </span>

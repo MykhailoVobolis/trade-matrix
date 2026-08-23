@@ -1,5 +1,5 @@
 export type OverviewComparisonMode = "NONE" | "PREVIOUS_PERIOD" | "CUSTOM";
-export type OverviewTimeGrain = "DAY" | "WEEK" | "MONTH" | "QUARTER";
+export type OverviewTimeGrain = "MONTH" | "QUARTER" | "YEAR";
 export type OverviewSortDirection = "asc" | "desc";
 export type OverviewTableSortBy =
   | "period"
@@ -129,12 +129,7 @@ function parseComparisonMode(value: string | null): OverviewComparisonMode {
 }
 
 function parseTimeGrain(value: string | null): OverviewTimeGrain | "" {
-  if (
-    value === "DAY" ||
-    value === "WEEK" ||
-    value === "MONTH" ||
-    value === "QUARTER"
-  ) {
+  if (value === "MONTH" || value === "QUARTER" || value === "YEAR") {
     return value;
   }
 
@@ -275,10 +270,9 @@ export function normalizeOverviewFilterState(
       ? state.comparisonMode
       : defaults.comparisonMode;
   const timeGrain =
-    state.timeGrain === "DAY" ||
-    state.timeGrain === "WEEK" ||
     state.timeGrain === "MONTH" ||
-    state.timeGrain === "QUARTER"
+    state.timeGrain === "QUARTER" ||
+    state.timeGrain === "YEAR"
       ? state.timeGrain
       : "";
   const limit = TABLE_LIMIT_OPTIONS.has(state.table.limit)

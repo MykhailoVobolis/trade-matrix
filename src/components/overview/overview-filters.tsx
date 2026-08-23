@@ -41,6 +41,7 @@ const primaryFilters = [
     label: "Product / Nomenclature",
     placeholder: "All products",
     dimension: "products",
+    popupMinWidth: 560,
   },
   {
     key: "buyerRegionCodes",
@@ -53,12 +54,14 @@ const primaryFilters = [
     label: "Buyer",
     placeholder: "All buyers",
     dimension: "buyers",
+    popupMinWidth: 560,
   },
   {
     key: "supplierTaxNumbers",
     label: "Supplier",
     placeholder: "All suppliers",
     dimension: "suppliers",
+    popupMinWidth: 560,
   },
 ] as const;
 
@@ -122,6 +125,22 @@ function toIsoDate(date: Date) {
   return `${year}-${month}-${day}`;
 }
 
+function parseIsoDate(value: string) {
+  if (!value) {
+    return undefined;
+  }
+
+  const [year, month, day] = value.split("-").map(Number);
+
+  if (!year || !month || !day) {
+    return undefined;
+  }
+
+  const parsedDate = new Date(year, month - 1, day);
+
+  return Number.isNaN(parsedDate.getTime()) ? undefined : parsedDate;
+}
+
 function useDebouncedValue<T>(value: T, delayMs = 350) {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
@@ -149,6 +168,9 @@ function DateRangeFilter({
   dateTo: string;
   onChange: (next: { dateFrom: string; dateTo: string }) => void;
 }) {
+  const fromDate = parseIsoDate(dateFrom);
+  const toDate = parseIsoDate(dateTo);
+
   return (
     <div className="space-y-2">
       <p className="text-xs font-medium text-muted-foreground">{label}</p>
@@ -169,7 +191,8 @@ function DateRangeFilter({
             <Calendar
               mode="single"
               captionLayout="dropdown"
-              selected={dateFrom ? new Date(dateFrom) : undefined}
+              defaultMonth={fromDate}
+              selected={fromDate}
               endMonth={new Date("2035-12-31")}
               startMonth={new Date("2020-01-01")}
               onSelect={(date) => {
@@ -204,7 +227,8 @@ function DateRangeFilter({
             <Calendar
               mode="single"
               captionLayout="dropdown"
-              selected={dateTo ? new Date(dateTo) : undefined}
+              defaultMonth={toDate}
+              selected={toDate}
               endMonth={new Date("2035-12-31")}
               startMonth={new Date("2020-01-01")}
               onSelect={(date) => {
@@ -232,6 +256,7 @@ function SearchableFilterField({
   label,
   placeholder,
   dimension,
+  popupMinWidth,
   state,
   accessToken,
   onUpdateOverviewFilters,
@@ -247,6 +272,7 @@ function SearchableFilterField({
   label: string;
   placeholder: string;
   dimension: "buyers" | "suppliers" | "products" | "uktzed" | "buyerRegions";
+  popupMinWidth?: number;
   state: OverviewFilterState;
   accessToken: string | null;
   onUpdateOverviewFilters: (patch: Partial<OverviewFilterValues>) => void;
@@ -340,6 +366,7 @@ function SearchableFilterField({
       onChange={handleChange}
       hasMore={optionsQuery.hasNextPage}
       isLoadingMore={optionsQuery.isFetchingNextPage}
+      popupMinWidth={popupMinWidth}
       onLoadMore={() => {
         void optionsQuery.fetchNextPage();
       }}
@@ -455,6 +482,7 @@ export function OverviewFilters({
             label={filter.label}
             placeholder={filter.placeholder}
             dimension={filter.dimension}
+            popupMinWidth={filter.popupMinWidth}
             state={state}
             accessToken={accessToken}
             onUpdateOverviewFilters={onUpdateOverviewFilters}

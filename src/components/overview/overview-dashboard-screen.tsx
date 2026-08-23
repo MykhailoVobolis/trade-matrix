@@ -54,7 +54,7 @@ export function OverviewDashboardScreen({
   isExportPending: boolean;
 }) {
   return (
-    <section className="flex w-full flex-1 flex-col gap-4">
+    <section className="flex min-w-0 w-full flex-1 flex-col gap-4">
       <OverviewFilters
         state={state}
         accessToken={accessToken}
@@ -87,6 +87,12 @@ export function OverviewDashboardScreen({
         error={overviewError}
         onRetry={onRetryOverview}
       />
+      <OverviewMarketInsightsCard
+        insights={overview?.insights ?? []}
+        isLoading={isOverviewLoading}
+        error={overviewError}
+        onRetry={onRetryOverview}
+      />
 
       <OverviewTopCardsGrid
         state={state}
@@ -99,24 +105,16 @@ export function OverviewDashboardScreen({
         onRetry={onRetryOverview}
       />
 
-      <div className="grid gap-4 xl:grid-cols-[minmax(320px,0.8fr)_minmax(0,1.7fr)]">
-        <OverviewMarketInsightsCard
-          insights={overview?.insights ?? []}
-          isLoading={isOverviewLoading}
-          error={overviewError}
-          onRetry={onRetryOverview}
-        />
-        <OverviewMarketTable
-          rows={overviewTable?.items ?? []}
-          total={overviewTable?.total ?? 0}
-          isLoading={isOverviewTableLoading}
-          isFetching={isOverviewTableFetching}
-          error={overviewTableError}
-          tableState={state.table}
-          onRetry={onRetryOverviewTable}
-          onUpdateTableState={onUpdateTableState}
-        />
-      </div>
+      <OverviewMarketTable
+        rows={overviewTable?.items ?? []}
+        total={overviewTable?.total ?? 0}
+        isLoading={isOverviewTableLoading}
+        isFetching={isOverviewTableFetching}
+        error={overviewTableError}
+        tableState={state.table}
+        onRetry={onRetryOverviewTable}
+        onUpdateTableState={onUpdateTableState}
+      />
     </section>
   );
 }

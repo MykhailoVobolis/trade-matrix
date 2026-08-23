@@ -36,6 +36,7 @@ type OverviewSearchableMultiSelectProps = {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
+  popupMinWidth?: number;
 };
 
 function getTriggerLabel({
@@ -73,6 +74,7 @@ export function OverviewSearchableMultiSelect({
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
+  popupMinWidth = 340,
 }: OverviewSearchableMultiSelectProps) {
   const [isOpen, setIsOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -127,7 +129,7 @@ export function OverviewSearchableMultiSelect({
         return;
       }
 
-      const popupWidth = Math.max(rect.width, 340);
+      const popupWidth = Math.max(rect.width, popupMinWidth);
       const viewportWidth = window.innerWidth;
       const horizontalPadding = 16;
       const nextLeft = Math.min(
@@ -172,7 +174,7 @@ export function OverviewSearchableMultiSelect({
       window.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen]);
+  }, [isOpen, popupMinWidth]);
 
   const handleListScroll = () => {
     const listElement = listRef.current;
@@ -259,7 +261,7 @@ export function OverviewSearchableMultiSelect({
                               key={option.value}
                               value={`${option.label} ${option.value}`}
                               data-checked={checked}
-                              className="gap-3 rounded-md px-3 py-2 data-selected:bg-sidebar-accent data-selected:text-sidebar-accent-foreground"
+                              className="items-start gap-3 rounded-md px-3 py-2 data-selected:bg-sidebar-accent data-selected:text-sidebar-accent-foreground"
                               onSelect={() => {
                                 onChange(
                                   checked
@@ -280,7 +282,7 @@ export function OverviewSearchableMultiSelect({
                               <span className="min-w-0 flex-1">
                                 <OverflowTooltipText
                                   text={option.label}
-                                  className="block truncate"
+                                  className="block whitespace-normal break-words leading-snug"
                                 />
                               </span>
                             </CommandItem>

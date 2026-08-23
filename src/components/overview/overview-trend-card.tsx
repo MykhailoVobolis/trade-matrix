@@ -13,11 +13,13 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { OverviewTimeGrain } from "@/lib/overview/overview-url-state";
 
 const timeGrainOptions: Array<{
-  value: OverviewTimeGrain;
+  value: OverviewTimeGrain | "";
   label: string;
 }> = [
+  { value: "", label: "Авто" },
   { value: "MONTH", label: "Місяць" },
   { value: "QUARTER", label: "Квартал" },
+  { value: "YEAR", label: "Рік" },
 ];
 
 export function OverviewTrendCard({
@@ -37,10 +39,10 @@ export function OverviewTrendCard({
   onRetry?: () => void;
   onTimeGrainChange: (timeGrain: OverviewTimeGrain | "") => void;
 }) {
-  const resolvedTimeGrain: OverviewTimeGrain = timeGrain || "MONTH";
+  const resolvedTimeGrain: OverviewTimeGrain | "" = timeGrain;
   const resolvedTimeGrainLabel =
     timeGrainOptions.find((option) => option.value === resolvedTimeGrain)
-      ?.label ?? "Місяць";
+      ?.label ?? "Авто";
   const maxValue = Math.max(
     1,
     ...trend.flatMap((item) => [
@@ -59,6 +61,13 @@ export function OverviewTrendCard({
         : pointCount <= 12
           ? "w-4 xl:w-5"
           : "w-3.5 xl:w-4";
+  const getBarHeight = (value: number) => {
+    if (value <= 0) {
+      return "2%";
+    }
+
+    return `${Math.max(8, (value / maxValue) * 100)}%`;
+  };
 
   return (
     <Card className="border border-border/70 shadow-none">
@@ -67,9 +76,11 @@ export function OverviewTrendCard({
 
         <div className="flex flex-wrap items-center gap-2">
           <Select
-            value={resolvedTimeGrain}
+            value={resolvedTimeGrain || "__AUTO__"}
             onValueChange={(value) =>
-              onTimeGrainChange(value as OverviewTimeGrain)
+              onTimeGrainChange(
+                value === "__AUTO__" ? "" : (value as OverviewTimeGrain),
+              )
             }
           >
             <SelectTrigger className="h-9 min-w-36 rounded-md">
@@ -77,7 +88,10 @@ export function OverviewTrendCard({
             </SelectTrigger>
             <SelectContent className="p-1">
               {timeGrainOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
+                <SelectItem
+                  key={option.value || "__AUTO__"}
+                  value={option.value || "__AUTO__"}
+                >
                   {option.label}
                 </SelectItem>
               ))}
@@ -131,15 +145,11 @@ export function OverviewTrendCard({
                   <div className="flex h-60 items-end gap-1.5">
                     <div
                       className={`${barWidthClass} rounded-t-[4px] bg-sidebar-primary`}
-                      style={{
-                        height: `${Math.max(8, (item.salesWithVat / maxValue) * 100)}%`,
-                      }}
+                      style={{ height: getBarHeight(item.salesWithVat) }}
                     />
                     <div
                       className={`${barWidthClass} rounded-t-[4px] bg-sidebar-primary/25`}
-                      style={{
-                        height: `${Math.max(8, (item.purchasesWithVat / maxValue) * 100)}%`,
-                      }}
+                      style={{ height: getBarHeight(item.purchasesWithVat) }}
                     />
                   </div>
                   <div className="w-full space-y-1 text-center">
