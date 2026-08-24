@@ -221,14 +221,14 @@ const structureItems = [
     iconClassName: "bg-blue-500/10 text-blue-600",
   },
   {
-    title: "Частка TOP-5 продуктів",
-    icon: PackageIcon,
-    iconClassName: "bg-violet-500/10 text-violet-600",
-  },
-  {
     title: "Частка TOP-5 регіонів збуту",
     icon: MapPinnedIcon,
     iconClassName: "bg-amber-500/10 text-amber-600",
+  },
+  {
+    title: "Частка TOP-5 продуктів",
+    icon: PackageIcon,
+    iconClassName: "bg-violet-500/10 text-violet-600",
   },
 ] as const;
 
@@ -587,16 +587,16 @@ function SuppliersMarketStructureCard({
               primary: `${formatPercent(data.top5BuyersShare)} від продажів`,
             }
           : null,
-        productConcentrationShare !== undefined &&
-        productConcentrationShare !== null
-          ? {
-              primary: `${formatInsightPercent(productConcentrationShare)}% від продажів`,
-            }
-          : null,
         regionConcentrationShare !== undefined &&
         regionConcentrationShare !== null
           ? {
               primary: `${formatInsightPercent(regionConcentrationShare)}% від продажів`,
+            }
+          : null,
+        productConcentrationShare !== undefined &&
+        productConcentrationShare !== null
+          ? {
+              primary: `${formatInsightPercent(productConcentrationShare)}% від продажів`,
             }
           : null,
       ]
@@ -617,7 +617,7 @@ function SuppliersMarketStructureCard({
               className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3"
             >
               <div className="flex items-start justify-between gap-3">
-                <p className="text-xs font-medium text-muted-foreground">
+                <p className="max-w-[calc(100%-3.5rem)] text-xs font-medium text-muted-foreground">
                   {item.title}
                 </p>
                 <div
@@ -650,8 +650,8 @@ function SuppliersMarketStructureCard({
                     }
 
                     return (
-                      <div className="space-y-1">
-                        <p className="text-sm text-foreground">
+                      <div className="max-w-[calc(100%-3.5rem)] space-y-1">
+                        <p className="break-words text-sm text-foreground">
                           {value.primary}
                         </p>
                         {"secondary" in value && value.secondary ? (

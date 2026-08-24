@@ -17,14 +17,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const structureItems = [
   {
-    title: "Топ покупець",
-    icon: UsersIcon,
-    iconClassName: "bg-blue-500/10 text-blue-600",
-  },
-  {
     title: "Топ постачальник",
     icon: BriefcaseBusinessIcon,
     iconClassName: "bg-cyan-500/10 text-cyan-600",
+  },
+  {
+    title: "Топ покупець",
+    icon: UsersIcon,
+    iconClassName: "bg-blue-500/10 text-blue-600",
   },
   {
     title: "Топ регіон збуту",
@@ -32,9 +32,9 @@ const structureItems = [
     iconClassName: "bg-amber-500/10 text-amber-600",
   },
   {
-    title: "Топ УКТЗЕД",
-    icon: TagIcon,
-    iconClassName: "bg-violet-500/10 text-violet-600",
+    title: "Частка TOP-5 постачальників",
+    icon: TrophyIcon,
+    iconClassName: "bg-cyan-500/10 text-cyan-600",
   },
   {
     title: "Частка TOP-5 покупців",
@@ -42,9 +42,9 @@ const structureItems = [
     iconClassName: "bg-blue-500/10 text-blue-600",
   },
   {
-    title: "Частка TOP-5 постачальників",
-    icon: TrophyIcon,
-    iconClassName: "bg-cyan-500/10 text-cyan-600",
+    title: "Топ УКТЗЕД",
+    icon: TagIcon,
+    iconClassName: "bg-violet-500/10 text-violet-600",
   },
 ] as const;
 
@@ -61,16 +61,16 @@ export function OverviewMarketStructureCard({
 }) {
   const values = data
     ? [
-        data.topBuyer
-          ? {
-              primary: data.topBuyer.name,
-              secondary: `${formatCompactCurrency(data.topBuyer.amount)} • ${formatPercent(data.topBuyer.share)}`,
-            }
-          : null,
         data.topSupplier
           ? {
               primary: data.topSupplier.name,
               secondary: `${formatCompactCurrency(data.topSupplier.amount)} • ${formatPercent(data.topSupplier.share)}`,
+            }
+          : null,
+        data.topBuyer
+          ? {
+              primary: data.topBuyer.name,
+              secondary: `${formatCompactCurrency(data.topBuyer.amount)} • ${formatPercent(data.topBuyer.share)}`,
             }
           : null,
         data.topBuyerRegion
@@ -83,11 +83,9 @@ export function OverviewMarketStructureCard({
               secondary: `${formatCompactCurrency(data.topBuyerRegion.amount)} • ${formatPercent(data.topBuyerRegion.share)}`,
             }
           : null,
-        data.topUKTZED
+        data.top5SuppliersShare !== null
           ? {
-              primary: data.topUKTZED.code ?? data.topUKTZED.name,
-              secondary: `${formatCompactCurrency(data.topUKTZED.amount)} • ${formatPercent(data.topUKTZED.share)}`,
-              tertiary: data.topUKTZED.description ?? null,
+              primary: `${formatPercent(data.top5SuppliersShare)} від закупівель`,
             }
           : null,
         data.top5BuyersShare !== null
@@ -95,9 +93,11 @@ export function OverviewMarketStructureCard({
               primary: `${formatPercent(data.top5BuyersShare)} від продажів`,
             }
           : null,
-        data.top5SuppliersShare !== null
+        data.topUKTZED
           ? {
-              primary: `${formatPercent(data.top5SuppliersShare)} від закупівель`,
+              primary: data.topUKTZED.code ?? data.topUKTZED.name,
+              secondary: `${formatCompactCurrency(data.topUKTZED.amount)} • ${formatPercent(data.topUKTZED.share)}`,
+              tertiary: data.topUKTZED.description ?? null,
             }
           : null,
       ]
@@ -118,7 +118,7 @@ export function OverviewMarketStructureCard({
               className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3"
             >
               <div className="flex items-start justify-between gap-3">
-                <p className="text-xs font-medium text-muted-foreground">
+                <p className="max-w-[calc(100%-3.5rem)] text-xs font-medium text-muted-foreground">
                   {item.title}
                 </p>
                 <div
@@ -151,8 +151,8 @@ export function OverviewMarketStructureCard({
                     }
 
                     return (
-                      <div className="space-y-1">
-                        <p className="text-sm text-foreground">
+                      <div className="max-w-[calc(100%-3.5rem)] space-y-1">
+                        <p className="break-words text-sm text-foreground">
                           {value.primary}
                         </p>
                         {"secondary" in value && value.secondary ? (
