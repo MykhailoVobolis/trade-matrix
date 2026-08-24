@@ -31,36 +31,36 @@ import type { OverviewExportFormat } from "@/lib/overview/overview-api";
 
 const primaryFilters = [
   {
-    key: "uktzed",
-    label: "UKTZED",
-    placeholder: "All UKTZED",
-    dimension: "uktzed",
-  },
-  {
-    key: "products",
-    label: "Product / Nomenclature",
-    placeholder: "All products",
-    dimension: "products",
+    key: "supplierTaxNumbers",
+    label: "Постачальник",
+    placeholder: "Усі постачальники",
+    dimension: "suppliers",
     popupMinWidth: 560,
   },
   {
-    key: "buyerRegionCodes",
-    label: "Buyer Region",
-    placeholder: "All regions",
-    dimension: "buyerRegions",
-  },
-  {
     key: "buyerTaxNumbers",
-    label: "Buyer",
-    placeholder: "All buyers",
+    label: "Покупець",
+    placeholder: "Усі покупці",
     dimension: "buyers",
     popupMinWidth: 560,
   },
   {
-    key: "supplierTaxNumbers",
-    label: "Supplier",
-    placeholder: "All suppliers",
-    dimension: "suppliers",
+    key: "buyerRegionCodes",
+    label: "Регіон покупця",
+    placeholder: "Усі регіони",
+    dimension: "buyerRegions",
+  },
+  {
+    key: "uktzed",
+    label: "УКТЗЕД",
+    placeholder: "Усі УКТЗЕД",
+    dimension: "uktzed",
+  },
+  {
+    key: "products",
+    label: "Продукт / Номенклатура",
+    placeholder: "Усі продукти",
+    dimension: "products",
     popupMinWidth: 560,
   },
 ] as const;
@@ -101,7 +101,7 @@ function readFilterLabelCache(
 
 function formatDateLabel(value: string) {
   if (!value) {
-    return "Select date";
+    return "Оберіть дату";
   }
 
   const date = new Date(value);
@@ -405,7 +405,7 @@ export function OverviewFilters({
       <div className="flex flex-col gap-3 xl:flex-row xl:items-start xl:justify-between">
         <div className="grid gap-3 md:grid-cols-[minmax(240px,320px)_minmax(260px,360px)] xl:flex xl:flex-wrap xl:items-start">
           <DateRangeFilter
-            label="Period"
+            label="Період"
             dateFrom={state.dateFrom}
             dateTo={state.dateTo}
             onChange={({ dateFrom, dateTo }) =>
@@ -418,12 +418,12 @@ export function OverviewFilters({
 
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground">
-              Comparison Period
+              Порівняння
             </p>
             <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border/70 bg-background px-3 py-2.5 shadow-sm shadow-black/[0.02]">
               <div className="space-y-0.5">
                 <p className="text-sm text-foreground">
-                  Same selected period, previous year
+                  Той самий вибраний період, попередній рік
                 </p>
               </div>
               <Switch
@@ -455,7 +455,7 @@ export function OverviewFilters({
               render={
                 <Button className="px-3 shadow-sm shadow-black/[0.02]">
                   <DownloadIcon />
-                  {isExportPending ? "Exporting..." : "Експорт"}
+                  {isExportPending ? "Експортуємо..." : "Експорт"}
                   <ChevronDownIcon className="size-4 text-current/75" />
                 </Button>
               }
@@ -482,7 +482,9 @@ export function OverviewFilters({
             label={filter.label}
             placeholder={filter.placeholder}
             dimension={filter.dimension}
-            popupMinWidth={filter.popupMinWidth}
+            popupMinWidth={
+              "popupMinWidth" in filter ? filter.popupMinWidth : undefined
+            }
             state={state}
             accessToken={accessToken}
             onUpdateOverviewFilters={onUpdateOverviewFilters}

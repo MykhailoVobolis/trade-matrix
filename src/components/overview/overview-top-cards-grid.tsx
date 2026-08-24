@@ -179,7 +179,7 @@ export function OverviewTopCardsGrid({
                 const name = "regionName" in item ? item.regionName : item.name;
                 const secondaryText =
                   cardIndex === 2 && "uktzed" in item && item.uktzed
-                    ? `UKTZED ${item.uktzed}`
+                    ? `УКТЗЕД ${item.uktzed}`
                     : cardIndex === 3 &&
                         "activeBuyers" in item &&
                         typeof item.activeBuyers === "number"

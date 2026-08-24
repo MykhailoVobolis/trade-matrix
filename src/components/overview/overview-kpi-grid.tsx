@@ -60,11 +60,13 @@ export function OverviewKpiGrid({
   kpi,
   isLoading,
   error,
+  comparisonEnabled = true,
   onRetry,
 }: {
   kpi?: OverviewResponse["kpi"];
   isLoading: boolean;
   error: string | null;
+  comparisonEnabled?: boolean;
   onRetry?: () => void;
 }) {
   return (
@@ -124,6 +126,8 @@ export function OverviewKpiGrid({
                     </Button>
                   ) : null}
                 </div>
+              ) : !comparisonEnabled ? (
+                <p className="text-xs text-muted-foreground">&nbsp;</p>
               ) : metric ? (
                 <p className="text-xs text-muted-foreground">
                   {formatDelta(metric)}

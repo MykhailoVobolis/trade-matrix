@@ -67,6 +67,7 @@ export function OverviewDashboardScreen({
         kpi={overview?.kpi}
         isLoading={isOverviewLoading}
         error={overviewError}
+        comparisonEnabled={state.comparisonMode !== "NONE"}
         onRetry={onRetryOverview}
       />
 
@@ -76,6 +77,7 @@ export function OverviewDashboardScreen({
         isFetching={isOverviewFetching}
         error={overviewError}
         timeGrain={state.timeGrain}
+        comparisonEnabled={state.comparisonMode !== "NONE"}
         onRetry={onRetryOverview}
         onTimeGrainChange={(timeGrain) =>
           onUpdateOverviewFilters({ timeGrain })

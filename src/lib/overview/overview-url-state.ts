@@ -10,6 +10,7 @@ export type OverviewTableSortBy =
   | "uktzed"
   | "unit"
   | "quantity"
+  | "priceWithVat"
   | "salesWithVat"
   | "purchasesWithVat"
   | "marketShare";
@@ -55,13 +56,18 @@ const SORT_BY_OPTIONS = new Set<OverviewTableSortBy>([
   "uktzed",
   "unit",
   "quantity",
+  "priceWithVat",
   "salesWithVat",
   "purchasesWithVat",
   "marketShare",
 ]);
 
 function formatIsoDate(date: Date) {
-  return date.toISOString().slice(0, 10);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 }
 
 function getDefaultDateRange() {
@@ -93,7 +99,7 @@ export function getDefaultOverviewFilterState(): OverviewFilterState {
       page: 1,
       limit: 5,
       sortBy: "period",
-      sortDirection: "desc",
+      sortDirection: "asc",
     },
   };
 }
@@ -144,8 +150,15 @@ function parseSortBy(value: string | null): OverviewTableSortBy {
   return "period";
 }
 
-function parseSortDirection(value: string | null): OverviewSortDirection {
-  return value === "asc" ? "asc" : "desc";
+function parseSortDirection(
+  value: string | null,
+  fallback: OverviewSortDirection,
+): OverviewSortDirection {
+  if (value === "asc" || value === "desc") {
+    return value;
+  }
+
+  return fallback;
 }
 
 export function parseOverviewSearchParams(
@@ -165,16 +178,16 @@ export function parseOverviewSearchParams(
   );
 
   return {
-    dateFrom: isIsoDate(dateFrom) ? dateFrom : defaults.dateFrom,
-    dateTo: isIsoDate(dateTo) ? dateTo : defaults.dateTo,
+    dateFrom: isIsoDate(dateFrom) ? dateFrom! : defaults.dateFrom,
+    dateTo: isIsoDate(dateTo) ? dateTo! : defaults.dateTo,
     comparisonMode,
     compareDateFrom:
       comparisonMode === "CUSTOM" && isIsoDate(compareDateFrom)
-        ? compareDateFrom
+        ? compareDateFrom!
         : "",
     compareDateTo:
       comparisonMode === "CUSTOM" && isIsoDate(compareDateTo)
-        ? compareDateTo
+        ? compareDateTo!
         : "",
     uktzed: normalizeMultiValue(searchParams.getAll("uktzed")),
     products: normalizeMultiValue(searchParams.getAll("products")),
@@ -192,9 +205,26 @@ export function parseOverviewSearchParams(
       page: parsePositiveInt(searchParams.get("page"), defaults.table.page),
       limit: TABLE_LIMIT_OPTIONS.has(limit) ? limit : defaults.table.limit,
       sortBy: parseSortBy(searchParams.get("sortBy")),
-      sortDirection: parseSortDirection(searchParams.get("sortDirection")),
+      sortDirection: parseSortDirection(
+        searchParams.get("sortDirection"),
+        defaults.table.sortDirection,
+      ),
     },
   };
+}
+
+function migrateLegacyOverviewTableState(state: OverviewFilterState) {
+  if (state.table.sortBy === "period" && state.table.sortDirection === "desc") {
+    return {
+      ...state,
+      table: {
+        ...state.table,
+        sortDirection: "asc" as const,
+      },
+    };
+  }
+
+  return state;
 }
 
 export function serializeOverviewSearchParams(state: OverviewFilterState) {
@@ -326,7 +356,9 @@ export function readPersistedOverviewFilterState() {
 
   try {
     return normalizeOverviewFilterState(
-      JSON.parse(rawValue) as OverviewFilterState,
+      migrateLegacyOverviewTableState(
+        JSON.parse(rawValue) as OverviewFilterState,
+      ),
     );
   } catch {
     return null;

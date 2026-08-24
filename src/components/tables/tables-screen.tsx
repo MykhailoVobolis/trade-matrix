@@ -79,28 +79,28 @@ const statusOptions: Array<{
 }> = [
   {
     value: "completed",
-    label: "Completed",
+    label: "Завершено",
     icon: CheckCircle2Icon,
     chipClassName:
       "border-emerald-200/80 bg-emerald-50 text-emerald-700 dark:border-emerald-900/80 dark:bg-emerald-950/40 dark:text-emerald-300",
   },
   {
     value: "processing",
-    label: "Processing",
+    label: "Обробляється",
     icon: LoaderCircleIcon,
     chipClassName:
       "border-sky-200/80 bg-sky-50 text-sky-700 dark:border-sky-900/80 dark:bg-sky-950/40 dark:text-sky-300",
   },
   {
     value: "queued",
-    label: "Queued",
+    label: "У черзі",
     icon: LoaderCircleIcon,
     chipClassName:
       "border-amber-200/80 bg-amber-50 text-amber-700 dark:border-amber-900/80 dark:bg-amber-950/40 dark:text-amber-300",
   },
   {
     value: "failed",
-    label: "Failed",
+    label: "Помилка",
     icon: AlertCircleIcon,
     chipClassName:
       "border-rose-200/80 bg-rose-50 text-rose-700 dark:border-rose-900/80 dark:bg-rose-950/40 dark:text-rose-300",
@@ -257,7 +257,7 @@ export function TablesScreen() {
   const normalizedSearch = deferredQuery.trim();
   const selectedStatusLabel =
     selectedStatus === "all"
-      ? "All statuses"
+      ? "Усі статуси"
       : getStatusMeta(selectedStatus).label;
 
   function shouldPollImports(stats?: RegistryImportStats) {
@@ -477,23 +477,24 @@ export function TablesScreen() {
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2">
                 <CardTitle className="text-2xl font-semibold tracking-tight">
-                  Database tables
+                  Таблиці бази даних
                 </CardTitle>
                 <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
                   {isStatsLoading
-                    ? "Loading..."
-                    : `${stats?.totalFiles ?? 0} files`}
+                    ? "Завантажуємо..."
+                    : `${stats?.totalFiles ?? 0} файлів`}
                 </span>
                 <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">
                   {isStatsLoading
-                    ? "Loading..."
+                    ? "Завантажуємо..."
                     : `${stats?.totalSizeMb?.toFixed(1) ?? "0.0"} MB`}
                 </span>
               </div>
               <CardDescription className="max-w-3xl text-sm">
-                Upload XLSX table files here before they enter the processing
-                pipeline. Search by file name, filter by status, and monitor
-                ingestion progress in one place.
+                Завантажуйте XLSX-файли таблиць сюди перед тим, як вони
+                потраплять у пайплайн обробки. Шукайте за назвою файлу,
+                фільтруйте за статусом і відстежуйте прогрес імпорту в одному
+                місці.
               </CardDescription>
             </div>
           </div>
@@ -518,7 +519,9 @@ export function TablesScreen() {
             ) : (
               <CloudUploadIcon />
             )}
-            {uploadMutation.isPending ? "Uploading..." : "Upload Tables"}
+            {uploadMutation.isPending
+              ? "Завантажуємо..."
+              : "Завантажити таблиці"}
           </Button>
         </CardHeader>
 
@@ -533,19 +536,25 @@ export function TablesScreen() {
           ) : null}
 
           {importsQuery.error ? (
-            <AuthInlineMessage variant="error" title="Files load failed">
+            <AuthInlineMessage
+              variant="error"
+              title="Не вдалося завантажити файли"
+            >
               {importsQuery.error.message}
             </AuthInlineMessage>
           ) : null}
 
           {statsQuery.error ? (
-            <AuthInlineMessage variant="error" title="Summary load failed">
+            <AuthInlineMessage
+              variant="error"
+              title="Не вдалося завантажити зведення"
+            >
               {statsQuery.error.message}
             </AuthInlineMessage>
           ) : null}
 
           {deleteMutation.error ? (
-            <AuthInlineMessage variant="error" title="Delete failed">
+            <AuthInlineMessage variant="error" title="Не вдалося видалити файл">
               {deleteMutation.error.message}
             </AuthInlineMessage>
           ) : null}
@@ -560,7 +569,7 @@ export function TablesScreen() {
                     setQuery(event.target.value);
                     setCurrentPage(1);
                   }}
-                  placeholder="Search files..."
+                  placeholder="Пошук файлів..."
                   className="h-10 rounded-lg pl-9"
                   disabled={!accessToken}
                 />
@@ -575,7 +584,7 @@ export function TablesScreen() {
               >
                 <SelectTrigger
                   className="!h-[2.5625rem] min-w-40 rounded-lg px-3"
-                  aria-label="Filter by status"
+                  aria-label="Фільтр за статусом"
                 >
                   <span className="flex items-center gap-2">
                     <ListFilterIcon className="size-4 text-muted-foreground" />
@@ -583,7 +592,7 @@ export function TablesScreen() {
                   </span>
                 </SelectTrigger>
                 <SelectContent className="p-1">
-                  <SelectItem value="all">All statuses</SelectItem>
+                  <SelectItem value="all">Усі статуси</SelectItem>
                   {statusOptions.map((status) => (
                     <SelectItem key={status.value} value={status.value}>
                       {status.label}
@@ -618,11 +627,11 @@ export function TablesScreen() {
             <Table>
               <TableHeader className="bg-muted/30">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead className="h-12 px-5">File Name</TableHead>
-                  <TableHead className="h-12 px-5">Type</TableHead>
-                  <TableHead className="h-12 px-5">Size</TableHead>
-                  <TableHead className="h-12 px-5">Status</TableHead>
-                  <TableHead className="h-12 px-5">Uploaded</TableHead>
+                  <TableHead className="h-12 px-5">Назва файлу</TableHead>
+                  <TableHead className="h-12 px-5">Тип</TableHead>
+                  <TableHead className="h-12 px-5">Розмір</TableHead>
+                  <TableHead className="h-12 px-5">Статус</TableHead>
+                  <TableHead className="h-12 px-5">Завантажено</TableHead>
                   <TableHead className="h-12 w-14 px-5 text-right" />
                 </TableRow>
               </TableHeader>
@@ -672,7 +681,7 @@ export function TablesScreen() {
                               <Button
                                 variant="ghost"
                                 size="icon-sm"
-                                aria-label={`Open actions for ${record.fileName}`}
+                                aria-label={`Відкрити дії для ${record.fileName}`}
                               />
                             }
                           >
@@ -684,7 +693,7 @@ export function TablesScreen() {
                               onClick={() => setPendingDeletion(record)}
                             >
                               <Trash2Icon />
-                              Delete
+                              Видалити
                             </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
@@ -697,7 +706,7 @@ export function TablesScreen() {
                       colSpan={6}
                       className="px-5 py-12 text-center text-sm text-muted-foreground"
                     >
-                      Loading uploaded files...
+                      Завантажуємо файли...
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -706,7 +715,8 @@ export function TablesScreen() {
                       colSpan={6}
                       className="px-5 py-12 text-center text-sm text-muted-foreground"
                     >
-                      No tables match the current search or status filter.
+                      Немає таблиць, що відповідають поточному пошуку або
+                      статус-фільтру.
                     </TableCell>
                   </TableRow>
                 )}
@@ -715,8 +725,8 @@ export function TablesScreen() {
 
             <div className="flex flex-col gap-3 border-t border-border/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
               <p className="text-sm text-muted-foreground">
-                Showing {pageSummaryStart}-{pageSummaryEnd} of {totalItems}{" "}
-                files
+                Показано {pageSummaryStart}-{pageSummaryEnd} з {totalItems}{" "}
+                файлів
               </p>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -728,7 +738,7 @@ export function TablesScreen() {
                     onClick={() =>
                       setCurrentPage((page) => Math.max(1, page - 1))
                     }
-                    aria-label="Previous page"
+                    aria-label="Попередня сторінка"
                   >
                     <ChevronLeftIcon />
                   </Button>
@@ -764,7 +774,7 @@ export function TablesScreen() {
                     onClick={() =>
                       setCurrentPage((page) => Math.min(totalPages, page + 1))
                     }
-                    aria-label="Next page"
+                    aria-label="Наступна сторінка"
                   >
                     <ChevronRightIcon />
                   </Button>
@@ -779,14 +789,14 @@ export function TablesScreen() {
                 >
                   <SelectTrigger
                     className="h-8 min-w-28 rounded-lg px-3"
-                    aria-label="Rows per page"
+                    aria-label="Рядків на сторінку"
                   >
-                    <SelectValue>{pageSize} / page</SelectValue>
+                    <SelectValue>{pageSize} / сторінка</SelectValue>
                   </SelectTrigger>
                   <SelectContent className="p-1">
-                    <SelectItem value="5">5 / page</SelectItem>
-                    <SelectItem value="10">10 / page</SelectItem>
-                    <SelectItem value="20">20 / page</SelectItem>
+                    <SelectItem value="5">5 / сторінка</SelectItem>
+                    <SelectItem value="10">10 / сторінка</SelectItem>
+                    <SelectItem value="20">20 / сторінка</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -810,12 +820,12 @@ export function TablesScreen() {
         >
           <DialogHeader className="gap-3">
             <DialogTitle className="text-3xl font-semibold tracking-tight">
-              Delete document
+              Видалити документ
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
               {pendingDeletion
-                ? `This will remove ${pendingDeletion.fileName} from the tables list.`
-                : "This will remove the selected document from the tables list."}
+                ? `Це видалить ${pendingDeletion.fileName} зі списку таблиць.`
+                : "Це видалить вибраний документ зі списку таблиць."}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter className="mt-3 border-t-0 bg-transparent p-0 sm:grid sm:grid-cols-2 sm:gap-4">
@@ -828,7 +838,7 @@ export function TablesScreen() {
                 setPendingDeletion(null);
               }}
             >
-              Cancel
+              Скасувати
             </Button>
             <Button
               variant="destructive"
@@ -837,7 +847,7 @@ export function TablesScreen() {
               disabled={deleteMutation.isPending}
               onClick={handleDeleteRecord}
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteMutation.isPending ? "Видаляємо..." : "Видалити"}
             </Button>
           </DialogFooter>
         </DialogContent>

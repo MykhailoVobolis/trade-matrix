@@ -32,7 +32,7 @@ const structureItems = [
     iconClassName: "bg-amber-500/10 text-amber-600",
   },
   {
-    title: "Топ UKTZED",
+    title: "Топ УКТЗЕД",
     icon: TagIcon,
     iconClassName: "bg-violet-500/10 text-violet-600",
   },
