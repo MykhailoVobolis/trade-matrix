@@ -1,7 +1,7 @@
 import {
   ActivityIcon,
   BarChart3Icon,
-  BriefcaseBusinessIcon,
+  Building2Icon,
   MapPinnedIcon,
   ShoppingCartIcon,
   UsersIcon,
@@ -46,7 +46,7 @@ const kpiCards = [
   },
   {
     title: "Активні постачальники",
-    icon: BriefcaseBusinessIcon,
+    icon: Building2Icon,
     iconClassName: "bg-cyan-500/10 text-cyan-600",
   },
   {

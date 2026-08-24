@@ -1,5 +1,5 @@
 import {
-  BriefcaseBusinessIcon,
+  Building2Icon,
   MapPinnedIcon,
   TagIcon,
   TrophyIcon,
@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const structureItems = [
   {
     title: "Топ постачальник",
-    icon: BriefcaseBusinessIcon,
+    icon: Building2Icon,
     iconClassName: "bg-cyan-500/10 text-cyan-600",
   },
   {
