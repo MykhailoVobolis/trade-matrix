@@ -645,7 +645,11 @@ function SuppliersKpiGrid({
           <Card
             key={card.title}
             size="sm"
-            className="flex h-full border border-border/70 shadow-none"
+            className={
+              isLoading
+                ? "border border-border/70 shadow-none"
+                : "flex h-full border border-border/70 shadow-none"
+            }
           >
             <CardHeader className="gap-2 pb-2.5">
               <div className="flex items-start justify-between gap-3">
@@ -654,7 +658,7 @@ function SuppliersKpiGrid({
                     {card.title}
                   </p>
                   <CardTitle>
-                    {isLoading ? <Skeleton className="h-8 w-24" /> : value}
+                    {isLoading ? <Skeleton className="h-6 w-20" /> : value}
                   </CardTitle>
                 </div>
                 <div
@@ -664,12 +668,15 @@ function SuppliersKpiGrid({
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="flex flex-1 flex-col justify-end space-y-1.5 pt-0">
+            <CardContent
+              className={
+                isLoading
+                  ? "pt-0"
+                  : "flex flex-1 flex-col justify-end space-y-1.5 pt-0"
+              }
+            >
               {isLoading ? (
-                <>
-                  <Skeleton className="h-3.5 w-28" />
-                  <Skeleton className="h-3.5 w-20" />
-                </>
+                <Skeleton className="h-4 w-40 max-w-full" />
               ) : error ? (
                 <div className="space-y-2">
                   <p className="text-xs text-destructive">{error}</p>
@@ -1160,7 +1167,9 @@ function SuppliersTopCardsGrid({
                   );
                 })
               ) : (
-                <p className="text-sm text-muted-foreground">No ranking data</p>
+                <p className="text-sm text-muted-foreground">
+                  Немає даних рейтингу
+                </p>
               )}
               <div
                 className={`grid ${gridClassName} items-center gap-4 border-t border-border/70 px-1 pt-2.5 text-sm`}
@@ -1672,6 +1681,14 @@ export function SuppliersDashboardScreen({
         isLoading={isDashboardLoading}
         error={dashboardError}
         onRetry={onRetryDashboard}
+        renderEmptyAsGrid
+        emptyGridCount={3}
+        emptyGridTemplates={[
+          "Продажі змінились на —% порівняно з попереднім періодом",
+          "Пік продажів — —",
+          "Найбільший регіон попиту — —",
+        ]}
+        emptyGridTypes={["SALES_CHANGE", "PEAK_SALES_PERIOD", "TOP_REGION"]}
       />
 
       <SuppliersTopCardsGrid

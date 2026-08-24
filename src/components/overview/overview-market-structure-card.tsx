@@ -92,12 +92,12 @@ export function OverviewMarketStructureCard({
               secondary: `${formatCompactCurrency(data.topBuyerRegion.amount)} • ${formatPercent(data.topBuyerRegion.share)}`,
             }
           : null,
-        data.top5SuppliersShare !== null
+        data.top5SuppliersShare !== null && data.top5SuppliersShare > 0
           ? {
               primary: `${formatPercent(data.top5SuppliersShare)} від закупівель`,
             }
           : null,
-        data.top5BuyersShare !== null
+        data.top5BuyersShare !== null && data.top5BuyersShare > 0
           ? {
               primary: `${formatPercent(data.top5BuyersShare)} від продажів`,
             }

@@ -1,19 +1,11 @@
 import {
-  ActivityIcon,
   BarChart3Icon,
   Building2Icon,
   MapPinnedIcon,
-  ShoppingCartIcon,
   UsersIcon,
 } from "lucide-react";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { OverviewResponse } from "@/lib/overview/overview-api";
 import {
   formatCompactCurrency,
@@ -28,16 +20,6 @@ const kpiCards = [
     title: "Продажі з ПДВ",
     icon: BarChart3Icon,
     iconClassName: "bg-blue-500/10 text-blue-600",
-  },
-  {
-    title: "Закупівлі з ПДВ",
-    icon: ShoppingCartIcon,
-    iconClassName: "bg-cyan-500/10 text-cyan-600",
-  },
-  {
-    title: "Сальдо продажі / закупівлі",
-    icon: ActivityIcon,
-    iconClassName: "bg-violet-500/10 text-violet-600",
   },
   {
     title: "Активні покупці",
@@ -70,21 +52,19 @@ export function OverviewKpiGrid({
   onRetry?: () => void;
 }) {
   return (
-    <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-6">
+    <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-4">
       {kpiCards.map((card, index) => {
         const Icon = card.icon;
         const metric = kpi
           ? [
               kpi.salesWithVat,
-              kpi.purchasesWithVat,
-              kpi.balance,
               kpi.activeBuyers,
               kpi.activeSuppliers,
               kpi.salesRegions,
             ][index]
           : undefined;
         const value =
-          index < 3
+          index < 1
             ? formatCompactCurrency(metric?.current)
             : formatNumber(metric?.current);
 
@@ -92,16 +72,20 @@ export function OverviewKpiGrid({
           <Card
             key={card.title}
             size="sm"
-            className="flex h-full border border-border/70 shadow-none"
+            className={
+              isLoading
+                ? "border border-border/70 shadow-none"
+                : "flex h-full border border-border/70 shadow-none"
+            }
           >
             <CardHeader className="gap-2 pb-2.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1.5">
-                  <CardDescription className="text-[0.78rem] leading-snug">
+                  <p className="text-[0.78rem] leading-snug text-muted-foreground">
                     {card.title}
-                  </CardDescription>
+                  </p>
                   <CardTitle>
-                    {isLoading ? <Skeleton className="h-8 w-24" /> : value}
+                    {isLoading ? <Skeleton className="h-6 w-20" /> : value}
                   </CardTitle>
                 </div>
                 <div
@@ -111,12 +95,15 @@ export function OverviewKpiGrid({
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="flex flex-1 flex-col justify-end space-y-1.5 pt-0">
+            <CardContent
+              className={
+                isLoading
+                  ? "pt-0"
+                  : "flex flex-1 flex-col justify-end space-y-1.5 pt-0"
+              }
+            >
               {isLoading ? (
-                <>
-                  <Skeleton className="h-3.5 w-28" />
-                  <Skeleton className="h-3.5 w-20" />
-                </>
+                <Skeleton className="h-4 w-40 max-w-full" />
               ) : error ? (
                 <div className="space-y-2">
                   <p className="text-xs text-destructive">{error}</p>

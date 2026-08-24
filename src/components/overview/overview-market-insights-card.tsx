@@ -81,16 +81,52 @@ function getInsightIcon(type: OverviewInsight["type"]) {
   }
 }
 
+function isPlaceholderInsight(insight: OverviewInsight) {
+  const payload = insight.payload;
+
+  switch (insight.type) {
+    case "SALES_CHANGE":
+      return payload.deltaPercent == null;
+    case "PEAK_SALES_PERIOD": {
+      const amount = payload.amount;
+      const numericAmount =
+        typeof amount === "number"
+          ? amount
+          : typeof amount === "string"
+            ? Number(amount)
+            : NaN;
+
+      return !(Number.isFinite(numericAmount) && numericAmount > 0);
+    }
+    case "SUPPLIER_CONCENTRATION":
+      return payload.top5Share == null;
+    case "TOP_REGION":
+      return !payload.regionName || payload.regionName === "—";
+    case "TOP_UKTZED":
+      return payload.code == null || payload.share == null;
+    default:
+      return false;
+  }
+}
+
 export function OverviewMarketInsightsCard({
   insights,
   isLoading,
   error,
   onRetry,
+  renderEmptyAsGrid = false,
+  emptyGridCount = 3,
+  emptyGridTemplates,
+  emptyGridTypes,
 }: {
   insights: OverviewInsight[];
   isLoading: boolean;
   error: string | null;
   onRetry?: () => void;
+  renderEmptyAsGrid?: boolean;
+  emptyGridCount?: number;
+  emptyGridTemplates?: string[];
+  emptyGridTypes?: OverviewInsight["type"][];
 }) {
   const visibleInsights = insights.filter(isRenderableInsight);
 
@@ -129,6 +165,7 @@ export function OverviewMarketInsightsCard({
               const { icon: InsightIcon, className } = getInsightIcon(
                 insight.type,
               );
+              const isPlaceholder = isPlaceholderInsight(insight);
 
               return (
                 <div
@@ -141,7 +178,13 @@ export function OverviewMarketInsightsCard({
                     >
                       <InsightIcon className="size-4" />
                     </div>
-                    <p className="text-sm leading-6 text-foreground">
+                    <p
+                      className={`text-sm leading-6 ${
+                        isPlaceholder
+                          ? "text-muted-foreground/80"
+                          : "text-foreground"
+                      }`}
+                    >
                       {formatOverviewInsight(insight)}
                     </p>
                   </div>
@@ -149,9 +192,46 @@ export function OverviewMarketInsightsCard({
               );
             })}
           </div>
+        ) : renderEmptyAsGrid ? (
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {(emptyGridTemplates?.length
+              ? emptyGridTemplates
+              : Array.from({ length: emptyGridCount }, () => "")
+            ).map((template, index) => {
+              const insightType = emptyGridTypes?.[index];
+              const { icon: EmptyInsightIcon, className } = getInsightIcon(
+                insightType ?? "SALES_CHANGE",
+              );
+
+              return (
+                <div
+                  key={`empty-insight-${index}`}
+                  className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3"
+                >
+                  <div className="flex items-start gap-3">
+                    <div
+                      className={`flex size-10 shrink-0 items-center justify-center rounded-md ${className}`}
+                    >
+                      <EmptyInsightIcon className="size-4" />
+                    </div>
+                    {template ? (
+                      <p className="text-sm leading-6 text-muted-foreground/80">
+                        {template}
+                      </p>
+                    ) : (
+                      <div className="space-y-2 pt-0.5">
+                        <div className="h-3.5 w-40 rounded bg-muted/60" />
+                        <div className="h-3.5 w-28 rounded bg-muted/45" />
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
         ) : (
           <div className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3 text-sm text-muted-foreground">
-            No insights available
+            Немає ринкових інсайтів
           </div>
         )}
       </CardContent>

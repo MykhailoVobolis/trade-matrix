@@ -141,10 +141,6 @@ export function OverviewTrendCard({
   const resolvedTimeGrainLabel =
     timeGrainOptions.find((option) => option.value === resolvedTimeGrain)
       ?.label ?? "Авто";
-  const purchasesBarColor =
-    resolvedTheme === "dark"
-      ? "color-mix(in oklab, var(--sidebar-primary) 38%, white)"
-      : "color-mix(in oklab, var(--sidebar-primary) 22%, white)";
   const comparisonSalesLineColor =
     resolvedTheme === "dark"
       ? "color-mix(in oklab, var(--sidebar-primary) 82%, white)"
@@ -152,25 +148,18 @@ export function OverviewTrendCard({
   const hasComparisonSales = trend.some(
     (item) => (item.comparisonSalesWithVat ?? 0) > 0,
   );
-  const hasComparisonPurchases = trend.some(
-    (item) => (item.comparisonPurchasesWithVat ?? 0) > 0,
-  );
   const chartData = trend.map((item) => ({
     ...item,
     comparisonSalesWithVat:
       comparisonEnabled && hasComparisonSales
         ? item.comparisonSalesWithVat
         : null,
-    comparisonPurchasesWithVat:
-      comparisonEnabled && hasComparisonPurchases
-        ? item.comparisonPurchasesWithVat
-        : null,
   }));
 
   return (
     <Card className="border border-border/70 shadow-none">
       <CardHeader className="flex flex-col gap-3 border-b border-border/70 pb-4 lg:flex-row lg:items-center lg:justify-between">
-        <CardTitle>Продажі та закупівлі за період</CardTitle>
+        <CardTitle>Продажі за період</CardTitle>
 
         <div className="flex flex-wrap items-center gap-2">
           <Select
@@ -206,13 +195,6 @@ export function OverviewTrendCard({
           <div className="flex items-center gap-2">
             <span className="size-2.5 rounded-full bg-sidebar-primary" />
             Продажі з ПДВ
-          </div>
-          <div className="flex items-center gap-2">
-            <span
-              className="size-2.5 rounded-full"
-              style={{ backgroundColor: purchasesBarColor }}
-            />
-            Закупівлі з ПДВ
           </div>
           {comparisonEnabled ? (
             <div className="flex items-center gap-2">
@@ -273,31 +255,12 @@ export function OverviewTrendCard({
                     radius={[3, 3, 0, 0]}
                     maxBarSize={24}
                   />
-                  <Bar
-                    dataKey="purchasesWithVat"
-                    name="Закупівлі з ПДВ"
-                    fill={purchasesBarColor}
-                    radius={[3, 3, 0, 0]}
-                    maxBarSize={24}
-                  />
                   {comparisonEnabled && hasComparisonSales ? (
                     <Line
                       type="monotone"
                       dataKey="comparisonSalesWithVat"
                       name="Продажі з ПДВ · попер. період"
                       stroke={comparisonSalesLineColor}
-                      strokeWidth={2}
-                      strokeDasharray="6 6"
-                      dot={false}
-                      activeDot={{ r: 4 }}
-                    />
-                  ) : null}
-                  {comparisonEnabled && hasComparisonPurchases ? (
-                    <Line
-                      type="monotone"
-                      dataKey="comparisonPurchasesWithVat"
-                      name="Закупівлі з ПДВ · попер. період"
-                      stroke="color-mix(in oklab, var(--sidebar-primary) 38%, white)"
                       strokeWidth={2}
                       strokeDasharray="6 6"
                       dot={false}

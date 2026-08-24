@@ -379,7 +379,11 @@ function BuyersKpiGrid({
           <Card
             key={card.title}
             size="sm"
-            className="flex h-full border border-border/70 shadow-none"
+            className={
+              isLoading
+                ? "border border-border/70 shadow-none"
+                : "flex h-full border border-border/70 shadow-none"
+            }
           >
             <CardHeader className="gap-2 pb-2.5">
               <div className="flex items-start justify-between gap-3">
@@ -388,7 +392,7 @@ function BuyersKpiGrid({
                     {card.title}
                   </p>
                   <CardTitle>
-                    {isLoading ? <Skeleton className="h-8 w-24" /> : value}
+                    {isLoading ? <Skeleton className="h-6 w-20" /> : value}
                   </CardTitle>
                 </div>
                 <div
@@ -398,12 +402,15 @@ function BuyersKpiGrid({
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="flex flex-1 flex-col justify-end space-y-1.5 pt-0">
+            <CardContent
+              className={
+                isLoading
+                  ? "pt-0"
+                  : "flex flex-1 flex-col justify-end space-y-1.5 pt-0"
+              }
+            >
               {isLoading ? (
-                <>
-                  <Skeleton className="h-3.5 w-28" />
-                  <Skeleton className="h-3.5 w-20" />
-                </>
+                <Skeleton className="h-4 w-40 max-w-full" />
               ) : error ? (
                 <div className="space-y-2">
                   <p className="text-xs text-destructive">{error}</p>
@@ -745,16 +752,19 @@ function BuyersMarketInsightsCard({
       insight: insights.find((item) => item.type === "PURCHASES_CHANGE"),
       icon: TrendingUpIcon,
       iconClassName: "bg-cyan-500/10 text-cyan-600",
+      emptyText: "Закупівлі змінились на —% порівняно з попереднім періодом",
     },
     {
       insight: insights.find((item) => item.type === "PEAK_PURCHASES_PERIOD"),
       icon: TrendingUpIcon,
       iconClassName: "bg-cyan-500/10 text-cyan-600",
+      emptyText: "Пік закупівель — —",
     },
     {
       insight: insights.find((item) => item.type === "TOP_SUPPLIER_REGION"),
       icon: MapPinnedIcon,
       iconClassName: "bg-amber-500/10 text-amber-600",
+      emptyText: "Найбільший регіон постачання — —",
     },
   ] as const;
 
@@ -803,8 +813,16 @@ function BuyersMarketInsightsCard({
                     >
                       <Icon className="size-4" />
                     </div>
-                    <p className="text-sm leading-6 text-foreground">
-                      {formatBuyersInsight(item.insight)}
+                    <p
+                      className={`text-sm leading-6 ${
+                        item.insight
+                          ? "text-foreground"
+                          : "text-muted-foreground/80"
+                      }`}
+                    >
+                      {item.insight
+                        ? formatBuyersInsight(item.insight)
+                        : item.emptyText}
                     </p>
                   </div>
                 </div>
@@ -1271,7 +1289,9 @@ function BuyersTopCardsGrid({
                   );
                 })
               ) : (
-                <p className="text-sm text-muted-foreground">No ranking data</p>
+                <p className="text-sm text-muted-foreground">
+                  Немає даних рейтингу
+                </p>
               )}
 
               <div
@@ -1768,7 +1788,7 @@ export function BuyersDashboardScreen({
         isLoading={isDashboardLoading}
         isFetching={isDashboardFetching}
         error={dashboardError}
-        timeGrain={dashboardData?.period.timeGrain ?? state.timeGrain}
+        timeGrain={state.timeGrain}
         comparisonEnabled={state.comparisonMode !== "NONE"}
         onRetry={onRetryDashboard}
         onTimeGrainChange={(timeGrain) => onUpdateFilters({ timeGrain })}

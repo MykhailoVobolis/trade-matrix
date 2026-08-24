@@ -556,7 +556,9 @@ export function OverviewTopCardsGrid({
                   );
                 })
               ) : (
-                <p className="text-sm text-muted-foreground">No ranking data</p>
+                <p className="text-sm text-muted-foreground">
+                  Немає даних рейтингу
+                </p>
               )}
               <div
                 className={`grid ${gridClassName} items-center gap-4 border-t border-border/70 px-1 pt-2.5 text-sm`}

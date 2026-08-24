@@ -94,6 +94,22 @@ export function OverviewDashboardScreen({
         isLoading={isOverviewLoading}
         error={overviewError}
         onRetry={onRetryOverview}
+        renderEmptyAsGrid
+        emptyGridCount={5}
+        emptyGridTemplates={[
+          "Продажі змінились на —% порівняно з попереднім періодом",
+          "Пік продажів — —",
+          "TOP-5 постачальників формують —% закупівель",
+          "Найбільший регіон попиту — —",
+          "УКТЗЕД — формує —% продажів",
+        ]}
+        emptyGridTypes={[
+          "SALES_CHANGE",
+          "PEAK_SALES_PERIOD",
+          "SUPPLIER_CONCENTRATION",
+          "TOP_REGION",
+          "TOP_UKTZED",
+        ]}
       />
 
       <OverviewTopCardsGrid
