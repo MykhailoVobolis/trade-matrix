@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   BarChart3Icon,
@@ -45,6 +45,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -79,9 +85,11 @@ import type {
 } from "@/lib/overview/overview-url-state";
 import type {
   SuppliersDashboardResponse,
+  SuppliersRankingDimension,
   SuppliersTableItem,
   SuppliersTableResponse,
 } from "@/lib/suppliers/suppliers-api";
+import { useSuppliersRankingsQuery } from "@/lib/suppliers/suppliers-query";
 
 const timeGrainOptions: Array<{
   value: OverviewTimeGrain | "";
@@ -235,18 +243,21 @@ const structureItems = [
 const topCards = [
   {
     title: "Топ покупців",
+    sheetTitle: "Усі покупці",
     columns: ["Покупець", "Продажі з ПДВ", "Частка"],
     icon: UsersIcon,
     iconClassName: "bg-blue-500/10 text-blue-600",
   },
   {
     title: "Топ продуктів",
+    sheetTitle: "Усі продукти",
     columns: ["Продукт / Номенклатура", "Продажі з ПДВ", "Частка"],
     icon: PackageIcon,
     iconClassName: "bg-violet-500/10 text-violet-600",
   },
   {
     title: "Топ регіонів збуту",
+    sheetTitle: "Усі регіони збуту",
     columns: ["Регіон покупця", "Продажі з ПДВ", "Частка"],
     icon: MapPinnedIcon,
     iconClassName: "bg-amber-500/10 text-amber-600",
@@ -265,6 +276,317 @@ const suppliersTableColumnLabels: Record<string, string> = {
   priceWithVat: "Ціна з ПДВ",
   salesWithVat: "Продажі з ПДВ",
 };
+
+function getPageNumbers(currentPage: number, totalPages: number) {
+  const pages = new Set<number>([1, totalPages, currentPage]);
+
+  if (currentPage - 1 > 1) pages.add(currentPage - 1);
+  if (currentPage + 1 < totalPages) pages.add(currentPage + 1);
+
+  return Array.from(pages).sort((left, right) => left - right);
+}
+
+function SuppliersRankingSheet({
+  open,
+  onOpenChange,
+  card,
+  state,
+  accessToken,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  card: (typeof topCards)[number] | null;
+  state: OverviewFilterState;
+  accessToken: string | null;
+}) {
+  const [paginationState, setPaginationState] = useState<{
+    dimension: SuppliersRankingDimension | null;
+    page: number;
+    limit: number;
+  }>({
+    dimension: null,
+    page: 1,
+    limit: 10,
+  });
+
+  const dimension = useMemo<SuppliersRankingDimension | null>(() => {
+    if (!card) {
+      return null;
+    }
+
+    if (card.title === "Топ покупців") return "buyers";
+    if (card.title === "Топ продуктів") return "products";
+
+    return "regions";
+  }, [card]);
+  const page =
+    paginationState.dimension === dimension ? paginationState.page : 1;
+  const limit =
+    paginationState.dimension === dimension ? paginationState.limit : 10;
+
+  const rankingsQuery = useSuppliersRankingsQuery({
+    state,
+    dimension: dimension ?? "buyers",
+    page,
+    limit,
+    accessToken,
+    enabled: open && Boolean(dimension),
+  });
+
+  const response = rankingsQuery.data;
+  const items = response?.items ?? [];
+  const total = response?.total ?? 0;
+  const totalPages = Math.max(1, Math.ceil(total / limit));
+  const pageSummaryStart = total === 0 ? 0 : (page - 1) * limit + 1;
+  const pageSummaryEnd = Math.min(page * limit, total);
+  const pageNumbers = getPageNumbers(page, totalPages);
+
+  function renderRow(
+    item:
+      | SuppliersDashboardResponse["topBuyers"][number]
+      | SuppliersDashboardResponse["topProducts"][number]
+      | SuppliersDashboardResponse["topRegions"][number],
+  ) {
+    const rawName = "regionName" in item ? item.regionName : item.name;
+    const name = rawName?.trim() || "—";
+    const secondaryText =
+      dimension === "buyers" &&
+      "id" in item &&
+      typeof item.id === "string" &&
+      item.id.trim()
+        ? `ЄДРПОУ ${item.id}`
+        : dimension === "products" && "uktzed" in item && item.uktzed
+          ? `УКТЗЕД ${item.uktzed}`
+          : dimension === "regions" &&
+              "activeBuyers" in item &&
+              typeof item.activeBuyers === "number"
+            ? `${item.activeBuyers} активних покупців`
+            : null;
+    const href =
+      dimension === "buyers"
+        ? buildOverviewDrilldownHref({
+            state,
+            target: "buyers",
+            buyerTaxNumbers:
+              "id" in item && typeof item.id === "string"
+                ? [item.id]
+                : undefined,
+          })
+        : dimension === "products"
+          ? buildOverviewDrilldownHref({
+              state,
+              target: "products",
+              products:
+                "name" in item &&
+                typeof item.name === "string" &&
+                item.name.trim()
+                  ? [item.name]
+                  : undefined,
+            })
+          : buildOverviewDrilldownHref({
+              state,
+              target: "regions",
+              buyerRegionCodes:
+                "regionCode" in item && typeof item.regionCode === "string"
+                  ? [item.regionCode]
+                  : undefined,
+            });
+
+    return (
+      <Link
+        href={href}
+        key={`ranking-${name}-${item.amount}-${item.share}`}
+        className="grid grid-cols-[minmax(0,2.9fr)_minmax(148px,0.62fr)_minmax(72px,0.28fr)] items-center gap-4 rounded-md border border-border/60 px-3 py-3 transition-colors hover:bg-sidebar-accent/45"
+      >
+        <div className="min-w-0">
+          <OverflowTooltipText
+            text={name}
+            className="block whitespace-normal break-words text-sm leading-snug text-foreground"
+          />
+          {secondaryText ? (
+            <OverflowTooltipText
+              text={secondaryText}
+              className="mt-0.5 block whitespace-normal break-words text-[11px] leading-snug text-muted-foreground"
+            />
+          ) : null}
+        </div>
+        <span className="whitespace-nowrap text-sm text-foreground">
+          {formatCompactCurrency(item.amount)}
+        </span>
+        <span className="whitespace-nowrap text-sm text-muted-foreground">
+          {formatPercent(item.share)}
+        </span>
+      </Link>
+    );
+  }
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent
+        side="right"
+        className="max-w-none p-0 data-[side=right]:w-full data-[side=right]:sm:max-w-none data-[side=right]:sm:w-[calc(100vw-2rem)] data-[side=right]:lg:w-[calc(100vw-18rem)] data-[side=right]:xl:w-[calc(100vw-19rem)]"
+      >
+        <SheetHeader className="gap-2 border-b border-border/70 pr-12">
+          <SheetTitle>{card?.sheetTitle ?? "Рейтинг"}</SheetTitle>
+        </SheetHeader>
+
+        <div className="flex min-h-0 flex-1 flex-col">
+          <div className="border-b border-border/70 px-4 py-3">
+            <div className="grid grid-cols-[minmax(0,2.9fr)_minmax(148px,0.62fr)_minmax(72px,0.28fr)] gap-4 text-[11px] font-medium text-muted-foreground">
+              {(card?.columns ?? []).map((column) => (
+                <span key={column}>{column}</span>
+              ))}
+            </div>
+          </div>
+
+          <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+            {rankingsQuery.isLoading ? (
+              <div className="space-y-2">
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="grid grid-cols-[minmax(0,2.9fr)_minmax(148px,0.62fr)_minmax(72px,0.28fr)] items-center gap-4 rounded-md border border-border/60 px-3 py-3"
+                  >
+                    <div className="space-y-1.5">
+                      <Skeleton className="h-4 w-[72%]" />
+                      <Skeleton className="h-3.5 w-[40%]" />
+                    </div>
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                ))}
+              </div>
+            ) : rankingsQuery.error ? (
+              <div className="flex min-h-full items-center justify-center py-10">
+                <div className="space-y-3 text-center">
+                  <p className="text-sm text-destructive">
+                    {rankingsQuery.error.message}
+                  </p>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      void rankingsQuery.refetch();
+                    }}
+                  >
+                    Retry
+                  </Button>
+                </div>
+              </div>
+            ) : items.length ? (
+              <div className="space-y-2">
+                {items.map((item) => renderRow(item))}
+              </div>
+            ) : (
+              <div className="flex min-h-full items-center justify-center py-10">
+                <p className="text-sm text-muted-foreground">
+                  Немає даних для поточних фільтрів.
+                </p>
+              </div>
+            )}
+          </div>
+
+          <div className="border-t border-border/70 px-4 py-3">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-muted-foreground">
+                Показано {pageSummaryStart}-{pageSummaryEnd} з {total}
+              </p>
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={page <= 1 || rankingsQuery.isFetching}
+                  onClick={() =>
+                    setPaginationState((current) => ({
+                      dimension,
+                      page: Math.max(1, page - 1),
+                      limit:
+                        current.dimension === dimension ? current.limit : 10,
+                    }))
+                  }
+                  aria-label="Попередня сторінка"
+                >
+                  <ChevronLeftIcon />
+                </Button>
+                {pageNumbers.map((pageNumber, index) => (
+                  <div key={pageNumber} className="flex items-center gap-1">
+                    {index > 0 && pageNumber - pageNumbers[index - 1] > 1 ? (
+                      <span className="px-1 text-xs text-muted-foreground">
+                        ...
+                      </span>
+                    ) : null}
+                    <Button
+                      variant="outline"
+                      size="icon-sm"
+                      className={
+                        pageNumber === page
+                          ? "border-sidebar-primary text-foreground"
+                          : ""
+                      }
+                      disabled={rankingsQuery.isFetching}
+                      onClick={() =>
+                        setPaginationState((current) => ({
+                          dimension,
+                          page: pageNumber,
+                          limit:
+                            current.dimension === dimension
+                              ? current.limit
+                              : 10,
+                        }))
+                      }
+                    >
+                      {pageNumber}
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  variant="outline"
+                  size="icon-sm"
+                  disabled={
+                    page >= totalPages ||
+                    rankingsQuery.isFetching ||
+                    total === 0
+                  }
+                  onClick={() =>
+                    setPaginationState((current) => ({
+                      dimension,
+                      page: Math.min(totalPages, page + 1),
+                      limit:
+                        current.dimension === dimension ? current.limit : 10,
+                    }))
+                  }
+                  aria-label="Наступна сторінка"
+                >
+                  <ChevronRightIcon />
+                </Button>
+                <Select
+                  value={String(limit)}
+                  onValueChange={(value) => {
+                    setPaginationState({
+                      dimension,
+                      page: 1,
+                      limit: Number(value),
+                    });
+                  }}
+                >
+                  <SelectTrigger className="h-8 min-w-28 rounded-lg px-3">
+                    <SelectValue>{limit} / сторінка</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="p-1">
+                    <SelectItem value="10">10 / сторінка</SelectItem>
+                    <SelectItem value="20">20 / сторінка</SelectItem>
+                    <SelectItem value="50">50 / сторінка</SelectItem>
+                    <SelectItem value="100">100 / сторінка</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
 
 function TooltipValue({
   value,
@@ -563,6 +885,10 @@ function SuppliersMarketStructureCard({
           ? {
               primary: data.topBuyer.name,
               secondary: `${formatCompactCurrency(data.topBuyer.amount)} • ${formatPercent(data.topBuyer.share)}`,
+              tertiary:
+                typeof data.topBuyer.id === "string" && data.topBuyer.id.trim()
+                  ? `ЄДРПОУ ${data.topBuyer.id}`
+                  : null,
             }
           : null,
         data.topBuyerRegion
@@ -650,18 +976,24 @@ function SuppliersMarketStructureCard({
                     }
 
                     return (
-                      <div className="max-w-[calc(100%-3.5rem)] space-y-1">
+                      <div className="max-w-[calc(100%-3.5rem)]">
                         <p className="break-words text-sm text-foreground">
                           {value.primary}
                         </p>
-                        {"secondary" in value && value.secondary ? (
-                          <p className="text-xs text-muted-foreground">
-                            {value.secondary}
+                        {"tertiary" in value && value.tertiary ? (
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {value.tertiary}
                           </p>
                         ) : null}
-                        {"tertiary" in value && value.tertiary ? (
-                          <p className="text-xs text-muted-foreground">
-                            {value.tertiary}
+                        {"secondary" in value && value.secondary ? (
+                          <p
+                            className={`text-xs text-muted-foreground ${
+                              "tertiary" in value && value.tertiary
+                                ? "mt-2"
+                                : "mt-0.5"
+                            }`}
+                          >
+                            {value.secondary}
                           </p>
                         ) : null}
                       </div>
@@ -679,6 +1011,7 @@ function SuppliersMarketStructureCard({
 
 function SuppliersTopCardsGrid({
   state,
+  accessToken,
   topBuyers,
   topProducts,
   topRegions,
@@ -687,6 +1020,7 @@ function SuppliersTopCardsGrid({
   onRetry,
 }: {
   state: OverviewFilterState;
+  accessToken: string | null;
   topBuyers: SuppliersDashboardResponse["topBuyers"];
   topProducts: SuppliersDashboardResponse["topProducts"];
   topRegions: SuppliersDashboardResponse["topRegions"];
@@ -694,167 +1028,178 @@ function SuppliersTopCardsGrid({
   error: string | null;
   onRetry?: () => void;
 }) {
+  const [activeSheetIndex, setActiveSheetIndex] = useState<number | null>(null);
   const rows = [topBuyers, topProducts, topRegions];
   const gridClassName =
     "grid-cols-[minmax(0,2.9fr)_minmax(148px,0.62fr)_minmax(72px,0.28fr)]";
-  const cardLinks = [
-    buildOverviewDrilldownHref({
-      state,
-      target: "buyers",
-    }),
-    buildOverviewDrilldownHref({
-      state,
-      target: "products",
-    }),
-    buildOverviewDrilldownHref({
-      state,
-      target: "regions",
-    }),
-  ] as const;
 
   return (
-    <div className="grid gap-4">
-      {topCards.map((card, cardIndex) => (
-        <Card key={card.title} className="border border-border/70 shadow-none">
-          <CardHeader className="gap-3 border-b border-border/70 pb-3.5">
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex items-center gap-3">
-                <span
-                  className={`inline-flex size-10 shrink-0 items-center justify-center rounded-md ${card.iconClassName}`}
-                >
-                  <card.icon className="size-4" />
-                </span>
-                <CardTitle className="text-[1.05rem]">{card.title}</CardTitle>
-              </div>
-              <Link
-                href={cardLinks[cardIndex]}
-                className="text-xs font-medium text-sidebar-primary transition-colors hover:text-sidebar-primary/80"
-              >
-                Переглянути всі
-              </Link>
-            </div>
-          </CardHeader>
-          <CardContent className="space-y-2.5 pt-3.5">
-            <div
-              className={`grid ${gridClassName} gap-4 px-1 text-[11px] font-medium text-muted-foreground`}
-            >
-              {card.columns.map((column) => (
-                <span key={column}>{column}</span>
-              ))}
-            </div>
-
-            {isLoading ? (
-              Array.from({ length: 5 }).map((_, index) => (
-                <div
-                  key={index}
-                  className={`grid ${gridClassName} items-center gap-4 border-b border-border/60 px-1 py-2 last:border-b-0`}
-                >
-                  <Skeleton className="h-4 w-28" />
-                  <Skeleton className="h-4 w-16" />
-                  <Skeleton className="h-4 w-12" />
+    <>
+      <div className="grid gap-4">
+        {topCards.map((card, cardIndex) => (
+          <Card
+            key={card.title}
+            className="border border-border/70 shadow-none"
+          >
+            <CardHeader className="gap-3 border-b border-border/70 pb-3.5">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`inline-flex size-10 shrink-0 items-center justify-center rounded-md ${card.iconClassName}`}
+                  >
+                    <card.icon className="size-4" />
+                  </span>
+                  <CardTitle className="text-[1.05rem]">{card.title}</CardTitle>
                 </div>
-              ))
-            ) : error ? (
-              <div className="space-y-3">
-                <p className="text-sm text-destructive">{error}</p>
-                {onRetry ? (
-                  <Button size="sm" variant="outline" onClick={onRetry}>
-                    Retry
-                  </Button>
-                ) : null}
+                <button
+                  type="button"
+                  onClick={() => setActiveSheetIndex(cardIndex)}
+                  className="text-xs font-medium text-sidebar-primary transition-colors hover:text-sidebar-primary/80"
+                >
+                  Переглянути всі
+                </button>
               </div>
-            ) : rows[cardIndex].length ? (
-              rows[cardIndex].slice(0, 5).map((item, index) => {
-                const href =
-                  cardIndex === 0
-                    ? buildOverviewDrilldownHref({
-                        state,
-                        target: "buyers",
-                        buyerTaxNumbers:
-                          "id" in item && typeof item.id === "string"
-                            ? [item.id]
-                            : undefined,
-                      })
-                    : cardIndex === 1
+            </CardHeader>
+            <CardContent className="space-y-2.5 pt-3.5">
+              <div
+                className={`grid ${gridClassName} gap-4 px-1 text-[11px] font-medium text-muted-foreground`}
+              >
+                {card.columns.map((column) => (
+                  <span key={column}>{column}</span>
+                ))}
+              </div>
+
+              {isLoading ? (
+                Array.from({ length: 5 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className={`grid ${gridClassName} items-center gap-4 border-b border-border/60 px-1 py-2 last:border-b-0`}
+                  >
+                    <Skeleton className="h-4 w-28" />
+                    <Skeleton className="h-4 w-16" />
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                ))
+              ) : error ? (
+                <div className="space-y-3">
+                  <p className="text-sm text-destructive">{error}</p>
+                  {onRetry ? (
+                    <Button size="sm" variant="outline" onClick={onRetry}>
+                      Retry
+                    </Button>
+                  ) : null}
+                </div>
+              ) : rows[cardIndex].length ? (
+                rows[cardIndex].slice(0, 5).map((item, index) => {
+                  const href =
+                    cardIndex === 0
                       ? buildOverviewDrilldownHref({
                           state,
-                          target: "products",
-                          products: "name" in item ? [item.name] : undefined,
-                        })
-                      : buildOverviewDrilldownHref({
-                          state,
-                          target: "regions",
-                          buyerRegionCodes:
-                            "regionCode" in item &&
-                            typeof item.regionCode === "string"
-                              ? [item.regionCode]
+                          target: "buyers",
+                          buyerTaxNumbers:
+                            "id" in item && typeof item.id === "string"
+                              ? [item.id]
                               : undefined,
-                        });
-                const name = "regionName" in item ? item.regionName : item.name;
-                const secondaryText =
-                  cardIndex === 1 && "uktzed" in item && item.uktzed
-                    ? `УКТЗЕД ${item.uktzed}`
-                    : cardIndex === 2 &&
-                        "activeBuyers" in item &&
-                        typeof item.activeBuyers === "number"
-                      ? `${item.activeBuyers} активних покупців`
-                      : null;
+                        })
+                      : cardIndex === 1
+                        ? buildOverviewDrilldownHref({
+                            state,
+                            target: "products",
+                            products: "name" in item ? [item.name] : undefined,
+                          })
+                        : buildOverviewDrilldownHref({
+                            state,
+                            target: "regions",
+                            buyerRegionCodes:
+                              "regionCode" in item &&
+                              typeof item.regionCode === "string"
+                                ? [item.regionCode]
+                                : undefined,
+                          });
+                  const name =
+                    "regionName" in item ? item.regionName : item.name;
+                  const secondaryText =
+                    cardIndex === 0 &&
+                    "id" in item &&
+                    typeof item.id === "string" &&
+                    item.id.trim()
+                      ? `ЄДРПОУ ${item.id}`
+                      : cardIndex === 1 && "uktzed" in item && item.uktzed
+                        ? `УКТЗЕД ${item.uktzed}`
+                        : cardIndex === 2 &&
+                            "activeBuyers" in item &&
+                            typeof item.activeBuyers === "number"
+                          ? `${item.activeBuyers} активних покупців`
+                          : null;
 
-                return (
-                  <Link
-                    href={href}
-                    key={`${card.title}-${index}`}
-                    className={`grid ${gridClassName} items-center gap-4 rounded-md border-b border-border/60 px-1 py-2 transition-colors hover:bg-sidebar-accent/45 last:border-b-0`}
-                  >
-                    <span className="min-w-0">
-                      <OverflowTooltipText
-                        text={name}
-                        className="block whitespace-normal break-words text-sm leading-snug text-foreground"
-                      />
-                      {secondaryText ? (
+                  return (
+                    <Link
+                      href={href}
+                      key={`${card.title}-${index}`}
+                      className={`grid ${gridClassName} items-center gap-4 rounded-md border-b border-border/60 px-1 py-2 transition-colors hover:bg-sidebar-accent/45 last:border-b-0`}
+                    >
+                      <span className="min-w-0">
                         <OverflowTooltipText
-                          text={secondaryText}
-                          className="mt-0.5 block whitespace-normal break-words text-[11px] leading-snug text-muted-foreground"
+                          text={name}
+                          className="block whitespace-normal break-words text-sm leading-snug text-foreground"
                         />
-                      ) : null}
-                    </span>
-                    <span className="whitespace-nowrap text-sm text-foreground">
-                      {formatCompactCurrency(item.amount)}
-                    </span>
-                    <span className="whitespace-nowrap text-sm text-muted-foreground">
-                      {formatPercent(item.share)}
-                    </span>
-                  </Link>
-                );
-              })
-            ) : (
-              <p className="text-sm text-muted-foreground">No ranking data</p>
-            )}
-            <div
-              className={`grid ${gridClassName} items-center gap-4 border-t border-border/70 px-1 pt-2.5 text-sm`}
-            >
-              <span className="whitespace-nowrap font-semibold text-foreground">
-                Разом TOP-5
-              </span>
-              <span className="text-sm font-semibold text-foreground">
-                {formatCompactCurrency(
-                  rows[cardIndex]
-                    .slice(0, 5)
-                    .reduce((total, item) => total + item.amount, 0),
-                )}
-              </span>
-              <span className="text-sm font-medium text-foreground">
-                {formatPercent(
-                  rows[cardIndex]
-                    .slice(0, 5)
-                    .reduce((total, item) => total + item.share, 0),
-                )}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
-    </div>
+                        {secondaryText ? (
+                          <OverflowTooltipText
+                            text={secondaryText}
+                            className="mt-0.5 block whitespace-normal break-words text-[11px] leading-snug text-muted-foreground"
+                          />
+                        ) : null}
+                      </span>
+                      <span className="whitespace-nowrap text-sm text-foreground">
+                        {formatCompactCurrency(item.amount)}
+                      </span>
+                      <span className="whitespace-nowrap text-sm text-muted-foreground">
+                        {formatPercent(item.share)}
+                      </span>
+                    </Link>
+                  );
+                })
+              ) : (
+                <p className="text-sm text-muted-foreground">No ranking data</p>
+              )}
+              <div
+                className={`grid ${gridClassName} items-center gap-4 border-t border-border/70 px-1 pt-2.5 text-sm`}
+              >
+                <span className="whitespace-nowrap font-semibold text-foreground">
+                  Разом TOP-5
+                </span>
+                <span className="text-sm font-semibold text-foreground">
+                  {formatCompactCurrency(
+                    rows[cardIndex]
+                      .slice(0, 5)
+                      .reduce((total, item) => total + item.amount, 0),
+                  )}
+                </span>
+                <span className="text-sm font-medium text-foreground">
+                  {formatPercent(
+                    rows[cardIndex]
+                      .slice(0, 5)
+                      .reduce((total, item) => total + item.share, 0),
+                  )}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <SuppliersRankingSheet
+        open={activeSheetIndex !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveSheetIndex(null);
+          }
+        }}
+        card={activeSheetIndex !== null ? topCards[activeSheetIndex] : null}
+        state={state}
+        accessToken={accessToken}
+      />
+    </>
   );
 }
 
@@ -1331,6 +1676,7 @@ export function SuppliersDashboardScreen({
 
       <SuppliersTopCardsGrid
         state={state}
+        accessToken={accessToken}
         topBuyers={dashboard?.topBuyers ?? []}
         topProducts={dashboard?.topProducts ?? []}
         topRegions={dashboard?.topRegions ?? []}

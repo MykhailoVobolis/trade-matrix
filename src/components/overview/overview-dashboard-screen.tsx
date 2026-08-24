@@ -98,6 +98,7 @@ export function OverviewDashboardScreen({
 
       <OverviewTopCardsGrid
         state={state}
+        accessToken={accessToken}
         topBuyers={overview?.topBuyers ?? []}
         topSuppliers={overview?.topSuppliers ?? []}
         topProducts={overview?.topProducts ?? []}

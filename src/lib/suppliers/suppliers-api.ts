@@ -13,6 +13,7 @@ import type {
   OverviewRankingItem,
   OverviewRegionRankingItem,
   OverviewTrendItem,
+  RankingsResponse,
 } from "@/lib/overview/overview-api";
 import type { OverviewFilterState } from "@/lib/overview/overview-url-state";
 
@@ -75,6 +76,13 @@ export type SuppliersTableResponse = {
 export type SuppliersFilterOption = OverviewFilterOption;
 export type SuppliersFilterOptionsResponse = OverviewFilterOptionsResponse;
 export type SuppliersFilterOptionsDimension = OverviewFilterOptionsDimension;
+export type SuppliersRankingDimension = "buyers" | "products" | "regions";
+export type SuppliersEntityRankingsResponse =
+  RankingsResponse<OverviewRankingItem>;
+export type SuppliersProductRankingsResponse =
+  RankingsResponse<OverviewProductRankingItem>;
+export type SuppliersRegionRankingsResponse =
+  RankingsResponse<OverviewRegionRankingItem>;
 
 function appendMultiValue(
   params: URLSearchParams,
@@ -213,6 +221,38 @@ export async function getSuppliersFilterOptionsRequest({
 
   return requestJson<SuppliersFilterOptionsResponse>({
     path: buildRequestPath("/api/analytics/suppliers/filter-options", params),
+    accessToken,
+  });
+}
+
+export async function getSuppliersRankingsRequest({
+  state,
+  dimension,
+  page = 1,
+  limit = 10,
+  accessToken,
+}: {
+  state: OverviewFilterState;
+  dimension: SuppliersRankingDimension;
+  page?: number;
+  limit?: number;
+  accessToken: string;
+}): Promise<
+  | SuppliersEntityRankingsResponse
+  | SuppliersProductRankingsResponse
+  | SuppliersRegionRankingsResponse
+> {
+  const params = buildSuppliersBaseSearchParams(state);
+  params.set("dimension", dimension);
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+
+  return requestJson<
+    | SuppliersEntityRankingsResponse
+    | SuppliersProductRankingsResponse
+    | SuppliersRegionRankingsResponse
+  >({
+    path: buildRequestPath("/api/analytics/suppliers/rankings", params),
     accessToken,
   });
 }

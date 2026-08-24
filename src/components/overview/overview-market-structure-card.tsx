@@ -65,12 +65,21 @@ export function OverviewMarketStructureCard({
           ? {
               primary: data.topSupplier.name,
               secondary: `${formatCompactCurrency(data.topSupplier.amount)} • ${formatPercent(data.topSupplier.share)}`,
+              tertiary:
+                typeof data.topSupplier.id === "string" &&
+                data.topSupplier.id.trim()
+                  ? `ЄДРПОУ ${data.topSupplier.id}`
+                  : null,
             }
           : null,
         data.topBuyer
           ? {
               primary: data.topBuyer.name,
               secondary: `${formatCompactCurrency(data.topBuyer.amount)} • ${formatPercent(data.topBuyer.share)}`,
+              tertiary:
+                typeof data.topBuyer.id === "string" && data.topBuyer.id.trim()
+                  ? `ЄДРПОУ ${data.topBuyer.id}`
+                  : null,
             }
           : null,
         data.topBuyerRegion
@@ -151,18 +160,24 @@ export function OverviewMarketStructureCard({
                     }
 
                     return (
-                      <div className="max-w-[calc(100%-3.5rem)] space-y-1">
+                      <div className="max-w-[calc(100%-3.5rem)]">
                         <p className="break-words text-sm text-foreground">
                           {value.primary}
                         </p>
-                        {"secondary" in value && value.secondary ? (
-                          <p className="text-xs text-muted-foreground">
-                            {value.secondary}
+                        {"tertiary" in value && value.tertiary ? (
+                          <p className="mt-0.5 text-xs text-muted-foreground">
+                            {value.tertiary}
                           </p>
                         ) : null}
-                        {"tertiary" in value && value.tertiary ? (
-                          <p className="text-xs text-muted-foreground">
-                            {value.tertiary}
+                        {"secondary" in value && value.secondary ? (
+                          <p
+                            className={`text-xs text-muted-foreground ${
+                              "tertiary" in value && value.tertiary
+                                ? "mt-2"
+                                : "mt-0.5"
+                            }`}
+                          >
+                            {value.secondary}
                           </p>
                         ) : null}
                       </div>

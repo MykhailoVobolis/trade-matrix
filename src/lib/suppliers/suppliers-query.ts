@@ -5,10 +5,15 @@ import {
   buildSuppliersTableSearchParams,
   getSuppliersDashboardRequest,
   getSuppliersFilterOptionsRequest,
+  getSuppliersRankingsRequest,
   getSuppliersTableRequest,
   type SuppliersDashboardResponse,
   type SuppliersFilterOptionsDimension,
   type SuppliersFilterOptionsResponse,
+  type SuppliersRankingDimension,
+  type SuppliersEntityRankingsResponse,
+  type SuppliersProductRankingsResponse,
+  type SuppliersRegionRankingsResponse,
   type SuppliersTableResponse,
 } from "@/lib/suppliers/suppliers-api";
 import type { OverviewFilterState } from "@/lib/overview/overview-url-state";
@@ -45,6 +50,25 @@ export const suppliersQueryKeys = {
       "filter-options",
       dimension,
       search,
+      page,
+      limit,
+      buildSuppliersBaseSearchParams(state).toString(),
+    ] as const,
+  rankings: ({
+    state,
+    dimension,
+    page,
+    limit,
+  }: {
+    state: OverviewFilterState;
+    dimension: SuppliersRankingDimension;
+    page: number;
+    limit: number;
+  }) =>
+    [
+      "suppliers",
+      "rankings",
+      dimension,
       page,
       limit,
       buildSuppliersBaseSearchParams(state).toString(),
@@ -144,5 +168,48 @@ export function useSuppliersFilterOptionsInfiniteQuery({
     },
     enabled: Boolean(accessToken) && enabled,
     placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useSuppliersRankingsQuery({
+  state,
+  dimension,
+  page = 1,
+  limit = 10,
+  accessToken,
+  enabled = true,
+}: {
+  state: OverviewFilterState;
+  dimension: SuppliersRankingDimension;
+  page?: number;
+  limit?: number;
+  accessToken: string | null;
+  enabled?: boolean;
+}) {
+  return useQuery<
+    | SuppliersEntityRankingsResponse
+    | SuppliersProductRankingsResponse
+    | SuppliersRegionRankingsResponse
+  >({
+    queryKey: suppliersQueryKeys.rankings({
+      state,
+      dimension,
+      page,
+      limit,
+    }),
+    queryFn: () => {
+      if (!accessToken) {
+        throw new Error("Authentication required.");
+      }
+
+      return getSuppliersRankingsRequest({
+        state,
+        dimension,
+        page,
+        limit,
+        accessToken,
+      });
+    },
+    enabled: Boolean(accessToken) && enabled,
   });
 }
