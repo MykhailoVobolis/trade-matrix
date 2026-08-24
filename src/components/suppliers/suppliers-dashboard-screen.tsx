@@ -766,16 +766,16 @@ function SuppliersTrendCard({
 
       <CardContent className="space-y-4 pt-4">
         <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <span className="size-2.5 rounded-full bg-sidebar-primary" />
+            Продажі з ПДВ
+          </div>
           {comparisonEnabled ? (
             <div className="flex items-center gap-2">
               <span className="h-px w-6 border-t border-dashed border-sidebar-primary/70" />
               Попер. період
             </div>
           ) : null}
-          <div className="flex items-center gap-2">
-            <span className="size-2.5 rounded-full bg-sidebar-primary" />
-            Продажі з ПДВ
-          </div>
         </div>
 
         <div className="rounded-md border border-border/70 bg-muted/15 p-4">

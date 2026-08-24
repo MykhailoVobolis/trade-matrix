@@ -9,7 +9,8 @@ export const BUYERS_FILTER_STATE_STORAGE_KEY = "buyers-filter-state";
 const TABLE_LIMIT_OPTIONS = new Set([5, 10, 20, 50, 100]);
 const BUYERS_SORT_BY_OPTIONS = new Set<OverviewTableSortBy>([
   "period",
-  "buyerRegion",
+  "supplierRegion",
+  "buyer",
   "supplier",
   "product",
   "uktzed",
@@ -86,6 +87,7 @@ export function getDefaultBuyersFilterState(): OverviewFilterState {
     table: {
       ...defaults.table,
       sortBy: "period",
+      sortDirection: "desc",
     },
   };
 }
@@ -120,9 +122,10 @@ export function parseBuyersSearchParams(
         : "",
     uktzed: normalizeMultiValue(searchParams.getAll("uktzed")),
     products: normalizeMultiValue(searchParams.getAll("products")),
-    buyerRegionCodes: normalizeMultiValue(
-      searchParams.getAll("buyerRegionCodes"),
-    ),
+    buyerRegionCodes: normalizeMultiValue([
+      ...searchParams.getAll("supplierRegionCodes"),
+      ...searchParams.getAll("buyerRegionCodes"),
+    ]),
     buyerTaxNumbers: normalizeMultiValue(
       searchParams.getAll("buyerTaxNumbers"),
     ),
@@ -143,16 +146,6 @@ export function parseBuyersSearchParams(
 }
 
 function migrateLegacyBuyersTableState(state: OverviewFilterState) {
-  if (state.table.sortBy === "period" && state.table.sortDirection === "desc") {
-    return {
-      ...state,
-      table: {
-        ...state.table,
-        sortDirection: "asc" as const,
-      },
-    };
-  }
-
   return state;
 }
 
@@ -207,7 +200,7 @@ export function normalizeBuyersFilterState(
       sortBy: BUYERS_SORT_BY_OPTIONS.has(state.table.sortBy)
         ? state.table.sortBy
         : defaults.table.sortBy,
-      sortDirection: state.table.sortDirection === "desc" ? "desc" : "asc",
+      sortDirection: state.table.sortDirection === "asc" ? "asc" : "desc",
     },
   };
 }
@@ -238,7 +231,7 @@ export function serializeBuyersSearchParams(state: OverviewFilterState) {
     [
       ["buyerTaxNumbers", normalizedState.buyerTaxNumbers],
       ["supplierTaxNumbers", normalizedState.supplierTaxNumbers],
-      ["buyerRegionCodes", normalizedState.buyerRegionCodes],
+      ["supplierRegionCodes", normalizedState.buyerRegionCodes],
       ["uktzed", normalizedState.uktzed],
       ["products", normalizedState.products],
     ] as const

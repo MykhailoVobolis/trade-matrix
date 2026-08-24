@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   CalendarRangeIcon,
   ChevronDownIcon,
@@ -29,31 +29,69 @@ import type {
   OverviewFilterState,
   OverviewFilterValues,
 } from "@/lib/overview/overview-url-state";
+import { useBuyersFilterOptionsInfiniteQuery } from "@/lib/buyers/buyers-query";
+
+type FilterDimension =
+  "buyers" | "suppliers" | "products" | "uktzed" | "supplierRegions";
 
 const dependentFilters = [
   {
     key: "supplierTaxNumbers",
     label: "Постачальник",
     placeholder: "Усі постачальники",
+    dimension: "suppliers",
     popupMinWidth: 560,
   },
   {
     key: "buyerRegionCodes",
-    label: "Регіон попиту",
+    label: "Регіон постачальника",
     placeholder: "Усі регіони",
+    dimension: "supplierRegions",
   },
   {
     key: "uktzed",
     label: "УКТЗЕД",
     placeholder: "Усі УКТЗЕД",
+    dimension: "uktzed",
   },
   {
     key: "products",
     label: "Продукт / Номенклатура",
     placeholder: "Усі продукти",
+    dimension: "products",
     popupMinWidth: 560,
   },
 ] as const;
+
+const buyersFilterLabelStorageKeyPrefix = "buyers-filter-labels";
+
+function getFilterLabelStorageKey(dimension: FilterDimension) {
+  return `${buyersFilterLabelStorageKeyPrefix}:${dimension}`;
+}
+
+function readFilterLabelCache(dimension: FilterDimension) {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  const rawValue = window.localStorage.getItem(
+    getFilterLabelStorageKey(dimension),
+  );
+
+  if (!rawValue) {
+    return {};
+  }
+
+  try {
+    const parsedValue = JSON.parse(rawValue);
+
+    if (parsedValue && typeof parsedValue === "object") {
+      return parsedValue as Record<string, string>;
+    }
+  } catch {}
+
+  return {};
+}
 
 function formatDateLabel(value: string) {
   if (!value) {
@@ -96,6 +134,22 @@ function parseIsoDate(value: string) {
   return Number.isNaN(parsedDate.getTime()) ? undefined : parsedDate;
 }
 
+function useDebouncedValue<T>(value: T, delayMs = 350) {
+  const [debouncedValue, setDebouncedValue] = useState(value);
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedValue(value);
+    }, delayMs);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [delayMs, value]);
+
+  return debouncedValue;
+}
+
 function DateRangeFilter({
   label,
   dateFrom,
@@ -135,7 +189,9 @@ function DateRangeFilter({
               endMonth={new Date("2035-12-31")}
               startMonth={new Date("2020-01-01")}
               onSelect={(date) => {
-                if (!date) return;
+                if (!date) {
+                  return;
+                }
 
                 const nextDateFrom = toIsoDate(date);
                 onChange({
@@ -169,7 +225,9 @@ function DateRangeFilter({
               endMonth={new Date("2035-12-31")}
               startMonth={new Date("2020-01-01")}
               onSelect={(date) => {
-                if (!date) return;
+                if (!date) {
+                  return;
+                }
 
                 const nextDateTo = toIsoDate(date);
                 onChange({
@@ -186,17 +244,15 @@ function DateRangeFilter({
   );
 }
 
-function createSelectedLabels(values: string[]) {
-  return Object.fromEntries(values.map((value) => [value, value]));
-}
-
 function BuyersFilterField({
   filterKey,
   label,
   placeholder,
+  dimension,
   popupMinWidth,
   disabled = false,
   state,
+  accessToken,
   onUpdateFilters,
 }: {
   filterKey: keyof Pick<
@@ -209,17 +265,98 @@ function BuyersFilterField({
   >;
   label: string;
   placeholder: string;
+  dimension: FilterDimension;
   popupMinWidth?: number;
   disabled?: boolean;
   state: OverviewFilterState;
+  accessToken: string | null;
   onUpdateFilters: (patch: Partial<OverviewFilterValues>) => void;
 }) {
   const selectedValues = state[filterKey];
   const [searchValue, setSearchValue] = useState("");
-  const selectedLabels = useMemo(
-    () => createSelectedLabels(selectedValues),
-    [selectedValues],
+  const [labelCache, setLabelCache] = useState<Record<string, string>>(() =>
+    readFilterLabelCache(dimension),
   );
+  const debouncedSearchValue = useDebouncedValue(searchValue, 350);
+  const hasSelectedBuyers = state.buyerTaxNumbers.length > 0;
+  const optionsState = useMemo(
+    () => ({
+      ...state,
+      [filterKey]: [],
+    }),
+    [filterKey, state],
+  );
+  const optionsQuery = useBuyersFilterOptionsInfiniteQuery({
+    state: optionsState,
+    dimension,
+    search: debouncedSearchValue,
+    limit: 50,
+    accessToken,
+    enabled: dimension === "buyers" || hasSelectedBuyers,
+  });
+
+  const optionItems = useMemo(
+    () => optionsQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [optionsQuery.data?.pages],
+  );
+
+  const selectedLabels = useMemo(() => {
+    const labels: Record<string, string> = {};
+
+    selectedValues.forEach((value) => {
+      const matchedOption = optionItems.find((item) => item.value === value);
+      const resolvedLabel = matchedOption?.label ?? labelCache[value];
+
+      if (resolvedLabel) {
+        labels[value] = resolvedLabel;
+      }
+    });
+
+    return labels;
+  }, [labelCache, optionItems, selectedValues]);
+
+  const handleChange = useCallback(
+    (values: string[]) => {
+      setLabelCache((current) => {
+        const next = { ...current };
+
+        optionItems.forEach((item) => {
+          if (values.includes(item.value)) {
+            next[item.value] = item.label;
+          }
+        });
+
+        return next;
+      });
+
+      if (filterKey === "buyerTaxNumbers") {
+        onUpdateFilters({
+          buyerTaxNumbers: values,
+          supplierTaxNumbers: [],
+          buyerRegionCodes: [],
+          uktzed: [],
+          products: [],
+        });
+        return;
+      }
+
+      onUpdateFilters({
+        [filterKey]: values,
+      } as Partial<OverviewFilterValues>);
+    },
+    [filterKey, onUpdateFilters, optionItems],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    window.localStorage.setItem(
+      getFilterLabelStorageKey(dimension),
+      JSON.stringify(labelCache),
+    );
+  }, [dimension, labelCache]);
 
   return (
     <OverviewSearchableMultiSelect
@@ -228,27 +365,18 @@ function BuyersFilterField({
       disabled={disabled}
       selectedValues={selectedValues}
       selectedLabels={selectedLabels}
-      options={[]}
-      isLoading={false}
-      isError={false}
+      options={optionItems}
+      isLoading={optionsQuery.isLoading}
+      isError={Boolean(optionsQuery.error)}
+      errorMessage={optionsQuery.error?.message}
       searchValue={searchValue}
       onSearchChange={setSearchValue}
+      onChange={handleChange}
+      hasMore={optionsQuery.hasNextPage}
+      isLoadingMore={optionsQuery.isFetchingNextPage}
       popupMinWidth={popupMinWidth}
-      onChange={(values) => {
-        if (filterKey === "buyerTaxNumbers") {
-          onUpdateFilters({
-            buyerTaxNumbers: values,
-            supplierTaxNumbers: [],
-            buyerRegionCodes: [],
-            uktzed: [],
-            products: [],
-          });
-          return;
-        }
-
-        onUpdateFilters({
-          [filterKey]: values,
-        } as Partial<OverviewFilterValues>);
+      onLoadMore={() => {
+        void optionsQuery.fetchNextPage();
       }}
     />
   );
@@ -256,12 +384,14 @@ function BuyersFilterField({
 
 export function BuyersFilters({
   state,
+  accessToken,
   onUpdateFilters,
   onResetFilters,
   onExport,
   isExportPending,
 }: {
   state: OverviewFilterState;
+  accessToken: string | null;
   onUpdateFilters: (patch: Partial<OverviewFilterValues>) => void;
   onResetFilters: () => void;
   onExport: (format: OverviewExportFormat) => void;
@@ -299,14 +429,14 @@ export function BuyersFilters({
             <p className="text-xs font-medium text-muted-foreground">
               Порівняння
             </p>
-            <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border/70 bg-background px-3 py-2.5 shadow-sm shadow-black/[0.02]">
+            <div className="flex h-11 items-center justify-between gap-4 rounded-lg border border-border/70 bg-background px-4 shadow-sm shadow-black/[0.02]">
               <div className="space-y-0.5">
-                <p className="text-sm text-foreground">
+                <p className="text-sm font-medium text-foreground">
                   Той самий вибраний період, попередній рік
                 </p>
               </div>
               <Switch
-                checked={state.comparisonMode === "PREVIOUS_PERIOD"}
+                checked={state.comparisonMode !== "NONE"}
                 onCheckedChange={(checked) =>
                   onUpdateFilters({
                     comparisonMode: checked ? "PREVIOUS_PERIOD" : "NONE",
@@ -330,9 +460,14 @@ export function BuyersFilters({
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
-              disabled
+              disabled={!accessToken || isExportPending || !hasSelectedBuyers}
               render={
-                <Button className="px-3 shadow-sm shadow-black/[0.02]" disabled>
+                <Button
+                  className="px-3 shadow-sm shadow-black/[0.02]"
+                  disabled={
+                    !accessToken || isExportPending || !hasSelectedBuyers
+                  }
+                >
                   <DownloadIcon />
                   {isExportPending ? "Експортуємо..." : "Експорт"}
                   <ChevronDownIcon className="size-4 text-current/75" />
@@ -353,41 +488,41 @@ export function BuyersFilters({
         </div>
       </div>
 
-      <div className="grid gap-2.5 xl:grid-cols-5">
+      <div className="grid gap-3 xl:grid-cols-5">
         <BuyersFilterField
           filterKey="buyerTaxNumbers"
           label="Покупець"
           placeholder="Усі покупці"
+          dimension="buyers"
           popupMinWidth={560}
           state={state}
+          accessToken={accessToken}
           onUpdateFilters={onUpdateFilters}
         />
+
         {dependentFilters.map((filter) => (
           <BuyersFilterField
             key={filter.key}
             filterKey={filter.key}
             label={filter.label}
             placeholder={filter.placeholder}
+            dimension={filter.dimension}
             popupMinWidth={
               "popupMinWidth" in filter ? filter.popupMinWidth : undefined
             }
             disabled={!hasSelectedBuyers}
             state={state}
+            accessToken={accessToken}
             onUpdateFilters={onUpdateFilters}
           />
         ))}
       </div>
 
       {!hasSelectedBuyers ? (
-        <div className="rounded-lg border border-border/70 bg-muted/15 px-4 py-3 text-sm text-muted-foreground">
-          Оберіть одного або кількох покупців, щоб розблокувати решту фільтрів.
+        <div className="rounded-lg border border-border/70 bg-muted/10 px-4 py-3 text-sm text-muted-foreground">
+          Виберіть одного або кількох покупців, щоб відкрити решту фільтрів.
         </div>
-      ) : (
-        <div className="rounded-lg border border-border/70 bg-muted/15 px-4 py-3 text-sm text-muted-foreground">
-          Опції для цієї сторінки будуть підключені після готовності backend
-          endpoint.
-        </div>
-      )}
+      ) : null}
     </div>
   );
 }

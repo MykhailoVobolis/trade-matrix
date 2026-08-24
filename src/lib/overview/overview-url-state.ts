@@ -4,6 +4,7 @@ export type OverviewSortDirection = "asc" | "desc";
 export type OverviewTableSortBy =
   | "period"
   | "buyerRegion"
+  | "supplierRegion"
   | "buyer"
   | "supplier"
   | "product"
@@ -50,6 +51,7 @@ const TABLE_LIMIT_OPTIONS = new Set([5, 10, 20, 50, 100]);
 const SORT_BY_OPTIONS = new Set<OverviewTableSortBy>([
   "period",
   "buyerRegion",
+  "supplierRegion",
   "buyer",
   "supplier",
   "product",

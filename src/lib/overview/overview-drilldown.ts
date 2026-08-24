@@ -50,6 +50,7 @@ export function buildOverviewDrilldownHref({
   supplierTaxNumbers,
   products,
   buyerRegionCodes,
+  supplierRegionCodes,
 }: {
   state: OverviewFilterState;
   target: DrilldownTarget;
@@ -57,6 +58,7 @@ export function buildOverviewDrilldownHref({
   supplierTaxNumbers?: string[];
   products?: string[];
   buyerRegionCodes?: string[];
+  supplierRegionCodes?: string[];
 }) {
   const params = new URLSearchParams();
   const path =
@@ -74,8 +76,8 @@ export function buildOverviewDrilldownHref({
     appendMultiValue(params, "products", products ?? state.products);
     appendMultiValue(
       params,
-      "buyerRegionCodes",
-      buyerRegionCodes ?? state.buyerRegionCodes,
+      "supplierRegionCodes",
+      supplierRegionCodes ?? buyerRegionCodes ?? state.buyerRegionCodes,
     );
     appendMultiValue(
       params,
