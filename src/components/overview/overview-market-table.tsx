@@ -51,9 +51,7 @@ import type { OverviewTableItem } from "@/lib/overview/overview-api";
 import {
   formatCompactCurrency,
   formatFullCurrency,
-  formatFullPercent,
   formatOverviewTableCell,
-  formatPercent,
   formatQuantityWithUnit,
 } from "@/lib/overview/overview-format";
 import type {
@@ -69,12 +67,11 @@ const columnLabels: Record<string, string> = {
   buyer: "Покупець",
   supplier: "Постачальник",
   product: "Продукт",
-  uktzed: "UKTZED",
+  uktzed: "УКТЗЕД",
   quantity: "Кількість",
   unit: "Од.",
   priceWithVat: "Ціна з ПДВ",
   salesWithVat: "Продажі з ПДВ",
-  marketShare: "Частка ринку",
 };
 
 function TooltipValue({
@@ -253,7 +250,7 @@ export function OverviewMarketTable({
         id: "uktzed",
         header: () => (
           <TableHeaderButton
-            label="UKTZED"
+            label="УКТЗЕД"
             sortBy="uktzed"
             tableState={tableState}
             onUpdateTableState={onUpdateTableState}
@@ -324,23 +321,6 @@ export function OverviewMarketTable({
           <TooltipValue
             value={formatCompactCurrency(row.original.salesWithVat)}
             tooltip={formatFullCurrency(row.original.salesWithVat)}
-          />
-        ),
-      },
-      {
-        id: "marketShare",
-        header: () => (
-          <TableHeaderButton
-            label="Частка ринку"
-            sortBy="marketShare"
-            tableState={tableState}
-            onUpdateTableState={onUpdateTableState}
-          />
-        ),
-        cell: ({ row }) => (
-          <TooltipValue
-            value={formatPercent(row.original.marketShare)}
-            tooltip={formatFullPercent(row.original.marketShare)}
           />
         ),
       },

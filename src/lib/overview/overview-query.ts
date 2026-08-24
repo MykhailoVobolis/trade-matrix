@@ -2,12 +2,17 @@ import { useInfiniteQuery, useQuery } from "@tanstack/react-query";
 
 import {
   buildOverviewBaseSearchParams,
+  getOverviewRankingsRequest,
   buildOverviewTableSearchParams,
   getOverviewFilterOptionsRequest,
   getOverviewRequest,
   getOverviewTableRequest,
   type OverviewFilterOptionsDimension,
   type OverviewFilterOptionsResponse,
+  type OverviewRankingDimension,
+  type OverviewProductRankingsResponse,
+  type OverviewEntityRankingsResponse,
+  type OverviewRegionRankingsResponse,
   type OverviewResponse,
   type OverviewTableResponse,
 } from "@/lib/overview/overview-api";
@@ -45,6 +50,25 @@ export const overviewQueryKeys = {
       "filter-options",
       dimension,
       search,
+      page,
+      limit,
+      buildOverviewBaseSearchParams(state).toString(),
+    ] as const,
+  rankings: ({
+    state,
+    dimension,
+    page,
+    limit,
+  }: {
+    state: OverviewFilterState;
+    dimension: OverviewRankingDimension;
+    page: number;
+    limit: number;
+  }) =>
+    [
+      "overview",
+      "rankings",
+      dimension,
       page,
       limit,
       buildOverviewBaseSearchParams(state).toString(),
@@ -188,5 +212,48 @@ export function useOverviewFilterOptionsInfiniteQuery({
     },
     enabled: Boolean(accessToken) && enabled,
     placeholderData: (previousData) => previousData,
+  });
+}
+
+export function useOverviewRankingsQuery({
+  state,
+  dimension,
+  page = 1,
+  limit = 10,
+  accessToken,
+  enabled = true,
+}: {
+  state: OverviewFilterState;
+  dimension: OverviewRankingDimension;
+  page?: number;
+  limit?: number;
+  accessToken: string | null;
+  enabled?: boolean;
+}) {
+  return useQuery<
+    | OverviewEntityRankingsResponse
+    | OverviewProductRankingsResponse
+    | OverviewRegionRankingsResponse
+  >({
+    queryKey: overviewQueryKeys.rankings({
+      state,
+      dimension,
+      page,
+      limit,
+    }),
+    queryFn: () => {
+      if (!accessToken) {
+        throw new Error("Authentication required.");
+      }
+
+      return getOverviewRankingsRequest({
+        state,
+        dimension,
+        page,
+        limit,
+        accessToken,
+      });
+    },
+    enabled: Boolean(accessToken) && enabled,
   });
 }

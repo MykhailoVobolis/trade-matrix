@@ -54,32 +54,32 @@ import { useAuthTwoFactorStore } from "@/lib/auth/auth-two-factor-store";
 
 const navigationItems = [
   {
-    title: "Overview",
+    title: "Огляд",
     href: "/app",
     icon: HouseIcon,
   },
   {
-    title: "Tables",
+    title: "Таблиці",
     href: "/app/tables",
     icon: DatabaseIcon,
   },
   {
-    title: "Suppliers",
+    title: "Постачальники",
     href: "/app/suppliers",
     icon: Building2Icon,
   },
   {
-    title: "Buyers",
+    title: "Покупці",
     href: "/app/buyers",
     icon: UsersIcon,
   },
   {
-    title: "Products",
+    title: "Продукти",
     href: "/app/products",
     icon: PackageIcon,
   },
   {
-    title: "UKTZED",
+    title: "УКТЗЕД",
     href: "/app/uktzed",
     icon: TagIcon,
   },
@@ -87,17 +87,17 @@ const navigationItems = [
 
 const themeOptions = [
   {
-    label: "Light",
+    label: "Світла",
     value: "light",
     icon: SunIcon,
   },
   {
-    label: "System",
+    label: "Системна",
     value: "system",
     icon: MonitorIcon,
   },
   {
-    label: "Dark",
+    label: "Темна",
     value: "dark",
     icon: MoonIcon,
   },
@@ -221,9 +221,7 @@ export function AppSidebar() {
                   )}
                 </div>
                 <div className="grid min-w-0 flex-1 text-left text-sm leading-tight group-data-[collapsible=icon]:hidden">
-                  <span className="truncate font-medium">
-                    {`${user.firstName} ${user.lastName}`}
-                  </span>
+                  <span className="truncate font-medium">{`${user.firstName} ${user.lastName}`}</span>
                   <span className="truncate text-xs text-muted-foreground">
                     {user.email}
                   </span>
@@ -254,9 +252,7 @@ export function AppSidebar() {
                         )}
                       </div>
                       <div className="grid min-w-0 flex-1 text-left text-sm leading-tight">
-                        <span className="truncate font-medium">
-                          {`${user.firstName} ${user.lastName}`}
-                        </span>
+                        <span className="truncate font-medium">{`${user.firstName} ${user.lastName}`}</span>
                         <span className="truncate text-xs text-muted-foreground">
                           {user.email}
                         </span>
@@ -269,7 +265,7 @@ export function AppSidebar() {
                   render={<Link href="/app/settings/general" />}
                 >
                   <SettingsIcon />
-                  Settings
+                  Налаштування
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuGroup>
@@ -279,7 +275,7 @@ export function AppSidebar() {
                   >
                     <div className="flex items-center gap-1.5">
                       <MoonIcon />
-                      <span>Appearance</span>
+                      <span>Тема</span>
                     </div>
                     <Switch
                       checked={effectiveTheme === "dark"}
@@ -320,7 +316,7 @@ export function AppSidebar() {
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleLogout}>
                   <LogOutIcon />
-                  Log out
+                  Вийти
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>

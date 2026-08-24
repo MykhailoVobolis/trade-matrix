@@ -114,18 +114,33 @@ export function formatOverviewInsight(insight: OverviewInsight) {
       return `Продажі змінились на ${payload.deltaPercent ?? "—"}% порівняно з попереднім періодом`;
     case "PURCHASES_CHANGE":
       return `Закупівлі змінились на ${payload.deltaPercent ?? "—"}% порівняно з попереднім періодом`;
-    case "PEAK_SALES_PERIOD":
-      return `Пік продажів — ${payload.periodLabel ?? "—"}`;
+    case "PEAK_SALES_PERIOD": {
+      const amount = payload.amount;
+      const numericAmount =
+        typeof amount === "number"
+          ? amount
+          : typeof amount === "string"
+            ? Number(amount)
+            : NaN;
+
+      return Number.isFinite(numericAmount) && numericAmount > 0
+        ? `Пік продажів — ${payload.periodLabel ?? "—"}`
+        : "Пік продажів — —";
+    }
     case "PEAK_PURCHASES_PERIOD":
       return `Пік закупівель — ${payload.periodLabel ?? "—"}`;
     case "BUYER_CONCENTRATION":
       return `TOP-5 покупців формують ${formatInsightPercent(payload.top5Share)}% продажів`;
+    case "PRODUCT_CONCENTRATION":
+      return `TOP-5 продуктів формують ${formatInsightPercent(payload.top5Share)}% продажів`;
+    case "REGION_CONCENTRATION":
+      return `TOP-5 регіонів збуту формують ${formatInsightPercent(payload.top5Share)}% продажів`;
     case "SUPPLIER_CONCENTRATION":
       return `TOP-5 постачальників формують ${formatInsightPercent(payload.top5Share)}% закупівель`;
     case "TOP_REGION":
       return `Найбільший регіон попиту — ${payload.regionName ?? "—"}`;
     case "TOP_UKTZED":
-      return `UKTZED ${payload.code ?? "—"} формує ${payload.share ?? "—"}% продажів`;
+      return `УКТЗЕД ${payload.code ?? "—"} формує ${payload.share ?? "—"}% продажів`;
     default:
       return "Інсайт недоступний";
   }

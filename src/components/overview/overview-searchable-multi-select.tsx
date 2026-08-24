@@ -24,6 +24,7 @@ import {
 type OverviewSearchableMultiSelectProps = {
   label: string;
   placeholder: string;
+  disabled?: boolean;
   selectedValues: string[];
   selectedLabels?: Record<string, string>;
   options: OverviewFilterOption[];
@@ -56,12 +57,13 @@ function getTriggerLabel({
     return selectedLabels?.[selectedValues[0]] ?? selectedValues[0];
   }
 
-  return `${selectedValues.length} selected`;
+  return `${selectedValues.length} обрано`;
 }
 
 export function OverviewSearchableMultiSelect({
   label,
   placeholder,
+  disabled = false,
   selectedValues,
   selectedLabels,
   options,
@@ -110,15 +112,16 @@ export function OverviewSearchableMultiSelect({
     selectedLabels,
     placeholder,
   });
+  const isPopupOpen = isOpen && !disabled;
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isPopupOpen) {
       onSearchChange("");
     }
-  }, [isOpen, onSearchChange]);
+  }, [isPopupOpen, onSearchChange]);
 
   useEffect(() => {
-    if (!isOpen) {
+    if (!isPopupOpen) {
       return;
     }
 
@@ -174,14 +177,14 @@ export function OverviewSearchableMultiSelect({
       window.removeEventListener("pointerdown", handlePointerDown);
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [isOpen, popupMinWidth]);
+  }, [isPopupOpen, popupMinWidth]);
 
   const handleListScroll = () => {
     const listElement = listRef.current;
 
     if (
       !listElement ||
-      !isOpen ||
+      !isPopupOpen ||
       !hasMore ||
       isLoading ||
       isLoadingMore ||
@@ -206,19 +209,32 @@ export function OverviewSearchableMultiSelect({
       <button
         ref={triggerRef}
         type="button"
+        disabled={disabled}
         aria-expanded={isOpen}
-        onClick={() => setIsOpen((open) => !open)}
+        onClick={() => {
+          if (disabled) {
+            return;
+          }
+
+          setIsOpen((open) => !open);
+        }}
         className="block w-full text-left"
       >
         <span className="block w-full">
-          <span className="flex h-11 w-full items-center justify-between gap-2 rounded-lg border border-border/70 bg-background px-3 text-sm text-foreground shadow-sm shadow-black/[0.02] transition-colors aria-expanded:border-sidebar-primary/30 aria-expanded:bg-accent/30">
+          <span
+            className={`flex h-11 w-full items-center justify-between gap-2 rounded-lg border px-3 text-sm shadow-sm shadow-black/[0.02] transition-colors aria-expanded:border-sidebar-primary/30 aria-expanded:bg-accent/30 ${
+              disabled
+                ? "cursor-not-allowed border-border/60 bg-muted/35 text-muted-foreground"
+                : "border-border/70 bg-background text-foreground"
+            }`}
+          >
             <OverflowTooltipText text={triggerLabel} className="truncate" />
             <ChevronsUpDownIcon className="size-4 shrink-0 text-muted-foreground" />
           </span>
         </span>
       </button>
 
-      {isOpen && popupStyle
+      {isPopupOpen && popupStyle
         ? createPortal(
             <div
               ref={popupRef}
@@ -233,26 +249,26 @@ export function OverviewSearchableMultiSelect({
                 <CommandInput
                   value={searchValue}
                   onValueChange={onSearchChange}
-                  placeholder={`Search ${label.toLowerCase()}...`}
+                  placeholder={`Пошук: ${label.toLowerCase()}...`}
                 />
                 <CommandList ref={listRef} onScroll={handleListScroll}>
                   {isLoading ? (
                     <div className="flex items-center gap-2 px-3 py-6 text-sm text-muted-foreground">
                       <LoaderCircleIcon className="size-4 animate-spin" />
-                      Loading options...
+                      Завантажуємо варіанти...
                     </div>
                   ) : null}
 
                   {!isLoading && isError ? (
                     <div className="px-3 py-6 text-sm text-destructive">
-                      {errorMessage || "Failed to load options."}
+                      {errorMessage || "Не вдалося завантажити варіанти."}
                     </div>
                   ) : null}
 
                   {!isLoading && !isError ? (
                     <>
-                      <CommandEmpty>No options found.</CommandEmpty>
-                      <CommandGroup heading="Options">
+                      <CommandEmpty>Нічого не знайдено.</CommandEmpty>
+                      <CommandGroup heading="Варіанти">
                         {mergedOptions.map((option) => {
                           const checked = selectedValues.includes(option.value);
 
@@ -298,8 +314,8 @@ export function OverviewSearchableMultiSelect({
                             />
                             <span>
                               {isLoadingMore
-                                ? "Loading more..."
-                                : "Scroll to load more"}
+                                ? "Завантажуємо ще..."
+                                : "Прокрутіть, щоб завантажити ще"}
                             </span>
                           </div>
                         </div>
@@ -318,10 +334,10 @@ export function OverviewSearchableMultiSelect({
                   onClick={() => onChange([])}
                 >
                   <XIcon />
-                  Clear
+                  Очистити
                 </Button>
                 <span className="text-xs text-muted-foreground">
-                  {selectedValues.length} selected
+                  {selectedValues.length} обрано
                 </span>
               </div>
             </div>,

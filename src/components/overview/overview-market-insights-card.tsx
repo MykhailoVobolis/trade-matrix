@@ -2,6 +2,7 @@ import {
   BarChart3Icon,
   Building2Icon,
   MapPinnedIcon,
+  PackageIcon,
   TagIcon,
   TrendingDownIcon,
   TrendingUpIcon,
@@ -13,6 +14,20 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { OverviewInsight } from "@/lib/overview/overview-api";
 import { formatOverviewInsight } from "@/lib/overview/overview-format";
+
+function isRenderableInsight(insight: OverviewInsight) {
+  if (
+    insight.type === "BUYER_CONCENTRATION" ||
+    insight.type === "PRODUCT_CONCENTRATION" ||
+    insight.type === "REGION_CONCENTRATION" ||
+    insight.type === "PURCHASES_CHANGE" ||
+    insight.type === "PEAK_PURCHASES_PERIOD"
+  ) {
+    return false;
+  }
+
+  return true;
+}
 
 function getInsightIcon(type: OverviewInsight["type"]) {
   switch (type) {
@@ -32,6 +47,16 @@ function getInsightIcon(type: OverviewInsight["type"]) {
       return {
         icon: UsersIcon,
         className: "bg-blue-500/10 text-blue-600",
+      };
+    case "PRODUCT_CONCENTRATION":
+      return {
+        icon: PackageIcon,
+        className: "bg-violet-500/10 text-violet-600",
+      };
+    case "REGION_CONCENTRATION":
+      return {
+        icon: MapPinnedIcon,
+        className: "bg-amber-500/10 text-amber-600",
       };
     case "SUPPLIER_CONCENTRATION":
       return {
@@ -67,11 +92,7 @@ export function OverviewMarketInsightsCard({
   error: string | null;
   onRetry?: () => void;
 }) {
-  const visibleInsights = insights.filter(
-    (insight) =>
-      insight.type !== "PURCHASES_CHANGE" &&
-      insight.type !== "PEAK_PURCHASES_PERIOD",
-  );
+  const visibleInsights = insights.filter(isRenderableInsight);
 
   return (
     <Card className="border border-border/70 shadow-none">
@@ -81,7 +102,7 @@ export function OverviewMarketInsightsCard({
       <CardContent className="border-t border-border/70 pt-3.5">
         {isLoading ? (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 5 }).map((_, index) => (
+            {Array.from({ length: 6 }).map((_, index) => (
               <div
                 key={index}
                 className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3"
@@ -104,7 +125,7 @@ export function OverviewMarketInsightsCard({
           </div>
         ) : visibleInsights.length ? (
           <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-            {visibleInsights.slice(0, 5).map((insight, index) => {
+            {visibleInsights.slice(0, 6).map((insight, index) => {
               const { icon: InsightIcon, className } = getInsightIcon(
                 insight.type,
               );

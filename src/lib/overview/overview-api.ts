@@ -34,6 +34,7 @@ export type OverviewTrendItem = {
 };
 
 export type OverviewMarketStructureValue = {
+  id?: string | null;
   name: string;
   amount: number;
   share: number;
@@ -92,6 +93,8 @@ export type OverviewInsightType =
   | "PEAK_SALES_PERIOD"
   | "PEAK_PURCHASES_PERIOD"
   | "BUYER_CONCENTRATION"
+  | "PRODUCT_CONCENTRATION"
+  | "REGION_CONCENTRATION"
   | "SUPPLIER_CONCENTRATION"
   | "TOP_REGION"
   | "TOP_UKTZED";
@@ -169,6 +172,23 @@ export type OverviewExportResult = {
   fileName: string;
   contentType: string;
 };
+
+export type OverviewRankingDimension =
+  "buyers" | "suppliers" | "products" | "regions";
+
+export type RankingsResponse<TItem> = {
+  items: TItem[];
+  total: number;
+  page: number;
+  limit: number;
+};
+
+export type OverviewEntityRankingsResponse =
+  RankingsResponse<OverviewRankingItem>;
+export type OverviewProductRankingsResponse =
+  RankingsResponse<OverviewProductRankingItem>;
+export type OverviewRegionRankingsResponse =
+  RankingsResponse<OverviewRegionRankingItem>;
 
 function appendMultiValue(
   params: URLSearchParams,
@@ -307,6 +327,38 @@ export async function getOverviewFilterOptionsRequest({
 
   return requestJson<OverviewFilterOptionsResponse>({
     path: buildRequestPath("/api/analytics/filter-options", params),
+    accessToken,
+  });
+}
+
+export async function getOverviewRankingsRequest({
+  state,
+  dimension,
+  page = 1,
+  limit = 10,
+  accessToken,
+}: {
+  state: OverviewFilterState;
+  dimension: OverviewRankingDimension;
+  page?: number;
+  limit?: number;
+  accessToken: string;
+}): Promise<
+  | OverviewEntityRankingsResponse
+  | OverviewProductRankingsResponse
+  | OverviewRegionRankingsResponse
+> {
+  const params = buildOverviewBaseSearchParams(state);
+  params.set("dimension", dimension);
+  params.set("page", String(page));
+  params.set("limit", String(limit));
+
+  return requestJson<
+    | OverviewEntityRankingsResponse
+    | OverviewProductRankingsResponse
+    | OverviewRegionRankingsResponse
+  >({
+    path: buildRequestPath("/api/analytics/overview/rankings", params),
     accessToken,
   });
 }
