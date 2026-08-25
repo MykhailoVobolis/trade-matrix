@@ -24,49 +24,15 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
+import type { OverviewExportFormat } from "@/lib/overview/overview-api";
 import type {
   OverviewFilterState,
   OverviewFilterValues,
 } from "@/lib/overview/overview-url-state";
+import { useProductsFilterOptionsInfiniteQuery } from "@/lib/products/products-query";
 
-type MockProductRelation = {
-  product: string;
-  uktzed: string;
-  suppliers: string[];
-  buyers: string[];
-  regions: string[];
-};
-
-const mockCatalog: MockProductRelation[] = [
-  {
-    product: "Мастило Літол-24 у бочці, 180 кг",
-    uktzed: "2710199900",
-    suppliers: ['ТОВ "ЕВРО ОЙЛ ПРОДАКШН"', 'ТОВ "БЕСТ ТЕРРА ОЙЛ"'],
-    buyers: ['ТОВ "МЕГАРОСТ"', 'ТОВ "ІНБЛАСТ"'],
-    regions: ["Одеська обл.", "Дніпропетровська обл."],
-  },
-  {
-    product: "Олива компресорна E-OIL K-28",
-    uktzed: "2710198100",
-    suppliers: ['ТОВ "ЕВРО ОЙЛ ПРОДАКШН"', 'ТОВ "ЛІНКОР"'],
-    buyers: ['ТОВ "ПАЛІТРА"', 'ТОВ "СП СОКОЛИ"'],
-    regions: ["Київська обл.", "Львівська обл."],
-  },
-  {
-    product: "Олива турбінна Тп-22 у каністрі, 20 л",
-    uktzed: "2710198800",
-    suppliers: ['ТОВ "ГАЗТРОН ТРЕЙД"'],
-    buyers: ['ТОВ "МЕГАРОСТ"', 'ТОВ "ПОЛТЕХКОМПЛЕКТ"'],
-    regions: ["Харківська обл.", "Полтавська обл."],
-  },
-  {
-    product: "Wexoil Hydrex HVLP 46",
-    uktzed: "2710199200",
-    suppliers: ['ТОВ "БЕСТ ТЕРРА ОЙЛ"', 'ТОВ "АСТ"'],
-    buyers: ['ТОВ "ІНБЛАСТ"', 'ТОВ "ПАЛІТРА"'],
-    regions: ["Дніпропетровська обл.", "Київська обл."],
-  },
-];
+type FilterDimension =
+  "products" | "uktzed" | "suppliers" | "buyers" | "buyerRegions";
 
 const dependentFilters = [
   {
@@ -90,6 +56,36 @@ const dependentFilters = [
     dimension: "buyerRegions",
   },
 ] as const;
+
+const productsFilterLabelStorageKeyPrefix = "products-filter-labels";
+
+function getFilterLabelStorageKey(dimension: FilterDimension) {
+  return `${productsFilterLabelStorageKeyPrefix}:${dimension}`;
+}
+
+function readFilterLabelCache(dimension: FilterDimension) {
+  if (typeof window === "undefined") {
+    return {};
+  }
+
+  const rawValue = window.localStorage.getItem(
+    getFilterLabelStorageKey(dimension),
+  );
+
+  if (!rawValue) {
+    return {};
+  }
+
+  try {
+    const parsedValue = JSON.parse(rawValue);
+
+    if (parsedValue && typeof parsedValue === "object") {
+      return parsedValue as Record<string, string>;
+    }
+  } catch {}
+
+  return {};
+}
 
 function formatDateLabel(value: string) {
   if (!value) {
@@ -132,7 +128,7 @@ function parseIsoDate(value: string) {
   return Number.isNaN(parsedDate.getTime()) ? undefined : parsedDate;
 }
 
-function useDebouncedValue<T>(value: T, delayMs = 250) {
+function useDebouncedValue<T>(value: T, delayMs = 350) {
   const [debouncedValue, setDebouncedValue] = useState(value);
 
   useEffect(() => {
@@ -146,10 +142,6 @@ function useDebouncedValue<T>(value: T, delayMs = 250) {
   }, [delayMs, value]);
 
   return debouncedValue;
-}
-
-function toSlugMap(values: string[]) {
-  return Object.fromEntries(values.map((value) => [value, value]));
 }
 
 function DateRangeFilter({
@@ -225,7 +217,7 @@ function DateRangeFilter({
               defaultMonth={toDate}
               selected={toDate}
               endMonth={new Date("2035-12-31")}
-              startMonth={new Date(dateFrom || "2020-01-01")}
+              startMonth={new Date("2020-01-01")}
               onSelect={(date) => {
                 if (!date) {
                   return;
@@ -246,18 +238,20 @@ function DateRangeFilter({
   );
 }
 
-function StaticFilterField({
+function ProductsFilterField({
   filterKey,
   label,
   placeholder,
-  values,
-  options,
-  disabled = false,
+  dimension,
   popupMinWidth,
+  disabled = false,
+  enabled = true,
+  state,
+  accessToken,
   onUpdateFilters,
 }: {
   filterKey: keyof Pick<
-    OverviewFilterValues,
+    OverviewFilterState,
     | "products"
     | "uktzed"
     | "supplierTaxNumbers"
@@ -266,167 +260,158 @@ function StaticFilterField({
   >;
   label: string;
   placeholder: string;
-  values: string[];
-  options: string[];
-  disabled?: boolean;
+  dimension: FilterDimension;
   popupMinWidth?: number;
+  disabled?: boolean;
+  enabled?: boolean;
+  state: OverviewFilterState;
+  accessToken: string | null;
   onUpdateFilters: (patch: Partial<OverviewFilterValues>) => void;
 }) {
+  const selectedValues = state[filterKey];
   const [searchValue, setSearchValue] = useState("");
-  const debouncedSearch = useDebouncedValue(searchValue);
+  const [labelCache, setLabelCache] = useState<Record<string, string>>(() =>
+    readFilterLabelCache(dimension),
+  );
+  const debouncedSearchValue = useDebouncedValue(searchValue, 350);
+  const optionsState = useMemo(
+    () => ({
+      ...state,
+      [filterKey]: [],
+    }),
+    [filterKey, state],
+  );
+  const optionsQuery = useProductsFilterOptionsInfiniteQuery({
+    state: optionsState,
+    dimension,
+    search: debouncedSearchValue,
+    limit: 50,
+    accessToken,
+    enabled,
+  });
 
-  const filteredOptions = useMemo(() => {
-    const normalizedSearch = debouncedSearch.trim().toLowerCase();
+  const optionItems = useMemo(
+    () => optionsQuery.data?.pages.flatMap((page) => page.items) ?? [],
+    [optionsQuery.data?.pages],
+  );
 
-    if (!normalizedSearch) {
-      return options;
+  const selectedLabels = useMemo(() => {
+    const labels: Record<string, string> = {};
+
+    selectedValues.forEach((value) => {
+      const matchedOption = optionItems.find((item) => item.value === value);
+      const resolvedLabel = matchedOption?.label ?? labelCache[value];
+
+      if (resolvedLabel) {
+        labels[value] = resolvedLabel;
+      }
+    });
+
+    return labels;
+  }, [labelCache, optionItems, selectedValues]);
+
+  const handleChange = useCallback(
+    (values: string[]) => {
+      setLabelCache((current) => {
+        const next = { ...current };
+
+        optionItems.forEach((item) => {
+          if (values.includes(item.value)) {
+            next[item.value] = item.label;
+          }
+        });
+
+        return next;
+      });
+
+      onUpdateFilters({
+        [filterKey]: values,
+      } as Partial<OverviewFilterValues>);
+    },
+    [filterKey, onUpdateFilters, optionItems],
+  );
+
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
     }
 
-    return options.filter((option) =>
-      option.toLowerCase().includes(normalizedSearch),
+    window.localStorage.setItem(
+      getFilterLabelStorageKey(dimension),
+      JSON.stringify(labelCache),
     );
-  }, [debouncedSearch, options]);
+  }, [dimension, labelCache]);
 
   return (
     <OverviewSearchableMultiSelect
       label={label}
       placeholder={placeholder}
       disabled={disabled}
-      selectedValues={values}
-      selectedLabels={toSlugMap(options)}
-      options={filteredOptions.map((option) => ({
-        value: option,
-        label: option,
-      }))}
-      isLoading={false}
-      isError={false}
+      selectedValues={selectedValues}
+      selectedLabels={selectedLabels}
+      options={optionItems}
+      isLoading={optionsQuery.isLoading}
+      isError={Boolean(optionsQuery.error)}
+      errorMessage={optionsQuery.error?.message}
       searchValue={searchValue}
       onSearchChange={setSearchValue}
+      onChange={handleChange}
+      hasMore={optionsQuery.hasNextPage}
+      isLoadingMore={optionsQuery.isFetchingNextPage}
       popupMinWidth={popupMinWidth}
-      onChange={(nextValues) =>
-        onUpdateFilters({
-          [filterKey]: nextValues,
-        })
-      }
+      onLoadMore={() => {
+        void optionsQuery.fetchNextPage();
+      }}
     />
   );
 }
 
-type ProductsFiltersProps = {
-  state: OverviewFilterState;
-  onUpdateFilters: (patch: Partial<OverviewFilterValues>) => void;
-  onResetFilters: () => void;
-};
-
 export function ProductsFilters({
   state,
+  accessToken,
   onUpdateFilters,
   onResetFilters,
-}: ProductsFiltersProps) {
-  const productOptions = useMemo(
-    () => Array.from(new Set(mockCatalog.map((item) => item.product))).sort(),
-    [],
-  );
-  const uktzedOptions = useMemo(
-    () => Array.from(new Set(mockCatalog.map((item) => item.uktzed))).sort(),
-    [],
-  );
-
-  const isPrimarySelectionActive =
+  onExport,
+  isExportPending,
+}: {
+  state: OverviewFilterState;
+  accessToken: string | null;
+  onUpdateFilters: (patch: Partial<OverviewFilterValues>) => void;
+  onResetFilters: () => void;
+  onExport: (format: OverviewExportFormat) => void;
+  isExportPending: boolean;
+}) {
+  const hasPrimarySelection =
     state.products.length > 0 || state.uktzed.length > 0;
-
-  const scopedEntries = useMemo(() => {
-    if (!isPrimarySelectionActive) {
-      return [];
-    }
-
-    return mockCatalog.filter((entry) => {
-      const matchesProducts =
-        state.products.length === 0 || state.products.includes(entry.product);
-      const matchesUktzed =
-        state.uktzed.length === 0 || state.uktzed.includes(entry.uktzed);
-
-      return matchesProducts && matchesUktzed;
-    });
-  }, [isPrimarySelectionActive, state.products, state.uktzed]);
-
-  const supplierOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(scopedEntries.flatMap((entry) => entry.suppliers)),
-      ).sort(),
-    [scopedEntries],
-  );
-  const buyerOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(scopedEntries.flatMap((entry) => entry.buyers)),
-      ).sort(),
-    [scopedEntries],
-  );
-  const regionOptions = useMemo(
-    () =>
-      Array.from(
-        new Set(scopedEntries.flatMap((entry) => entry.regions)),
-      ).sort(),
-    [scopedEntries],
-  );
-
   const hasActiveFilters =
     state.products.length > 0 ||
     state.uktzed.length > 0 ||
     state.supplierTaxNumbers.length > 0 ||
     state.buyerTaxNumbers.length > 0 ||
     state.buyerRegionCodes.length > 0 ||
+    state.timeGrain.length > 0 ||
     state.comparisonMode !== "PREVIOUS_PERIOD" ||
-    state.timeGrain.length > 0;
+    state.compareDateFrom.length > 0 ||
+    state.compareDateTo.length > 0;
 
-  const handlePrimaryUpdate = useCallback(
-    (patch: Partial<OverviewFilterValues>) => {
-      const nextProducts = patch.products ?? state.products;
-      const nextUktzed = patch.uktzed ?? state.uktzed;
-      const nextScopedEntries = mockCatalog.filter((entry) => {
-        const matchesProducts =
-          nextProducts.length === 0 || nextProducts.includes(entry.product);
-        const matchesUktzed =
-          nextUktzed.length === 0 || nextUktzed.includes(entry.uktzed);
+  function resetSecondaryFiltersIfNeeded(
+    patch: Partial<OverviewFilterValues>,
+  ): Partial<OverviewFilterValues> {
+    const nextProducts = patch.products ?? state.products;
+    const nextUktzed = patch.uktzed ?? state.uktzed;
+    const hasPrimaryFilters = nextProducts.length > 0 || nextUktzed.length > 0;
 
-        return matchesProducts && matchesUktzed;
-      });
-      const nextPrimaryActive =
-        nextProducts.length > 0 || nextUktzed.length > 0;
-      const nextSuppliers = nextPrimaryActive
-        ? new Set(nextScopedEntries.flatMap((entry) => entry.suppliers))
-        : new Set<string>();
-      const nextBuyers = nextPrimaryActive
-        ? new Set(nextScopedEntries.flatMap((entry) => entry.buyers))
-        : new Set<string>();
-      const nextRegions = nextPrimaryActive
-        ? new Set(nextScopedEntries.flatMap((entry) => entry.regions))
-        : new Set<string>();
+    if (hasPrimaryFilters) {
+      return patch;
+    }
 
-      onUpdateFilters({
-        ...patch,
-        supplierTaxNumbers: nextPrimaryActive
-          ? state.supplierTaxNumbers.filter((value) => nextSuppliers.has(value))
-          : [],
-        buyerTaxNumbers: nextPrimaryActive
-          ? state.buyerTaxNumbers.filter((value) => nextBuyers.has(value))
-          : [],
-        buyerRegionCodes: nextPrimaryActive
-          ? state.buyerRegionCodes.filter((value) => nextRegions.has(value))
-          : [],
-      });
-    },
-    [
-      onUpdateFilters,
-      state.buyerRegionCodes,
-      state.buyerTaxNumbers,
-      state.products,
-      state.supplierTaxNumbers,
-      state.uktzed,
-    ],
-  );
+    return {
+      ...patch,
+      supplierTaxNumbers: [],
+      buyerTaxNumbers: [],
+      buyerRegionCodes: [],
+    };
+  }
 
   return (
     <div className="space-y-3">
@@ -436,7 +421,12 @@ export function ProductsFilters({
             label="Період"
             dateFrom={state.dateFrom}
             dateTo={state.dateTo}
-            onChange={onUpdateFilters}
+            onChange={({ dateFrom, dateTo }) =>
+              onUpdateFilters({
+                dateFrom,
+                dateTo,
+              })
+            }
           />
 
           <div className="space-y-2">
@@ -450,7 +440,7 @@ export function ProductsFilters({
                 </p>
               </div>
               <Switch
-                checked={state.comparisonMode !== "NONE"}
+                checked={state.comparisonMode === "PREVIOUS_PERIOD"}
                 onCheckedChange={(checked) =>
                   onUpdateFilters({
                     comparisonMode: checked ? "PREVIOUS_PERIOD" : "NONE",
@@ -465,35 +455,36 @@ export function ProductsFilters({
 
         <div className="flex flex-wrap gap-2">
           <Button
-            type="button"
             variant="outline"
             className="px-3 shadow-sm shadow-black/[0.02]"
-            onClick={onResetFilters}
             disabled={!hasActiveFilters}
+            onClick={onResetFilters}
           >
             Очистити фільтри
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger
-              disabled
+              disabled={!accessToken || isExportPending || !hasPrimarySelection}
               render={
                 <Button
                   className="px-3 shadow-sm shadow-black/[0.02]"
-                  disabled
+                  disabled={
+                    !accessToken || isExportPending || !hasPrimarySelection
+                  }
                 >
                   <DownloadIcon />
-                  Експорт
+                  {isExportPending ? "Експортуємо..." : "Експорт"}
                   <ChevronDownIcon className="size-4 text-current/75" />
                 </Button>
               }
             />
             <DropdownMenuContent align="end" className="min-w-40">
-              <DropdownMenuItem disabled>
+              <DropdownMenuItem onClick={() => onExport("xlsx")}>
                 <FileSpreadsheetIcon />
                 XLSX
               </DropdownMenuItem>
-              <DropdownMenuItem disabled>
+              <DropdownMenuItem onClick={() => onExport("csv")}>
                 <FileTextIcon />
                 CSV
               </DropdownMenuItem>
@@ -502,46 +493,50 @@ export function ProductsFilters({
         </div>
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-5">
-        <StaticFilterField
+      <div className="grid gap-2.5 xl:grid-cols-5">
+        <ProductsFilterField
           filterKey="products"
           label="Продукт / Номенклатура"
           placeholder="Усі продукти"
-          values={state.products}
-          options={productOptions}
+          dimension="products"
           popupMinWidth={620}
-          onUpdateFilters={handlePrimaryUpdate}
+          state={state}
+          accessToken={accessToken}
+          onUpdateFilters={(patch) =>
+            onUpdateFilters(resetSecondaryFiltersIfNeeded(patch))
+          }
         />
-        <StaticFilterField
+        <ProductsFilterField
           filterKey="uktzed"
           label="УКТЗЕД"
           placeholder="Усі УКТЗЕД"
-          values={state.uktzed}
-          options={uktzedOptions}
-          onUpdateFilters={handlePrimaryUpdate}
+          dimension="uktzed"
+          state={state}
+          accessToken={accessToken}
+          onUpdateFilters={(patch) =>
+            onUpdateFilters(resetSecondaryFiltersIfNeeded(patch))
+          }
         />
         {dependentFilters.map((filter) => (
-          <StaticFilterField
+          <ProductsFilterField
             key={filter.key}
             filterKey={filter.key}
             label={filter.label}
             placeholder={filter.placeholder}
-            values={state[filter.key]}
-            options={
-              filter.dimension === "suppliers"
-                ? supplierOptions
-                : filter.dimension === "buyers"
-                  ? buyerOptions
-                  : regionOptions
+            dimension={filter.dimension}
+            popupMinWidth={
+              "popupMinWidth" in filter ? filter.popupMinWidth : undefined
             }
-            disabled={!isPrimarySelectionActive}
-            popupMinWidth={filter.popupMinWidth}
+            disabled={!hasPrimarySelection}
+            enabled={hasPrimarySelection}
+            state={state}
+            accessToken={accessToken}
             onUpdateFilters={onUpdateFilters}
           />
         ))}
       </div>
 
-      {!isPrimarySelectionActive ? (
+      {!hasPrimarySelection ? (
         <div className="rounded-md border border-border/70 bg-muted/15 px-3.5 py-3 text-sm text-muted-foreground">
           Оберіть один або кілька продуктів чи кодів УКТЗЕД, щоб розблокувати
           фільтри постачальників, покупців і регіону покупця.
