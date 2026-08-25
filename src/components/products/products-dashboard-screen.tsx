@@ -11,6 +11,7 @@ import {
   DatabaseIcon,
   EyeOffIcon,
   MapPinnedIcon,
+  PackageIcon,
   TrophyIcon,
   UsersIcon,
 } from "lucide-react";
@@ -169,6 +170,13 @@ const topCards = [
     columns: ["Постачальник", "Продажі з ПДВ", "Частка"],
     icon: Building2Icon,
     iconClassName: "bg-cyan-500/10 text-cyan-600",
+  },
+  {
+    title: "Топ продуктів",
+    sheetTitle: "Усі продукти",
+    columns: ["Продукт / Номенклатура", "Продажі з ПДВ", "Частка"],
+    icon: PackageIcon,
+    iconClassName: "bg-violet-500/10 text-violet-600",
   },
   {
     title: "Топ регіонів збуту",
@@ -764,6 +772,7 @@ function ProductsRankingSheet({
 
     if (card.title === "Топ покупців") return "buyers";
     if (card.title === "Топ постачальників") return "suppliers";
+    if (card.title === "Топ продуктів") return "products";
 
     return "regions";
   }, [card]);
@@ -793,6 +802,7 @@ function ProductsRankingSheet({
     item:
       | ProductsDashboardResponse["topBuyers"][number]
       | ProductsDashboardResponse["topSuppliers"][number]
+      | ProductsDashboardResponse["topProducts"][number]
       | ProductsDashboardResponse["topRegions"][number],
   ) {
     const rawName = "regionName" in item ? item.regionName : item.name;
@@ -803,11 +813,16 @@ function ProductsRankingSheet({
       typeof item.id === "string" &&
       item.id.trim()
         ? `ЄДРПОУ ${item.id}`
-        : dimension === "regions" &&
-            "activeBuyers" in item &&
-            typeof item.activeBuyers === "number"
-          ? `${item.activeBuyers} активних покупців`
-          : null;
+        : dimension === "products" &&
+            "uktzed" in item &&
+            typeof item.uktzed === "string" &&
+            item.uktzed.trim()
+          ? `УКТЗЕД ${item.uktzed}`
+          : dimension === "regions" &&
+              "activeBuyers" in item &&
+              typeof item.activeBuyers === "number"
+            ? `${item.activeBuyers} активних покупців`
+            : null;
     const href =
       dimension === "buyers"
         ? buildOverviewDrilldownHref({
@@ -827,14 +842,25 @@ function ProductsRankingSheet({
                   ? [item.id]
                   : undefined,
             })
-          : buildOverviewDrilldownHref({
-              state,
-              target: "regions",
-              buyerRegionCodes:
-                "regionCode" in item && typeof item.regionCode === "string"
-                  ? [item.regionCode]
-                  : undefined,
-            });
+          : dimension === "products"
+            ? buildOverviewDrilldownHref({
+                state,
+                target: "products",
+                products:
+                  "name" in item &&
+                  typeof item.name === "string" &&
+                  item.name.trim()
+                    ? [item.name]
+                    : undefined,
+              })
+            : buildOverviewDrilldownHref({
+                state,
+                target: "regions",
+                buyerRegionCodes:
+                  "regionCode" in item && typeof item.regionCode === "string"
+                    ? [item.regionCode]
+                    : undefined,
+              });
 
     return (
       <Link
@@ -1037,6 +1063,7 @@ function ProductsTopCardsGrid({
   accessToken,
   topBuyers,
   topSuppliers,
+  topProducts,
   topRegions,
   isLoading,
   error,
@@ -1046,13 +1073,14 @@ function ProductsTopCardsGrid({
   accessToken: string | null;
   topBuyers: ProductsDashboardResponse["topBuyers"];
   topSuppliers: ProductsDashboardResponse["topSuppliers"];
+  topProducts: ProductsDashboardResponse["topProducts"];
   topRegions: ProductsDashboardResponse["topRegions"];
   isLoading: boolean;
   error: string | null;
   onRetry?: () => void;
 }) {
   const [activeSheetIndex, setActiveSheetIndex] = useState<number | null>(null);
-  const rows = [topBuyers, topSuppliers, topRegions];
+  const rows = [topBuyers, topSuppliers, topProducts, topRegions];
   const gridClassName =
     "grid-cols-[minmax(0,2.9fr)_minmax(148px,0.62fr)_minmax(72px,0.28fr)]";
 
@@ -1133,15 +1161,26 @@ function ProductsTopCardsGrid({
                                 ? [item.id]
                                 : undefined,
                           })
-                        : buildOverviewDrilldownHref({
-                            state,
-                            target: "regions",
-                            buyerRegionCodes:
-                              "regionCode" in item &&
-                              typeof item.regionCode === "string"
-                                ? [item.regionCode]
-                                : undefined,
-                          });
+                        : cardIndex === 2
+                          ? buildOverviewDrilldownHref({
+                              state,
+                              target: "products",
+                              products:
+                                "name" in item &&
+                                typeof item.name === "string" &&
+                                item.name.trim()
+                                  ? [item.name]
+                                  : undefined,
+                            })
+                          : buildOverviewDrilldownHref({
+                              state,
+                              target: "regions",
+                              buyerRegionCodes:
+                                "regionCode" in item &&
+                                typeof item.regionCode === "string"
+                                  ? [item.regionCode]
+                                  : undefined,
+                            });
                   const name =
                     "regionName" in item ? item.regionName : item.name;
                   const secondaryText =
@@ -1150,11 +1189,13 @@ function ProductsTopCardsGrid({
                     typeof item.id === "string" &&
                     item.id.trim()
                       ? `ЄДРПОУ ${item.id}`
-                      : cardIndex === 2 &&
-                          "activeBuyers" in item &&
-                          typeof item.activeBuyers === "number"
-                        ? `${item.activeBuyers} активних покупців`
-                        : null;
+                      : cardIndex === 2 && "uktzed" in item && item.uktzed
+                        ? `УКТЗЕД ${item.uktzed}`
+                        : cardIndex === 3 &&
+                            "activeBuyers" in item &&
+                            typeof item.activeBuyers === "number"
+                          ? `${item.activeBuyers} активних покупців`
+                          : null;
 
                   return (
                     <Link
@@ -1689,6 +1730,7 @@ export function ProductsDashboardScreen({
         accessToken={accessToken}
         topBuyers={dashboard?.topBuyers ?? []}
         topSuppliers={dashboard?.topSuppliers ?? []}
+        topProducts={dashboard?.topProducts ?? []}
         topRegions={dashboard?.topRegions ?? []}
         isLoading={isDashboardLoading}
         error={dashboardError}

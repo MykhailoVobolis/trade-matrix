@@ -13,6 +13,7 @@ import {
   type ProductsFilterOptionsDimension,
   type ProductsFilterOptionsResponse,
   type ProductsRankingDimension,
+  type ProductsProductRankingsResponse,
   type ProductsRegionRankingsResponse,
   type ProductsTableResponse,
 } from "@/lib/products/products-api";
@@ -186,7 +187,9 @@ export function useProductsRankingsQuery({
   enabled?: boolean;
 }) {
   return useQuery<
-    ProductsEntityRankingsResponse | ProductsRegionRankingsResponse
+    | ProductsEntityRankingsResponse
+    | ProductsProductRankingsResponse
+    | ProductsRegionRankingsResponse
   >({
     queryKey: productsQueryKeys.rankings({
       state,

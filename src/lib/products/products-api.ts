@@ -7,6 +7,7 @@ import type {
   OverviewInsight,
   OverviewMetric,
   OverviewPeriod,
+  OverviewProductRankingItem,
   OverviewRankingItem,
   OverviewRegionRankingItem,
   RankingsResponse,
@@ -44,6 +45,7 @@ export type ProductsDashboardResponse = {
   };
   topBuyers: OverviewRankingItem[];
   topSuppliers: OverviewRankingItem[];
+  topProducts: OverviewProductRankingItem[];
   topRegions: OverviewRegionRankingItem[];
   insights: OverviewInsight[];
 };
@@ -83,9 +85,12 @@ export type ProductsFilterOptionsResponse = {
   limit: number;
 };
 
-export type ProductsRankingDimension = "buyers" | "suppliers" | "regions";
+export type ProductsRankingDimension =
+  "buyers" | "suppliers" | "products" | "regions";
 export type ProductsEntityRankingsResponse =
   RankingsResponse<OverviewRankingItem>;
+export type ProductsProductRankingsResponse =
+  RankingsResponse<OverviewProductRankingItem>;
 export type ProductsRegionRankingsResponse =
   RankingsResponse<OverviewRegionRankingItem>;
 
@@ -242,14 +247,20 @@ export async function getProductsRankingsRequest({
   page?: number;
   limit?: number;
   accessToken: string;
-}): Promise<ProductsEntityRankingsResponse | ProductsRegionRankingsResponse> {
+}): Promise<
+  | ProductsEntityRankingsResponse
+  | ProductsProductRankingsResponse
+  | ProductsRegionRankingsResponse
+> {
   const params = buildProductsBaseSearchParams(state);
   params.set("dimension", dimension);
   params.set("page", String(page));
   params.set("limit", String(limit));
 
   return requestJson<
-    ProductsEntityRankingsResponse | ProductsRegionRankingsResponse
+    | ProductsEntityRankingsResponse
+    | ProductsProductRankingsResponse
+    | ProductsRegionRankingsResponse
   >({
     path: buildRequestPath("/api/analytics/products/rankings", params),
     accessToken,
