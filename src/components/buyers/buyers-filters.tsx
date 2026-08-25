@@ -429,9 +429,9 @@ export function BuyersFilters({
             <p className="text-xs font-medium text-muted-foreground">
               Порівняння
             </p>
-            <div className="flex h-11 items-center justify-between gap-4 rounded-lg border border-border/70 bg-background px-4 shadow-sm shadow-black/[0.02]">
+            <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border/70 bg-background px-3 py-2.5 shadow-sm shadow-black/[0.02]">
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-foreground">
+                <p className="text-sm text-foreground">
                   Той самий вибраний період, попередній рік
                 </p>
               </div>
