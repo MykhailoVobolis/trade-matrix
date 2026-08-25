@@ -1,5 +1,5 @@
 import {
-  BriefcaseBusinessIcon,
+  Building2Icon,
   MapPinnedIcon,
   TagIcon,
   TrophyIcon,
@@ -18,7 +18,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 const structureItems = [
   {
     title: "Топ постачальник",
-    icon: BriefcaseBusinessIcon,
+    icon: Building2Icon,
     iconClassName: "bg-cyan-500/10 text-cyan-600",
   },
   {
@@ -92,12 +92,12 @@ export function OverviewMarketStructureCard({
               secondary: `${formatCompactCurrency(data.topBuyerRegion.amount)} • ${formatPercent(data.topBuyerRegion.share)}`,
             }
           : null,
-        data.top5SuppliersShare !== null
+        data.top5SuppliersShare !== null && data.top5SuppliersShare > 0
           ? {
               primary: `${formatPercent(data.top5SuppliersShare)} від закупівель`,
             }
           : null,
-        data.top5BuyersShare !== null
+        data.top5BuyersShare !== null && data.top5BuyersShare > 0
           ? {
               primary: `${formatPercent(data.top5BuyersShare)} від продажів`,
             }
