@@ -4,11 +4,15 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   Building2Icon,
+  ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronsUpDownIcon,
   DatabaseIcon,
+  DownloadIcon,
   EyeOffIcon,
+  FileSpreadsheetIcon,
+  FileTextIcon,
   MapPinnedIcon,
   PackageIcon,
   ShoppingCartIcon,
@@ -35,6 +39,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -1369,6 +1374,8 @@ function BuyersOperationsTable({
   tableState,
   onRetry,
   onUpdateTableState,
+  onExport,
+  isExportPending,
 }: {
   rows: BuyersTableResponse["items"];
   total: number;
@@ -1378,6 +1385,8 @@ function BuyersOperationsTable({
   tableState: OverviewTableState;
   onRetry?: () => void;
   onUpdateTableState: (patch: Partial<OverviewTableState>) => void;
+  onExport: (format: OverviewExportFormat) => void;
+  isExportPending: boolean;
 }) {
   const [hiddenColumns, setHiddenColumns] = useState<Record<string, boolean>>(
     {},
@@ -1512,11 +1521,11 @@ function BuyersOperationsTable({
               <CardTitle>Огляд закупівель</CardTitle>
             </div>
 
-            <div className="shrink-0">
+            <div className="flex shrink-0 items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <Button variant="outline" className="h-9 rounded-lg px-3">
+                    <Button variant="outline" className="h-8 rounded-lg px-3">
                       <EyeOffIcon />
                       Колонки
                     </Button>
@@ -1552,6 +1561,32 @@ function BuyersOperationsTable({
                       </DropdownMenuCheckboxItem>
                     );
                   })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  disabled={isExportPending}
+                  render={
+                    <Button
+                      className="h-8 rounded-lg px-3"
+                      disabled={isExportPending}
+                    >
+                      <DownloadIcon />
+                      {isExportPending ? "Експортуємо..." : "Експорт"}
+                      <ChevronDownIcon className="size-4 text-current/75" />
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent align="end" className="min-w-40">
+                  <DropdownMenuItem onClick={() => onExport("xlsx")}>
+                    <FileSpreadsheetIcon />
+                    XLSX
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => onExport("csv")}>
+                    <FileTextIcon />
+                    CSV
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -1770,8 +1805,6 @@ export function BuyersDashboardScreen({
         accessToken={accessToken}
         onUpdateFilters={onUpdateFilters}
         onResetFilters={onResetFilters}
-        onExport={onExport}
-        isExportPending={isExportPending}
       />
 
       <BuyersKpiGrid
@@ -1827,6 +1860,8 @@ export function BuyersDashboardScreen({
         tableState={state.table}
         onRetry={onRetryTable}
         onUpdateTableState={onUpdateTableState}
+        onExport={onExport}
+        isExportPending={isExportPending}
       />
     </section>
   );

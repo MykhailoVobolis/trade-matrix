@@ -60,8 +60,6 @@ export function OverviewDashboardScreen({
         accessToken={accessToken}
         onUpdateOverviewFilters={onUpdateOverviewFilters}
         onResetFilters={onResetFilters}
-        onExport={onExport}
-        isExportPending={isExportPending}
       />
       <OverviewKpiGrid
         kpi={overview?.kpi}
@@ -133,6 +131,8 @@ export function OverviewDashboardScreen({
         tableState={state.table}
         onRetry={onRetryOverviewTable}
         onUpdateTableState={onUpdateTableState}
+        onExport={onExport}
+        isExportPending={isExportPending}
       />
     </section>
   );

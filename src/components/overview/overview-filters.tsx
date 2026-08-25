@@ -1,11 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  CalendarRangeIcon,
-  ChevronDownIcon,
-  DownloadIcon,
-  FileSpreadsheetIcon,
-  FileTextIcon,
-} from "lucide-react";
+import { CalendarRangeIcon, ChevronDownIcon, DownloadIcon } from "lucide-react";
 
 import { OverviewSearchableMultiSelect } from "@/components/overview/overview-searchable-multi-select";
 import { Button } from "@/components/ui/button";
@@ -18,8 +12,6 @@ import {
 import { Switch } from "@/components/ui/switch";
 import {
   DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import type {
@@ -27,7 +19,6 @@ import type {
   OverviewFilterValues,
 } from "@/lib/overview/overview-url-state";
 import { useOverviewFilterOptionsInfiniteQuery } from "@/lib/overview/overview-query";
-import type { OverviewExportFormat } from "@/lib/overview/overview-api";
 
 const primaryFilters = [
   {
@@ -379,15 +370,11 @@ export function OverviewFilters({
   accessToken,
   onUpdateOverviewFilters,
   onResetFilters,
-  onExport,
-  isExportPending,
 }: {
   state: OverviewFilterState;
   accessToken: string | null;
   onUpdateOverviewFilters: (patch: Partial<OverviewFilterValues>) => void;
   onResetFilters: () => void;
-  onExport: (format: OverviewExportFormat) => void;
-  isExportPending: boolean;
 }) {
   const hasOverviewFilters =
     state.comparisonMode !== "PREVIOUS_PERIOD" ||
@@ -451,25 +438,15 @@ export function OverviewFilters({
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
-              disabled={!accessToken || isExportPending}
+              disabled
               render={
-                <Button className="px-3 shadow-sm shadow-black/[0.02]">
+                <Button className="px-3 shadow-sm shadow-black/[0.02]" disabled>
                   <DownloadIcon />
-                  {isExportPending ? "Експортуємо..." : "Експорт"}
+                  Експорт
                   <ChevronDownIcon className="size-4 text-current/75" />
                 </Button>
               }
             />
-            <DropdownMenuContent align="end" className="min-w-40">
-              <DropdownMenuItem onClick={() => onExport("xlsx")}>
-                <FileSpreadsheetIcon />
-                XLSX
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onExport("csv")}>
-                <FileTextIcon />
-                CSV
-              </DropdownMenuItem>
-            </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>

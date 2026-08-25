@@ -1,30 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import {
-  CalendarRangeIcon,
-  ChevronDownIcon,
-  DownloadIcon,
-  FileSpreadsheetIcon,
-  FileTextIcon,
-} from "lucide-react";
+import { CalendarRangeIcon, ChevronDownIcon, DownloadIcon } from "lucide-react";
 
 import { OverviewSearchableMultiSelect } from "@/components/overview/overview-searchable-multi-select";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
-import type { OverviewExportFormat } from "@/lib/overview/overview-api";
 import type {
   OverviewFilterState,
   OverviewFilterValues,
@@ -387,15 +374,11 @@ export function BuyersFilters({
   accessToken,
   onUpdateFilters,
   onResetFilters,
-  onExport,
-  isExportPending,
 }: {
   state: OverviewFilterState;
   accessToken: string | null;
   onUpdateFilters: (patch: Partial<OverviewFilterValues>) => void;
   onResetFilters: () => void;
-  onExport: (format: OverviewExportFormat) => void;
-  isExportPending: boolean;
 }) {
   const hasSelectedBuyers = state.buyerTaxNumbers.length > 0;
   const hasActiveFilters =
@@ -458,33 +441,11 @@ export function BuyersFilters({
           >
             Очистити фільтри
           </Button>
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              disabled={!accessToken || isExportPending || !hasSelectedBuyers}
-              render={
-                <Button
-                  className="px-3 shadow-sm shadow-black/[0.02]"
-                  disabled={
-                    !accessToken || isExportPending || !hasSelectedBuyers
-                  }
-                >
-                  <DownloadIcon />
-                  {isExportPending ? "Експортуємо..." : "Експорт"}
-                  <ChevronDownIcon className="size-4 text-current/75" />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end" className="min-w-40">
-              <DropdownMenuItem onClick={() => onExport("xlsx")}>
-                <FileSpreadsheetIcon />
-                XLSX
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onExport("csv")}>
-                <FileTextIcon />
-                CSV
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <Button className="px-3 shadow-sm shadow-black/[0.02]" disabled>
+            <DownloadIcon />
+            Експорт
+            <ChevronDownIcon className="size-4 text-current/75" />
+          </Button>
         </div>
       </div>
 
