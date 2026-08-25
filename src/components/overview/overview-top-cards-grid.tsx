@@ -322,11 +322,11 @@ function OverviewRankingSheet({
                       </span>
                     ) : null}
                     <Button
-                      variant="outline"
+                      variant={pageNumber === page ? "outline" : "ghost"}
                       size="icon-sm"
                       className={
                         pageNumber === page
-                          ? "border-sidebar-primary text-foreground"
+                          ? "border-sidebar-primary bg-background text-foreground shadow-sm dark:border-input dark:bg-input/40 dark:text-foreground dark:hover:bg-input/40"
                           : ""
                       }
                       disabled={rankingsQuery.isFetching}

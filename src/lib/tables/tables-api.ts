@@ -2,13 +2,22 @@ import { requestJson } from "@/lib/api/http-client";
 
 export const MAX_TABLE_UPLOAD_FILES = 20;
 export const MAX_TABLE_UPLOAD_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+export const TABLE_UPLOAD_ACCEPTED_EXTENSIONS = [".xlsx", ".csv"] as const;
+export const TABLE_UPLOAD_ACCEPT_ATTRIBUTE = [
+  ".xlsx",
+  ".csv",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/csv",
+].join(",");
 
 export type RegistryImportStatus =
   "queued" | "processing" | "completed" | "failed";
+export type RegistryImportFileType = "XLSX" | "CSV";
 
 export type RegistryImportUploadItem = {
   id: string;
   fileName: string;
+  fileType: RegistryImportFileType;
   fileSizeBytes?: number | null;
   fileSizeMb?: number | null;
   errorMessage: string | null;

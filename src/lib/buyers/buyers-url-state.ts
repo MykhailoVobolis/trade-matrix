@@ -9,7 +9,7 @@ export const BUYERS_FILTER_STATE_STORAGE_KEY = "buyers-filter-state";
 const TABLE_LIMIT_OPTIONS = new Set([5, 10, 20, 50, 100]);
 const BUYERS_SORT_BY_OPTIONS = new Set<OverviewTableSortBy>([
   "period",
-  "supplierRegion",
+  "buyerRegion",
   "buyer",
   "supplier",
   "product",
@@ -123,7 +123,6 @@ export function parseBuyersSearchParams(
     uktzed: normalizeMultiValue(searchParams.getAll("uktzed")),
     products: normalizeMultiValue(searchParams.getAll("products")),
     buyerRegionCodes: normalizeMultiValue([
-      ...searchParams.getAll("supplierRegionCodes"),
       ...searchParams.getAll("buyerRegionCodes"),
     ]),
     buyerTaxNumbers: normalizeMultiValue(
@@ -231,7 +230,7 @@ export function serializeBuyersSearchParams(state: OverviewFilterState) {
     [
       ["buyerTaxNumbers", normalizedState.buyerTaxNumbers],
       ["supplierTaxNumbers", normalizedState.supplierTaxNumbers],
-      ["supplierRegionCodes", normalizedState.buyerRegionCodes],
+      ["buyerRegionCodes", normalizedState.buyerRegionCodes],
       ["uktzed", normalizedState.uktzed],
       ["products", normalizedState.products],
     ] as const

@@ -24,6 +24,8 @@ import {
   getRegistryImportStatsRequest,
   MAX_TABLE_UPLOAD_FILES,
   MAX_TABLE_UPLOAD_FILE_SIZE_BYTES,
+  TABLE_UPLOAD_ACCEPT_ATTRIBUTE,
+  TABLE_UPLOAD_ACCEPTED_EXTENSIONS,
   prepareTablesUploadPayload,
   type RegistryImportItem,
   type RegistryImportStats,
@@ -144,6 +146,14 @@ function formatImportFileSize(record: RegistryImportItem) {
   return "Unknown";
 }
 
+function isAcceptedTableFile(file: File) {
+  const normalizedName = file.name.toLowerCase();
+
+  return TABLE_UPLOAD_ACCEPTED_EXTENSIONS.some((extension) =>
+    normalizedName.endsWith(extension),
+  );
+}
+
 function formatImportDate(value: string) {
   const date = new Date(value);
 
@@ -254,6 +264,29 @@ export function TablesScreen() {
     null,
   );
 
+  async function invalidateDatabaseDependentQueries() {
+    await Promise.all([
+      queryClient.invalidateQueries({
+        queryKey: ["registry-imports"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["registry-import-stats"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["overview"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["suppliers"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["buyers"],
+      }),
+      queryClient.invalidateQueries({
+        queryKey: ["products"],
+      }),
+    ]);
+  }
+
   const normalizedSearch = deferredQuery.trim();
   const selectedStatusLabel =
     selectedStatus === "all"
@@ -344,14 +377,7 @@ export function TablesScreen() {
       setCurrentPage(1);
       setPollingDeadlineAt(Date.now() + IMPORT_POLLING_WINDOW_MS);
 
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["registry-imports"],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["registry-import-stats"],
-        }),
-      ]);
+      await invalidateDatabaseDependentQueries();
     },
   });
 
@@ -373,14 +399,7 @@ export function TablesScreen() {
 
       setPendingDeletion(null);
 
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["registry-imports"],
-        }),
-        queryClient.invalidateQueries({
-          queryKey: ["registry-import-stats"],
-        }),
-      ]);
+      await invalidateDatabaseDependentQueries();
     },
   });
 
@@ -407,21 +426,19 @@ export function TablesScreen() {
       setFeedback({
         variant: "error",
         title: "Upload failed",
-        message: `You can upload up to ${MAX_TABLE_UPLOAD_FILES} XLSX files at a time.`,
+        message: `You can upload up to ${MAX_TABLE_UPLOAD_FILES} XLSX or CSV files at a time.`,
       });
       event.target.value = "";
       return;
     }
 
-    const invalidTypeFile = files.find(
-      (file) => !file.name.toLowerCase().endsWith(".xlsx"),
-    );
+    const invalidTypeFile = files.find((file) => !isAcceptedTableFile(file));
 
     if (invalidTypeFile) {
       setFeedback({
         variant: "error",
         title: "Upload failed",
-        message: "Only XLSX files are supported in the MVP flow.",
+        message: "Only XLSX and CSV files are supported.",
       });
       event.target.value = "";
       return;
@@ -435,7 +452,7 @@ export function TablesScreen() {
       setFeedback({
         variant: "error",
         title: "Upload failed",
-        message: "Each XLSX file must be 10 MB or smaller.",
+        message: "Each XLSX or CSV file must be 10 MB or smaller.",
       });
       event.target.value = "";
       return;
@@ -491,7 +508,7 @@ export function TablesScreen() {
                 </span>
               </div>
               <CardDescription className="max-w-3xl text-sm">
-                Завантажуйте XLSX-файли таблиць сюди перед тим, як вони
+                Завантажуйте XLSX або CSV-файли таблиць сюди перед тим, як вони
                 потраплять у пайплайн обробки. Шукайте за назвою файлу,
                 фільтруйте за статусом і відстежуйте прогрес імпорту в одному
                 місці.
@@ -502,7 +519,7 @@ export function TablesScreen() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            accept={TABLE_UPLOAD_ACCEPT_ATTRIBUTE}
             multiple
             className="hidden"
             onChange={handleFileSelection}
@@ -653,7 +670,7 @@ export function TablesScreen() {
                             </span>
                             {record.status === "failed" &&
                             record.errorMessage ? (
-                              <span className="block text-xs text-destructive">
+                              <span className="block whitespace-normal break-words text-xs leading-5 text-destructive">
                                 {record.errorMessage}
                               </span>
                             ) : null}
@@ -662,7 +679,7 @@ export function TablesScreen() {
                       </TableCell>
                       <TableCell className="px-5 py-4">
                         <span className="inline-flex rounded-full border border-border/70 bg-background px-2.5 py-1 text-xs font-medium text-muted-foreground">
-                          XLSX
+                          {record.fileType}
                         </span>
                       </TableCell>
                       <TableCell className="px-5 py-4 text-muted-foreground">
@@ -751,12 +768,14 @@ export function TablesScreen() {
                         </span>
                       ) : null}
                       <Button
-                        variant="outline"
+                        variant={
+                          pageNumber === safeCurrentPage ? "outline" : "ghost"
+                        }
                         size="icon-sm"
                         className={cn(
                           "text-xs",
                           pageNumber === safeCurrentPage &&
-                            "border-sidebar-primary text-foreground",
+                            "border-sidebar-primary bg-background text-foreground shadow-sm dark:border-input dark:bg-input/40 dark:text-foreground dark:hover:bg-input/40",
                         )}
                         onClick={() => setCurrentPage(pageNumber)}
                       >

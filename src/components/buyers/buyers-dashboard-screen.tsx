@@ -130,7 +130,7 @@ const structureItems = [
     iconClassName: "bg-cyan-500/10 text-cyan-600",
   },
   {
-    title: "Топ регіон постачання",
+    title: "Топ регіон збуту",
     icon: MapPinnedIcon,
     iconClassName: "bg-amber-500/10 text-amber-600",
   },
@@ -145,7 +145,7 @@ const structureItems = [
     iconClassName: "bg-cyan-500/10 text-cyan-600",
   },
   {
-    title: "Частка TOP-5 регіонів постачання",
+    title: "Частка TOP-5 регіонів збуту",
     icon: MapPinnedIcon,
     iconClassName: "bg-amber-500/10 text-amber-600",
   },
@@ -172,9 +172,9 @@ const topCards = [
     iconClassName: "bg-violet-500/10 text-violet-600",
   },
   {
-    title: "Топ регіонів постачання",
-    sheetTitle: "Усі регіони постачання",
-    columns: ["Регіон постачальника", "Закупівлі з ПДВ", "Частка"],
+    title: "Топ регіонів збуту",
+    sheetTitle: "Усі регіони збуту",
+    columns: ["Регіон покупця", "Закупівлі з ПДВ", "Частка"],
     icon: MapPinnedIcon,
     iconClassName: "bg-amber-500/10 text-amber-600",
   },
@@ -182,7 +182,7 @@ const topCards = [
 
 const buyersTableColumnLabels: Record<string, string> = {
   period: "Період",
-  supplierRegion: "Регіон постачальника",
+  buyerRegion: "Регіон покупця",
   buyer: "Покупець",
   supplier: "Постачальник",
   product: "Продукт",
@@ -336,8 +336,8 @@ function formatBuyersInsight(insight?: BuyersInsight | null) {
         ? `Пік закупівель — ${insight.payload.periodLabel ?? "—"}`
         : "Пік закупівель — —";
     }
-    case "TOP_SUPPLIER_REGION":
-      return `Найбільший регіон постачання — ${insight.payload.regionName ?? "—"}`;
+    case "TOP_BUYER_REGION":
+      return `Найбільший регіон попиту — ${insight.payload.regionName ?? "—"}`;
     default:
       return "—";
   }
@@ -360,7 +360,7 @@ function BuyersKpiGrid({
     ? [
         kpi.purchasesWithVat,
         kpi.activeSuppliers,
-        kpi.supplierRegions,
+        kpi.buyerRegions,
         kpi.productPositions,
       ]
     : [];
@@ -620,14 +620,14 @@ function BuyersMarketStructureCard({
                   : null,
             }
           : null,
-        data.topSupplierRegion
+        data.topBuyerRegion
           ? {
               primary:
-                data.topSupplierRegion.regionName &&
-                data.topSupplierRegion.regionName.trim() !== "undefined"
-                  ? data.topSupplierRegion.regionName
+                data.topBuyerRegion.regionName &&
+                data.topBuyerRegion.regionName.trim() !== "undefined"
+                  ? data.topBuyerRegion.regionName
                   : "Не визначено",
-              secondary: `${formatCompactCurrency(data.topSupplierRegion.amount)} • ${formatPercent(data.topSupplierRegion.share)}`,
+              secondary: `${formatCompactCurrency(data.topBuyerRegion.amount)} • ${formatPercent(data.topBuyerRegion.share)}`,
             }
           : null,
         data.topUKTZED
@@ -761,10 +761,10 @@ function BuyersMarketInsightsCard({
       emptyText: "Пік закупівель — —",
     },
     {
-      insight: insights.find((item) => item.type === "TOP_SUPPLIER_REGION"),
+      insight: insights.find((item) => item.type === "TOP_BUYER_REGION"),
       icon: MapPinnedIcon,
       iconClassName: "bg-amber-500/10 text-amber-600",
-      emptyText: "Найбільший регіон постачання — —",
+      emptyText: "Найбільший регіон попиту — —",
     },
   ] as const;
 
@@ -894,7 +894,7 @@ function BuyersRankingSheet({
     item:
       | BuyersDashboardResponse["topSuppliers"][number]
       | BuyersDashboardResponse["topProducts"][number]
-      | BuyersDashboardResponse["topSupplierRegions"][number],
+      | BuyersDashboardResponse["topBuyerRegions"][number],
   ) {
     const rawName = "regionName" in item ? item.regionName : item.name;
     const name = rawName?.trim() || "—";
@@ -936,7 +936,7 @@ function BuyersRankingSheet({
           : buildOverviewDrilldownHref({
               state,
               target: "regions",
-              supplierRegionCodes:
+              buyerRegionCodes:
                 "regionCode" in item && typeof item.regionCode === "string"
                   ? [item.regionCode]
                   : undefined,
@@ -1066,11 +1066,11 @@ function BuyersRankingSheet({
                       </span>
                     ) : null}
                     <Button
-                      variant="outline"
+                      variant={pageNumber === page ? "outline" : "ghost"}
                       size="icon-sm"
                       className={
                         pageNumber === page
-                          ? "border-sidebar-primary text-foreground"
+                          ? "border-sidebar-primary bg-background text-foreground shadow-sm dark:border-input dark:bg-input/40 dark:text-foreground dark:hover:bg-input/40"
                           : ""
                       }
                       disabled={rankingsQuery.isFetching}
@@ -1143,7 +1143,7 @@ function BuyersTopCardsGrid({
   accessToken,
   topSuppliers,
   topProducts,
-  topSupplierRegions,
+  topBuyerRegions,
   isLoading,
   error,
   onRetry,
@@ -1152,13 +1152,13 @@ function BuyersTopCardsGrid({
   accessToken: string | null;
   topSuppliers: BuyersDashboardResponse["topSuppliers"];
   topProducts: BuyersDashboardResponse["topProducts"];
-  topSupplierRegions: BuyersDashboardResponse["topSupplierRegions"];
+  topBuyerRegions: BuyersDashboardResponse["topBuyerRegions"];
   isLoading: boolean;
   error: string | null;
   onRetry?: () => void;
 }) {
   const [activeSheetIndex, setActiveSheetIndex] = useState<number | null>(null);
-  const rows = [topSuppliers, topProducts, topSupplierRegions];
+  const rows = [topSuppliers, topProducts, topBuyerRegions];
   const gridClassName =
     "grid-cols-[minmax(0,2.9fr)_minmax(148px,0.62fr)_minmax(72px,0.28fr)]";
 
@@ -1239,7 +1239,7 @@ function BuyersTopCardsGrid({
                         : buildOverviewDrilldownHref({
                             state,
                             target: "regions",
-                            supplierRegionCodes:
+                            buyerRegionCodes:
                               "regionCode" in item &&
                               typeof item.regionCode === "string"
                                 ? [item.regionCode]
@@ -1400,7 +1400,7 @@ function BuyersOperationsTable({
   const columns: Array<{
     key:
       | "period"
-      | "supplierRegion"
+      | "buyerRegion"
       | "buyer"
       | "supplier"
       | "product"
@@ -1418,11 +1418,11 @@ function BuyersOperationsTable({
       render: (row) => row.period || "—",
     },
     {
-      key: "supplierRegion",
-      label: "Регіон постачальника",
+      key: "buyerRegion",
+      label: "Регіон покупця",
       render: (row) => (
         <OverflowTooltipText
-          text={row.supplierRegionName || "Не визначено"}
+          text={row.buyerRegionName || "Не визначено"}
           className="block whitespace-normal break-words leading-snug"
         />
       ),
@@ -1649,11 +1649,10 @@ function BuyersOperationsTable({
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="h-9 w-9 rounded-lg"
+                  size="icon-sm"
                   disabled={tableState.page <= 1}
                   onClick={() =>
                     onUpdateTableState({
@@ -1666,10 +1665,11 @@ function BuyersOperationsTable({
                 {pageNumbers.map((page) => (
                   <Button
                     key={page}
-                    variant="outline"
-                    className={`h-9 min-w-9 rounded-lg px-0 ${
+                    variant={tableState.page === page ? "outline" : "ghost"}
+                    size="icon-sm"
+                    className={`text-xs ${
                       tableState.page === page
-                        ? "border-sidebar-primary text-sidebar-primary"
+                        ? "border-sidebar-primary bg-background text-foreground shadow-sm dark:border-input dark:bg-input/40 dark:text-foreground dark:hover:bg-input/40"
                         : ""
                     }`}
                     onClick={() => onUpdateTableState({ page })}
@@ -1679,8 +1679,7 @@ function BuyersOperationsTable({
                 ))}
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="h-9 w-9 rounded-lg"
+                  size="icon-sm"
                   disabled={tableState.page >= totalPages}
                   onClick={() =>
                     onUpdateTableState({
@@ -1701,8 +1700,8 @@ function BuyersOperationsTable({
                   })
                 }
               >
-                <SelectTrigger className="h-9 min-w-32 rounded-lg">
-                  <SelectValue />
+                <SelectTrigger className="h-8 min-w-28 rounded-lg px-3">
+                  <SelectValue>{tableState.limit} / сторінка</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {[5, 10, 20, 50, 100].map((option) => (
@@ -1813,7 +1812,7 @@ export function BuyersDashboardScreen({
         accessToken={accessToken}
         topSuppliers={dashboardData?.topSuppliers ?? []}
         topProducts={dashboardData?.topProducts ?? []}
-        topSupplierRegions={dashboardData?.topSupplierRegions ?? []}
+        topBuyerRegions={dashboardData?.topBuyerRegions ?? []}
         isLoading={isDashboardLoading}
         error={dashboardError}
         onRetry={onRetryDashboard}

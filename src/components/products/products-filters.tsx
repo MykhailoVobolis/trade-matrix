@@ -538,8 +538,8 @@ export function ProductsFilters({
 
       {!hasPrimarySelection ? (
         <div className="rounded-md border border-border/70 bg-muted/15 px-3.5 py-3 text-sm text-muted-foreground">
-          Оберіть один або кілька продуктів чи кодів УКТЗЕД, щоб розблокувати
-          фільтри постачальників, покупців і регіону покупця.
+          Оберіть один або кілька продуктів чи кодів УКТЗЕД, щоб відкрити решту
+          фільтрів.
         </div>
       ) : null}
     </div>

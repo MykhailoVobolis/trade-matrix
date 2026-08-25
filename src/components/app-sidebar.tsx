@@ -59,11 +59,6 @@ const navigationItems = [
     icon: HouseIcon,
   },
   {
-    title: "Таблиці",
-    href: "/app/tables",
-    icon: DatabaseIcon,
-  },
-  {
     title: "Постачальники",
     href: "/app/suppliers",
     icon: Building2Icon,
@@ -77,6 +72,11 @@ const navigationItems = [
     title: "Продукти",
     href: "/app/products",
     icon: PackageIcon,
+  },
+  {
+    title: "Таблиці",
+    href: "/app/tables",
+    icon: DatabaseIcon,
   },
   {
     title: "УКТЗЕД",

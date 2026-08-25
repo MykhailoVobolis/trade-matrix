@@ -224,7 +224,7 @@ export function OverviewSearchableMultiSelect({
           <span
             className={`flex h-11 w-full items-center justify-between gap-2 rounded-lg border px-3 text-sm shadow-sm shadow-black/[0.02] transition-colors aria-expanded:border-sidebar-primary/30 aria-expanded:bg-accent/30 ${
               disabled
-                ? "cursor-not-allowed border-border/60 bg-muted/35 text-muted-foreground"
+                ? "cursor-default border-border/60 bg-muted/35 text-muted-foreground"
                 : "border-border/70 bg-background text-foreground"
             }`}
           >

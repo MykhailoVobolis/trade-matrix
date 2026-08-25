@@ -986,11 +986,11 @@ function ProductsRankingSheet({
                       </span>
                     ) : null}
                     <Button
-                      variant="outline"
+                      variant={pageNumber === page ? "outline" : "ghost"}
                       size="icon-sm"
                       className={
                         pageNumber === page
-                          ? "border-sidebar-primary text-foreground"
+                          ? "border-sidebar-primary bg-background text-foreground shadow-sm dark:border-input dark:bg-input/40 dark:text-foreground dark:hover:bg-input/40"
                           : ""
                       }
                       disabled={rankingsQuery.isFetching}
@@ -1560,11 +1560,10 @@ function ProductsOperationsTable({
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="h-9 w-9 rounded-lg"
+                  size="icon-sm"
                   disabled={tableState.page <= 1}
                   onClick={() =>
                     onUpdateTableState({
@@ -1577,10 +1576,11 @@ function ProductsOperationsTable({
                 {pageNumbers.map((page) => (
                   <Button
                     key={page}
-                    variant="outline"
-                    className={`h-9 min-w-9 rounded-lg px-0 ${
+                    variant={tableState.page === page ? "outline" : "ghost"}
+                    size="icon-sm"
+                    className={`text-xs ${
                       tableState.page === page
-                        ? "border-sidebar-primary text-sidebar-primary"
+                        ? "border-sidebar-primary bg-background text-foreground shadow-sm dark:border-input dark:bg-input/40 dark:text-foreground dark:hover:bg-input/40"
                         : ""
                     }`}
                     onClick={() => onUpdateTableState({ page })}
@@ -1590,8 +1590,7 @@ function ProductsOperationsTable({
                 ))}
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="h-9 w-9 rounded-lg"
+                  size="icon-sm"
                   disabled={tableState.page >= totalPages}
                   onClick={() =>
                     onUpdateTableState({
@@ -1612,8 +1611,8 @@ function ProductsOperationsTable({
                   })
                 }
               >
-                <SelectTrigger className="h-9 min-w-32 rounded-lg">
-                  <SelectValue />
+                <SelectTrigger className="h-8 min-w-28 rounded-lg px-3">
+                  <SelectValue>{tableState.limit} / сторінка</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {[5, 10, 20, 50, 100].map((option) => (

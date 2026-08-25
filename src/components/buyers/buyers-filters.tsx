@@ -32,7 +32,7 @@ import type {
 import { useBuyersFilterOptionsInfiniteQuery } from "@/lib/buyers/buyers-query";
 
 type FilterDimension =
-  "buyers" | "suppliers" | "products" | "uktzed" | "supplierRegions";
+  "buyers" | "suppliers" | "products" | "uktzed" | "buyerRegions";
 
 const dependentFilters = [
   {
@@ -44,9 +44,9 @@ const dependentFilters = [
   },
   {
     key: "buyerRegionCodes",
-    label: "Регіон постачальника",
+    label: "Регіон покупця",
     placeholder: "Усі регіони",
-    dimension: "supplierRegions",
+    dimension: "buyerRegions",
   },
   {
     key: "uktzed",
