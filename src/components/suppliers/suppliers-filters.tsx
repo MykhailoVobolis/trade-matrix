@@ -1,11 +1,23 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CalendarRangeIcon, ChevronDownIcon, DownloadIcon } from "lucide-react";
+import {
+  CalendarRangeIcon,
+  ChevronDownIcon,
+  DownloadIcon,
+  FileTextIcon,
+  LoaderCircleIcon,
+} from "lucide-react";
 
 import { OverviewSearchableMultiSelect } from "@/components/overview/overview-searchable-multi-select";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Popover,
   PopoverContent,
@@ -374,11 +386,17 @@ export function SuppliersFilters({
   accessToken,
   onUpdateFilters,
   onResetFilters,
+  onExportPdf,
+  isPdfExportPending,
+  isPdfExportDisabled = false,
 }: {
   state: OverviewFilterState;
   accessToken: string | null;
   onUpdateFilters: (patch: Partial<OverviewFilterValues>) => void;
   onResetFilters: () => void;
+  onExportPdf: () => void;
+  isPdfExportPending: boolean;
+  isPdfExportDisabled?: boolean;
 }) {
   const hasSelectedSuppliers = state.supplierTaxNumbers.length > 0;
   const hasActiveFilters =
@@ -441,11 +459,46 @@ export function SuppliersFilters({
           >
             Очистити фільтри
           </Button>
-          <Button className="px-3 shadow-sm shadow-black/[0.02]" disabled>
-            <DownloadIcon />
-            Експорт
-            <ChevronDownIcon className="size-4 text-current/75" />
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  className="px-3 shadow-sm shadow-black/[0.02]"
+                  disabled={isPdfExportPending || isPdfExportDisabled}
+                >
+                  {isPdfExportPending ? (
+                    <span
+                      className="inline-flex animate-spin"
+                      style={{
+                        animationDuration: "0.9s",
+                        animationTimingFunction: "linear",
+                        willChange: "transform",
+                      }}
+                    >
+                      <LoaderCircleIcon />
+                    </span>
+                  ) : (
+                    <DownloadIcon />
+                  )}
+                  {isPdfExportPending ? "Експорт PDF" : "Експорт"}
+                  <ChevronDownIcon className="size-4 text-current/75" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent
+              align="end"
+              className="min-w-40"
+              sideOffset={8}
+            >
+              <DropdownMenuItem
+                disabled={isPdfExportPending || isPdfExportDisabled}
+                onClick={onExportPdf}
+              >
+                <FileTextIcon className="size-4" />
+                PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

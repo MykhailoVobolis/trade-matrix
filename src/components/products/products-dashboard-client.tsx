@@ -1,11 +1,17 @@
 "use client";
 
-import { startTransition, useEffect, useMemo } from "react";
+import { startTransition, useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 import { useMutation } from "@tanstack/react-query";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 import { ProductsDashboardScreen } from "@/components/products/products-dashboard-screen";
+import { ProductsPrintScreen } from "@/components/products/products-print-screen";
 import { useAuthSessionStore } from "@/lib/auth/auth-session-store";
+import {
+  exportDashboardPdf,
+  exportThemeVariables,
+} from "@/lib/pdf/dashboard-pdf-export";
 import type { OverviewExportFormat } from "@/lib/overview/overview-api";
 import {
   getDefaultProductsFilterState,
@@ -15,7 +21,11 @@ import {
   readPersistedProductsFilterState,
   serializeProductsSearchParams,
 } from "@/lib/products/products-url-state";
-import { exportProductsRequest } from "@/lib/products/products-api";
+import {
+  exportProductsRequest,
+  getProductsFilterOptionsRequest,
+  type ProductsFilterOptionsDimension,
+} from "@/lib/products/products-api";
 import {
   useProductsDashboardQuery,
   useProductsTableQuery,
@@ -26,11 +36,64 @@ import type {
   OverviewTableState,
 } from "@/lib/overview/overview-url-state";
 
+type ProductsPrintFilterLabels = {
+  buyerRegions: Record<string, string>;
+  buyers: Record<string, string>;
+  suppliers: Record<string, string>;
+};
+
 function createUrl(pathname: string, state: OverviewFilterState) {
   const params = serializeProductsSearchParams(state);
   const queryString = params.toString();
 
   return queryString ? `${pathname}?${queryString}` : pathname;
+}
+
+async function resolveFilterLabels(
+  state: OverviewFilterState,
+  accessToken: string,
+): Promise<ProductsPrintFilterLabels> {
+  const result: ProductsPrintFilterLabels = {
+    buyerRegions: {},
+    buyers: {},
+    suppliers: {},
+  };
+  const tasks: Array<Promise<void>> = [];
+
+  function queueDimension(
+    dimension: ProductsFilterOptionsDimension,
+    values: string[],
+    target: keyof ProductsPrintFilterLabels,
+  ) {
+    for (const value of values) {
+      tasks.push(
+        getProductsFilterOptionsRequest({
+          state,
+          dimension,
+          search: value,
+          page: 1,
+          limit: 20,
+          accessToken,
+        }).then((response) => {
+          const exactMatch = response.items.find(
+            (item) => item.value === value,
+          );
+
+          if (exactMatch?.label) {
+            result[target][value] = exactMatch.label;
+          }
+        }),
+      );
+    }
+  }
+
+  queueDimension("buyerRegions", state.buyerRegionCodes, "buyerRegions");
+  queueDimension("buyers", state.buyerTaxNumbers, "buyers");
+  queueDimension("suppliers", state.supplierTaxNumbers, "suppliers");
+
+  await Promise.all(tasks);
+
+  return result;
 }
 
 export function ProductsDashboardClient() {
@@ -74,6 +137,14 @@ export function ProductsDashboardClient() {
     state,
     accessToken,
   });
+  const exportReportRef = useRef<HTMLElement | null>(null);
+  const [isPdfExportPending, setIsPdfExportPending] = useState(false);
+  const [printFilterLabels, setPrintFilterLabels] =
+    useState<ProductsPrintFilterLabels>({
+      buyerRegions: {},
+      buyers: {},
+      suppliers: {},
+    });
   const exportMutation = useMutation({
     mutationFn: async (format: OverviewExportFormat) => {
       if (!accessToken) {
@@ -132,29 +203,77 @@ export function ProductsDashboardClient() {
     replaceState(getDefaultProductsFilterState());
   }
 
+  async function exportPdf() {
+    if (!exportReportRef.current || isPdfExportPending || !accessToken) {
+      return;
+    }
+
+    setIsPdfExportPending(true);
+
+    try {
+      const resolvedLabels = await resolveFilterLabels(state, accessToken);
+
+      flushSync(() => {
+        setPrintFilterLabels(resolvedLabels);
+      });
+
+      await exportDashboardPdf({
+        exportNode: exportReportRef.current,
+        fileName: `products-report-${state.dateFrom}-${state.dateTo}.pdf`,
+      });
+    } finally {
+      setIsPdfExportPending(false);
+    }
+  }
+
   return (
-    <ProductsDashboardScreen
-      state={state}
-      accessToken={accessToken}
-      dashboard={dashboardQuery.data}
-      table={tableQuery.data}
-      isDashboardLoading={dashboardQuery.isLoading}
-      isDashboardFetching={dashboardQuery.isFetching}
-      dashboardError={dashboardQuery.error?.message ?? null}
-      isTableLoading={tableQuery.isLoading}
-      isTableFetching={tableQuery.isFetching}
-      tableError={tableQuery.error?.message ?? null}
-      onUpdateFilters={updateFilters}
-      onUpdateTableState={updateTableState}
-      onResetFilters={resetFilters}
-      onRetryDashboard={() => {
-        void dashboardQuery.refetch();
-      }}
-      onRetryTable={() => {
-        void tableQuery.refetch();
-      }}
-      onExport={(format) => exportMutation.mutate(format)}
-      isExportPending={exportMutation.isPending}
-    />
+    <>
+      <ProductsDashboardScreen
+        state={state}
+        accessToken={accessToken}
+        dashboard={dashboardQuery.data}
+        table={tableQuery.data}
+        isDashboardLoading={dashboardQuery.isLoading}
+        isDashboardFetching={dashboardQuery.isFetching}
+        dashboardError={dashboardQuery.error?.message ?? null}
+        isTableLoading={tableQuery.isLoading}
+        isTableFetching={tableQuery.isFetching}
+        tableError={tableQuery.error?.message ?? null}
+        onUpdateFilters={updateFilters}
+        onUpdateTableState={updateTableState}
+        onResetFilters={resetFilters}
+        onRetryDashboard={() => {
+          void dashboardQuery.refetch();
+        }}
+        onRetryTable={() => {
+          void tableQuery.refetch();
+        }}
+        onExport={(format) => exportMutation.mutate(format)}
+        isExportPending={exportMutation.isPending}
+        onExportPdf={() => {
+          void exportPdf();
+        }}
+        isPdfExportPending={isPdfExportPending}
+      />
+
+      <div
+        aria-hidden="true"
+        className="pointer-events-none fixed top-0 left-[-200vw] z-[-1] w-[1120px] overflow-hidden bg-background"
+        style={exportThemeVariables}
+      >
+        <ProductsPrintScreen
+          reportRef={exportReportRef}
+          state={state}
+          dashboard={dashboardQuery.data}
+          isLoading={dashboardQuery.isLoading}
+          isFetching={dashboardQuery.isFetching}
+          error={dashboardQuery.error?.message ?? null}
+          filterLabels={printFilterLabels}
+          onRetry={() => {
+            void dashboardQuery.refetch();
+          }}
+        />
+      </div>
+    </>
   );
 }

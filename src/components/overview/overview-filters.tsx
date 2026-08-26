@@ -3,6 +3,7 @@ import {
   CalendarRangeIcon,
   ChevronDownIcon,
   DownloadIcon,
+  FileTextIcon,
   LoaderCircleIcon,
 } from "lucide-react";
 
@@ -379,6 +380,7 @@ export function OverviewFilters({
   onResetFilters,
   onExportPdf,
   isPdfExportPending,
+  isPdfExportDisabled = false,
   pdfExportError,
 }: {
   state: OverviewFilterState;
@@ -387,6 +389,7 @@ export function OverviewFilters({
   onResetFilters: () => void;
   onExportPdf: () => void;
   isPdfExportPending: boolean;
+  isPdfExportDisabled?: boolean;
   pdfExportError: string | null;
 }) {
   const hasOverviewFilters =
@@ -454,7 +457,7 @@ export function OverviewFilters({
               render={
                 <Button
                   className="px-3 shadow-sm shadow-black/[0.02]"
-                  disabled={isPdfExportPending}
+                  disabled={isPdfExportPending || isPdfExportDisabled}
                 >
                   {isPdfExportPending ? (
                     <span
@@ -475,9 +478,17 @@ export function OverviewFilters({
                 </Button>
               }
             />
-            <DropdownMenuContent align="end" className="w-44" sideOffset={8}>
-              <DropdownMenuItem onClick={onExportPdf}>
-                Експорт PDF
+            <DropdownMenuContent
+              align="end"
+              className="min-w-40"
+              sideOffset={8}
+            >
+              <DropdownMenuItem
+                disabled={isPdfExportPending || isPdfExportDisabled}
+                onClick={onExportPdf}
+              >
+                <FileTextIcon className="size-4" />
+                PDF
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

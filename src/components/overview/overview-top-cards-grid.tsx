@@ -5,6 +5,7 @@ import {
   Building2Icon,
   ChevronLeftIcon,
   ChevronRightIcon,
+  type LucideIcon,
   MapPinnedIcon,
   PackageIcon,
   UsersIcon,
@@ -43,7 +44,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-const topCards = [
+export type OverviewTopCardDefinition = {
+  title: string;
+  sheetTitle: string;
+  columns: [string, string, string];
+  icon: LucideIcon;
+  iconClassName: string;
+};
+
+const topCards: readonly OverviewTopCardDefinition[] = [
   {
     title: "Топ покупців",
     sheetTitle: "Усі покупці",
@@ -406,6 +415,9 @@ export function OverviewTopCardsGrid({
   error,
   onRetry,
   printMode = false,
+  cardsOverride,
+  rowsOverride,
+  secondaryTextResolver,
 }: {
   state: OverviewFilterState;
   accessToken: string | null;
@@ -417,16 +429,65 @@ export function OverviewTopCardsGrid({
   error: string | null;
   onRetry?: () => void;
   printMode?: boolean;
+  cardsOverride?: readonly OverviewTopCardDefinition[];
+  rowsOverride?: Array<
+    (
+      | OverviewRankingItem
+      | OverviewProductRankingItem
+      | OverviewRegionRankingItem
+    )[]
+  >;
+  secondaryTextResolver?: (
+    item:
+      | OverviewRankingItem
+      | OverviewProductRankingItem
+      | OverviewRegionRankingItem,
+    cardIndex: number,
+  ) => string | null;
 }) {
   const [activeSheetIndex, setActiveSheetIndex] = useState<number | null>(null);
-  const rows = [topBuyers, topSuppliers, topProducts, topRegions];
+  const cards = cardsOverride ?? topCards;
+  const rows = rowsOverride ?? [
+    topBuyers,
+    topSuppliers,
+    topProducts,
+    topRegions,
+  ];
   const gridClassName =
     "grid-cols-[minmax(0,2.9fr)_minmax(148px,0.62fr)_minmax(72px,0.28fr)]";
+
+  function getPrintIconStyle(iconClassName: string) {
+    if (iconClassName.includes("cyan")) {
+      return {
+        backgroundColor: "#cffafe",
+        color: "#0891b2",
+      };
+    }
+
+    if (iconClassName.includes("violet")) {
+      return {
+        backgroundColor: "#ede9fe",
+        color: "#7c3aed",
+      };
+    }
+
+    if (iconClassName.includes("amber")) {
+      return {
+        backgroundColor: "#fef3c7",
+        color: "#d97706",
+      };
+    }
+
+    return {
+      backgroundColor: "#dbeafe",
+      color: "#2563eb",
+    };
+  }
 
   return (
     <>
       <div className={cn("overview-top-cards-grid grid gap-4", "grid-cols-1")}>
-        {topCards.map((card, cardIndex) => (
+        {cards.map((card, cardIndex) => (
           <Card
             key={card.title}
             className={cn(
@@ -449,25 +510,7 @@ export function OverviewTopCardsGrid({
                     className={`inline-flex size-10 shrink-0 items-center justify-center rounded-md ${card.iconClassName}`}
                     style={
                       printMode
-                        ? cardIndex === 0
-                          ? {
-                              backgroundColor: "#dbeafe",
-                              color: "#2563eb",
-                            }
-                          : cardIndex === 1
-                            ? {
-                                backgroundColor: "#cffafe",
-                                color: "#0891b2",
-                              }
-                            : cardIndex === 2
-                              ? {
-                                  backgroundColor: "#ede9fe",
-                                  color: "#7c3aed",
-                                }
-                              : {
-                                  backgroundColor: "#fef3c7",
-                                  color: "#d97706",
-                                }
+                        ? getPrintIconStyle(card.iconClassName)
                         : undefined
                     }
                   >
@@ -558,10 +601,11 @@ export function OverviewTopCardsGrid({
                   const name =
                     "regionName" in item ? item.regionName : item.name;
                   const secondaryText =
-                    (cardIndex === 0 || cardIndex === 1) &&
-                    "id" in item &&
-                    typeof item.id === "string" &&
-                    item.id.trim()
+                    (secondaryTextResolver?.(item, cardIndex) ??
+                    ((cardIndex === 0 || cardIndex === 1) &&
+                      "id" in item &&
+                      typeof item.id === "string" &&
+                      item.id.trim()))
                       ? `ЄДРПОУ ${item.id}`
                       : cardIndex === 2 && "uktzed" in item && item.uktzed
                         ? `УКТЗЕД ${item.uktzed}`

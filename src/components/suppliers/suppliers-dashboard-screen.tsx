@@ -106,11 +106,20 @@ const timeGrainOptions: Array<{
   { value: "YEAR", label: "Рік" },
 ];
 
-function SuppliersTrendTooltip({
-  active,
-  payload,
-  label,
-}: RechartsTooltipProps<number, string>) {
+function SuppliersTrendTooltip(props: RechartsTooltipProps<number, string>) {
+  const { active, payload, label } = props as RechartsTooltipProps<
+    number,
+    string
+  > & {
+    payload?: Array<{
+      value?: number;
+      dataKey?: string | number;
+      name?: string;
+      color?: string;
+    }>;
+    label?: string;
+  };
+
   if (!active || !payload?.length) {
     return null;
   }
@@ -138,7 +147,7 @@ function SuppliersTrendTooltip({
               <span>{item.name}</span>
             </div>
             <span className="font-medium text-foreground">
-              {formatCompactCurrency(Number(item.value))}
+              {formatCompactCurrency(item.value ?? null)}
             </span>
           </div>
         ))}
@@ -1653,6 +1662,8 @@ export function SuppliersDashboardScreen({
   onRetryTable,
   onExport,
   isExportPending,
+  onExportPdf,
+  isPdfExportPending,
 }: {
   state: OverviewFilterState;
   accessToken: string | null;
@@ -1671,7 +1682,21 @@ export function SuppliersDashboardScreen({
   onRetryTable: () => void;
   onExport: (format: OverviewExportFormat) => void;
   isExportPending: boolean;
+  onExportPdf: () => void;
+  isPdfExportPending: boolean;
 }) {
+  const hasSuppliersData = Boolean(
+    dashboard &&
+    (dashboard.kpi.salesWithVat.current > 0 ||
+      dashboard.kpi.activeBuyers.current > 0 ||
+      dashboard.kpi.salesRegions.current > 0 ||
+      dashboard.kpi.productPositions.current > 0 ||
+      dashboard.trend.some((item) => item.salesWithVat > 0) ||
+      dashboard.topBuyers.length > 0 ||
+      dashboard.topProducts.length > 0 ||
+      dashboard.topRegions.length > 0),
+  );
+
   return (
     <section className="flex min-w-0 w-full flex-1 flex-col gap-4">
       <SuppliersFilters
@@ -1679,6 +1704,9 @@ export function SuppliersDashboardScreen({
         accessToken={accessToken}
         onUpdateFilters={onUpdateFilters}
         onResetFilters={onResetFilters}
+        onExportPdf={onExportPdf}
+        isPdfExportPending={isPdfExportPending}
+        isPdfExportDisabled={!hasSuppliersData}
       />
 
       <SuppliersKpiGrid

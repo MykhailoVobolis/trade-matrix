@@ -59,6 +59,19 @@ export function OverviewDashboardScreen({
   onExport: (format: OverviewExportFormat) => void;
   isExportPending: boolean;
 }) {
+  const hasOverviewData = Boolean(
+    overview &&
+    (overview.kpi.salesWithVat.current > 0 ||
+      overview.kpi.activeBuyers.current > 0 ||
+      overview.kpi.activeSuppliers.current > 0 ||
+      overview.kpi.salesRegions.current > 0 ||
+      overview.trend.some((item) => item.salesWithVat > 0) ||
+      overview.topBuyers.length > 0 ||
+      overview.topSuppliers.length > 0 ||
+      overview.topProducts.length > 0 ||
+      overview.topRegions.length > 0),
+  );
+
   return (
     <section className="flex min-w-0 w-full flex-1 flex-col gap-4">
       <OverviewFilters
@@ -68,6 +81,7 @@ export function OverviewDashboardScreen({
         onResetFilters={onResetFilters}
         onExportPdf={onExportPdf}
         isPdfExportPending={isPdfExportPending}
+        isPdfExportDisabled={!hasOverviewData}
         pdfExportError={pdfExportError}
       />
       <OverviewKpiGrid

@@ -172,7 +172,7 @@ export function OverviewPrintScreen({
               <div className="flex size-11 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
                 <LayoutDashboardIcon className="size-5" />
               </div>
-              <div className="flex min-h-11 flex-col justify-center self-center">
+              <div className="flex min-h-11 flex-col justify-center">
                 <p className="print-text text-lg font-semibold leading-none text-foreground">
                   TradeMatrix
                 </p>
@@ -198,6 +198,7 @@ export function OverviewPrintScreen({
                       <p
                         key={`${item.label}-${lineIndex}`}
                         className="print-text text-sm text-foreground"
+                        style={{ color: "#18181b" }}
                       >
                         {line}
                       </p>
@@ -225,6 +226,7 @@ export function OverviewPrintScreen({
                       <p
                         key={`${item.label}-${index}`}
                         className="print-text text-sm text-foreground"
+                        style={{ color: "#18181b" }}
                       >
                         {line}
                       </p>

@@ -1687,6 +1687,8 @@ export function ProductsDashboardScreen({
   onRetryTable,
   onExport,
   isExportPending,
+  onExportPdf,
+  isPdfExportPending,
 }: {
   state: OverviewFilterState;
   accessToken: string | null;
@@ -1705,8 +1707,22 @@ export function ProductsDashboardScreen({
   onRetryTable: () => void;
   onExport: (format: OverviewExportFormat) => void;
   isExportPending: boolean;
+  onExportPdf: () => void;
+  isPdfExportPending: boolean;
 }) {
   const comparisonEnabled = state.comparisonMode !== "NONE";
+  const hasProductsData = Boolean(
+    dashboard &&
+    (dashboard.kpi.salesWithVat.current > 0 ||
+      dashboard.kpi.activeBuyers.current > 0 ||
+      dashboard.kpi.activeSuppliers.current > 0 ||
+      dashboard.kpi.salesRegions.current > 0 ||
+      dashboard.trend.some((item) => item.salesWithVat > 0) ||
+      dashboard.topBuyers.length > 0 ||
+      dashboard.topSuppliers.length > 0 ||
+      dashboard.topProducts.length > 0 ||
+      dashboard.topRegions.length > 0),
+  );
 
   return (
     <section className="flex w-full flex-col gap-4">
@@ -1715,6 +1731,9 @@ export function ProductsDashboardScreen({
         accessToken={accessToken}
         onUpdateFilters={onUpdateFilters}
         onResetFilters={onResetFilters}
+        onExportPdf={onExportPdf}
+        isPdfExportPending={isPdfExportPending}
+        isPdfExportDisabled={!hasProductsData}
       />
 
       <ProductsKpiGrid

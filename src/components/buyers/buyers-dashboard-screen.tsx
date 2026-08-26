@@ -1776,6 +1776,8 @@ export function BuyersDashboardScreen({
   onRetryTable,
   onExport,
   isExportPending,
+  onExportPdf,
+  isPdfExportPending,
 }: {
   state: OverviewFilterState;
   accessToken: string | null;
@@ -1794,9 +1796,22 @@ export function BuyersDashboardScreen({
   onRetryTable: () => void;
   onExport: (format: OverviewExportFormat) => void;
   isExportPending: boolean;
+  onExportPdf: () => void;
+  isPdfExportPending: boolean;
 }) {
   const dashboardData = dashboard;
   const tableData = table;
+  const hasBuyersData = Boolean(
+    dashboardData &&
+    (dashboardData.kpi.purchasesWithVat.current > 0 ||
+      dashboardData.kpi.activeSuppliers.current > 0 ||
+      dashboardData.kpi.buyerRegions.current > 0 ||
+      dashboardData.kpi.productPositions.current > 0 ||
+      dashboardData.trend.some((item) => item.purchasesWithVat > 0) ||
+      dashboardData.topSuppliers.length > 0 ||
+      dashboardData.topProducts.length > 0 ||
+      dashboardData.topBuyerRegions.length > 0),
+  );
 
   return (
     <section className="flex min-w-0 w-full flex-1 flex-col gap-4">
@@ -1805,6 +1820,9 @@ export function BuyersDashboardScreen({
         accessToken={accessToken}
         onUpdateFilters={onUpdateFilters}
         onResetFilters={onResetFilters}
+        onExportPdf={onExportPdf}
+        isPdfExportPending={isPdfExportPending}
+        isPdfExportDisabled={!hasBuyersData}
       />
 
       <BuyersKpiGrid

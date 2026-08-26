@@ -221,15 +221,32 @@ export function OverviewTrendCard({
       <CardContent className="space-y-4 pt-4">
         <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <span className="size-2.5 rounded-full bg-sidebar-primary" />
+            <span
+              className="size-2.5 rounded-full"
+              style={{ backgroundColor: "#2563eb" }}
+            />
             <span className="print-text">Продажі з ПДВ</span>
           </div>
           {comparisonEnabled ? (
             <div className="flex items-center gap-2">
-              <span
-                className="h-px w-6 border-t border-dashed"
-                style={{ borderColor: comparisonSalesLineColor }}
-              />
+              <svg
+                width="24"
+                height="8"
+                viewBox="0 0 24 8"
+                aria-hidden="true"
+                className="shrink-0"
+              >
+                <line
+                  x1="0"
+                  y1="4"
+                  x2="24"
+                  y2="4"
+                  stroke={printMode ? "#93c5fd" : comparisonSalesLineColor}
+                  strokeWidth="2"
+                  strokeDasharray="6 4"
+                  strokeLinecap="round"
+                />
+              </svg>
               <span className="print-text">Попер. період</span>
             </div>
           ) : null}
