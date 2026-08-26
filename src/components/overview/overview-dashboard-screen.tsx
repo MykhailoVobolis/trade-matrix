@@ -32,6 +32,9 @@ export function OverviewDashboardScreen({
   onUpdateOverviewFilters,
   onUpdateTableState,
   onResetFilters,
+  onExportPdf,
+  isPdfExportPending,
+  pdfExportError,
   onExport,
   isExportPending,
 }: {
@@ -50,6 +53,9 @@ export function OverviewDashboardScreen({
   onUpdateOverviewFilters: (patch: Partial<OverviewFilterValues>) => void;
   onUpdateTableState: (patch: Partial<OverviewTableState>) => void;
   onResetFilters: () => void;
+  onExportPdf: () => void;
+  isPdfExportPending: boolean;
+  pdfExportError: string | null;
   onExport: (format: OverviewExportFormat) => void;
   isExportPending: boolean;
 }) {
@@ -60,6 +66,9 @@ export function OverviewDashboardScreen({
         accessToken={accessToken}
         onUpdateOverviewFilters={onUpdateOverviewFilters}
         onResetFilters={onResetFilters}
+        onExportPdf={onExportPdf}
+        isPdfExportPending={isPdfExportPending}
+        pdfExportError={pdfExportError}
       />
       <OverviewKpiGrid
         kpi={overview?.kpi}

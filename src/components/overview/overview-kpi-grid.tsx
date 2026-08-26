@@ -44,15 +44,21 @@ export function OverviewKpiGrid({
   error,
   comparisonEnabled = true,
   onRetry,
+  printMode = false,
 }: {
   kpi?: OverviewResponse["kpi"];
   isLoading: boolean;
   error: string | null;
   comparisonEnabled?: boolean;
   onRetry?: () => void;
+  printMode?: boolean;
 }) {
   return (
-    <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-4">
+    <div
+      className={`overview-kpi-grid grid gap-3.5 ${
+        printMode ? "grid-cols-4" : "md:grid-cols-2 xl:grid-cols-4"
+      }`}
+    >
       {kpiCards.map((card, index) => {
         const Icon = card.icon;
         const metric = kpi
@@ -77,11 +83,19 @@ export function OverviewKpiGrid({
                 ? "border border-border/70 shadow-none"
                 : "flex h-full border border-border/70 shadow-none"
             }
+            style={
+              printMode
+                ? {
+                    borderColor: "#d4d4d8",
+                    backgroundColor: "#ffffff",
+                  }
+                : undefined
+            }
           >
             <CardHeader className="gap-2 pb-2.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="space-y-1.5">
-                  <p className="text-[0.78rem] leading-snug text-muted-foreground">
+                  <p className="print-text text-[0.78rem] leading-snug text-muted-foreground">
                     {card.title}
                   </p>
                   <CardTitle>
@@ -90,6 +104,24 @@ export function OverviewKpiGrid({
                 </div>
                 <div
                   className={`flex size-10 shrink-0 items-center justify-center rounded-md ${card.iconClassName}`}
+                  style={
+                    printMode
+                      ? index === 0 || index === 1
+                        ? {
+                            backgroundColor: "#dbeafe",
+                            color: "#2563eb",
+                          }
+                        : index === 2
+                          ? {
+                              backgroundColor: "#cffafe",
+                              color: "#0891b2",
+                            }
+                          : {
+                              backgroundColor: "#fef3c7",
+                              color: "#d97706",
+                            }
+                      : undefined
+                  }
                 >
                   <Icon className="size-4" />
                 </div>
@@ -114,13 +146,17 @@ export function OverviewKpiGrid({
                   ) : null}
                 </div>
               ) : !comparisonEnabled ? (
-                <p className="text-xs text-muted-foreground">&nbsp;</p>
+                <p className="print-text text-xs text-muted-foreground">
+                  &nbsp;
+                </p>
               ) : metric ? (
-                <p className="text-xs text-muted-foreground">
+                <p className="print-text text-xs text-muted-foreground">
                   {formatDelta(metric)}
                 </p>
               ) : (
-                <p className="text-xs text-muted-foreground">No data</p>
+                <p className="print-text text-xs text-muted-foreground">
+                  No data
+                </p>
               )}
             </CardContent>
           </Card>

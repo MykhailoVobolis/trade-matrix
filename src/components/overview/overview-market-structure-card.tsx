@@ -53,11 +53,13 @@ export function OverviewMarketStructureCard({
   isLoading,
   error,
   onRetry,
+  printMode = false,
 }: {
   data?: OverviewMarketStructure;
   isLoading: boolean;
   error: string | null;
   onRetry?: () => void;
+  printMode?: boolean;
 }) {
   const values = data
     ? [
@@ -113,11 +115,25 @@ export function OverviewMarketStructureCard({
     : [];
 
   return (
-    <Card className="border border-border/70 shadow-none">
+    <Card
+      className="border border-border/70 shadow-none"
+      style={
+        printMode
+          ? {
+              borderColor: "#d4d4d8",
+              backgroundColor: "#ffffff",
+            }
+          : undefined
+      }
+    >
       <CardHeader className="pb-3.5">
-        <CardTitle>Структура ринку</CardTitle>
+        <CardTitle className="print-text">Структура ринку</CardTitle>
       </CardHeader>
-      <CardContent className="grid gap-3 border-t border-border/70 pt-3.5 md:grid-cols-2 xl:grid-cols-3">
+      <CardContent
+        className={`overview-market-structure-grid grid gap-3 border-t border-border/70 pt-3.5 ${
+          printMode ? "grid-cols-3" : "md:grid-cols-2 xl:grid-cols-3"
+        }`}
+      >
         {structureItems.map((item, index) => {
           const Icon = item.icon;
 
@@ -125,13 +141,44 @@ export function OverviewMarketStructureCard({
             <div
               key={item.title}
               className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3"
+              style={
+                printMode
+                  ? {
+                      borderColor: "#d4d4d8",
+                      backgroundColor: "#ffffff",
+                    }
+                  : undefined
+              }
             >
               <div className="flex items-start justify-between gap-3">
-                <p className="max-w-[calc(100%-3.5rem)] text-xs font-medium text-muted-foreground">
+                <p className="print-text max-w-[calc(100%-3.5rem)] text-xs font-medium text-muted-foreground">
                   {item.title}
                 </p>
                 <div
                   className={`flex size-10 shrink-0 items-center justify-center rounded-md ${item.iconClassName}`}
+                  style={
+                    printMode
+                      ? index === 0 || index === 3
+                        ? {
+                            backgroundColor: "#cffafe",
+                            color: "#0891b2",
+                          }
+                        : index === 1 || index === 4
+                          ? {
+                              backgroundColor: "#dbeafe",
+                              color: "#2563eb",
+                            }
+                          : index === 2
+                            ? {
+                                backgroundColor: "#fef3c7",
+                                color: "#d97706",
+                              }
+                            : {
+                                backgroundColor: "#ede9fe",
+                                color: "#7c3aed",
+                              }
+                      : undefined
+                  }
                 >
                   <Icon className="size-4" />
                 </div>
@@ -156,22 +203,24 @@ export function OverviewMarketStructureCard({
                     const value = values[index];
 
                     if (!value) {
-                      return <p className="text-sm text-foreground">—</p>;
+                      return (
+                        <p className="print-text text-sm text-foreground">—</p>
+                      );
                     }
 
                     return (
                       <div className="max-w-[calc(100%-3.5rem)]">
-                        <p className="break-words text-sm text-foreground">
+                        <p className="print-text break-words text-sm text-foreground">
                           {value.primary}
                         </p>
                         {"tertiary" in value && value.tertiary ? (
-                          <p className="mt-0.5 text-xs text-muted-foreground">
+                          <p className="print-text mt-0.5 text-xs text-muted-foreground">
                             {value.tertiary}
                           </p>
                         ) : null}
                         {"secondary" in value && value.secondary ? (
                           <p
-                            className={`text-xs text-muted-foreground ${
+                            className={`print-text text-xs text-muted-foreground ${
                               "tertiary" in value && value.tertiary
                                 ? "mt-2"
                                 : "mt-0.5"

@@ -34,6 +34,7 @@ import {
   formatPercent,
 } from "@/lib/overview/overview-format";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import {
   Select,
   SelectContent,
@@ -404,6 +405,7 @@ export function OverviewTopCardsGrid({
   isLoading,
   error,
   onRetry,
+  printMode = false,
 }: {
   state: OverviewFilterState;
   accessToken: string | null;
@@ -414,6 +416,7 @@ export function OverviewTopCardsGrid({
   isLoading: boolean;
   error: string | null;
   onRetry?: () => void;
+  printMode?: boolean;
 }) {
   const [activeSheetIndex, setActiveSheetIndex] = useState<number | null>(null);
   const rows = [topBuyers, topSuppliers, topProducts, topRegions];
@@ -422,29 +425,69 @@ export function OverviewTopCardsGrid({
 
   return (
     <>
-      <div className="grid gap-4">
+      <div className={cn("overview-top-cards-grid grid gap-4", "grid-cols-1")}>
         {topCards.map((card, cardIndex) => (
           <Card
             key={card.title}
-            className="border border-border/70 shadow-none"
+            className={cn(
+              "border border-border/70 shadow-none",
+              printMode && "print-section",
+            )}
+            style={
+              printMode
+                ? {
+                    borderColor: "#d4d4d8",
+                    backgroundColor: "#ffffff",
+                  }
+                : undefined
+            }
           >
             <CardHeader className="gap-3 border-b border-border/70 pb-3.5">
               <div className="flex items-start justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <span
                     className={`inline-flex size-10 shrink-0 items-center justify-center rounded-md ${card.iconClassName}`}
+                    style={
+                      printMode
+                        ? cardIndex === 0
+                          ? {
+                              backgroundColor: "#dbeafe",
+                              color: "#2563eb",
+                            }
+                          : cardIndex === 1
+                            ? {
+                                backgroundColor: "#cffafe",
+                                color: "#0891b2",
+                              }
+                            : cardIndex === 2
+                              ? {
+                                  backgroundColor: "#ede9fe",
+                                  color: "#7c3aed",
+                                }
+                              : {
+                                  backgroundColor: "#fef3c7",
+                                  color: "#d97706",
+                                }
+                        : undefined
+                    }
                   >
                     <card.icon className="size-4" />
                   </span>
-                  <CardTitle className="text-[1.05rem]">{card.title}</CardTitle>
+                  <div className="flex min-h-10 items-center">
+                    <CardTitle className="text-[1.05rem] leading-none">
+                      {card.title}
+                    </CardTitle>
+                  </div>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setActiveSheetIndex(cardIndex)}
-                  className="text-xs font-medium text-sidebar-primary transition-colors hover:text-sidebar-primary/80"
-                >
-                  Переглянути всі
-                </button>
+                {printMode ? null : (
+                  <button
+                    type="button"
+                    onClick={() => setActiveSheetIndex(cardIndex)}
+                    className="text-xs font-medium text-sidebar-primary transition-colors hover:text-sidebar-primary/80"
+                  >
+                    Переглянути всі
+                  </button>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-2.5 pt-3.5">
@@ -528,30 +571,52 @@ export function OverviewTopCardsGrid({
                           ? `${item.activeBuyers} активних покупців`
                           : null;
 
+                  const rowContent = (
+                    <>
+                      <span className="min-w-0">
+                        <OverflowTooltipText
+                          text={name}
+                          className="print-text block whitespace-normal break-words text-sm leading-snug text-foreground"
+                        />
+                        {secondaryText ? (
+                          <OverflowTooltipText
+                            text={secondaryText}
+                            className="print-text mt-0.5 block whitespace-normal break-words text-[11px] leading-snug text-muted-foreground"
+                          />
+                        ) : null}
+                      </span>
+                      <span className="print-text whitespace-nowrap text-sm text-foreground">
+                        {formatCompactCurrency(item.amount)}
+                      </span>
+                      <span className="print-text whitespace-nowrap text-sm text-muted-foreground">
+                        {formatPercent(item.share)}
+                      </span>
+                    </>
+                  );
+
+                  if (printMode) {
+                    return (
+                      <div
+                        key={`${card.title}-${index}`}
+                        className={`grid ${gridClassName} items-center gap-4 rounded-md border-b border-border/60 px-1 py-2 last:border-b-0`}
+                        style={
+                          printMode
+                            ? { borderBottomColor: "#e4e4e7" }
+                            : undefined
+                        }
+                      >
+                        {rowContent}
+                      </div>
+                    );
+                  }
+
                   return (
                     <Link
                       href={href}
                       key={`${card.title}-${index}`}
                       className={`grid ${gridClassName} items-center gap-4 rounded-md border-b border-border/60 px-1 py-2 transition-colors hover:bg-sidebar-accent/45 last:border-b-0`}
                     >
-                      <span className="min-w-0">
-                        <OverflowTooltipText
-                          text={name}
-                          className="block whitespace-normal break-words text-sm leading-snug text-foreground"
-                        />
-                        {secondaryText ? (
-                          <OverflowTooltipText
-                            text={secondaryText}
-                            className="mt-0.5 block whitespace-normal break-words text-[11px] leading-snug text-muted-foreground"
-                          />
-                        ) : null}
-                      </span>
-                      <span className="whitespace-nowrap text-sm text-foreground">
-                        {formatCompactCurrency(item.amount)}
-                      </span>
-                      <span className="whitespace-nowrap text-sm text-muted-foreground">
-                        {formatPercent(item.share)}
-                      </span>
+                      {rowContent}
                     </Link>
                   );
                 })
@@ -563,17 +628,17 @@ export function OverviewTopCardsGrid({
               <div
                 className={`grid ${gridClassName} items-center gap-4 border-t border-border/70 px-1 pt-2.5 text-sm`}
               >
-                <span className="whitespace-nowrap font-semibold text-foreground">
+                <span className="print-text whitespace-nowrap font-semibold text-foreground">
                   Разом TOP-5
                 </span>
-                <span className="text-sm font-semibold text-foreground">
+                <span className="print-text text-sm font-semibold text-foreground">
                   {formatCompactCurrency(
                     rows[cardIndex]
                       .slice(0, 5)
                       .reduce((total, item) => total + item.amount, 0),
                   )}
                 </span>
-                <span className="text-sm font-medium text-foreground">
+                <span className="print-text text-sm font-medium text-foreground">
                   {formatPercent(
                     rows[cardIndex]
                       .slice(0, 5)
@@ -587,7 +652,7 @@ export function OverviewTopCardsGrid({
       </div>
 
       <OverviewRankingSheet
-        open={activeSheetIndex !== null}
+        open={!printMode && activeSheetIndex !== null}
         onOpenChange={(open) => {
           if (!open) {
             setActiveSheetIndex(null);
