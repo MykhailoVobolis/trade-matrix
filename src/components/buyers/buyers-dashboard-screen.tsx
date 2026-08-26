@@ -1566,11 +1566,11 @@ function BuyersOperationsTable({
 
               <DropdownMenu>
                 <DropdownMenuTrigger
-                  disabled={isExportPending}
+                  disabled={isExportPending || total === 0}
                   render={
                     <Button
                       className="h-8 rounded-lg px-3"
-                      disabled={isExportPending}
+                      disabled={isExportPending || total === 0}
                     >
                       <DownloadIcon />
                       {isExportPending ? "Експортуємо..." : "Експорт"}
