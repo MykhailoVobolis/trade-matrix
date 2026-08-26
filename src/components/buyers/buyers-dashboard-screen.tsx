@@ -1518,7 +1518,7 @@ function BuyersOperationsTable({
               <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600">
                 <DatabaseIcon className="size-4" />
               </span>
-              <CardTitle>Огляд закупівель</CardTitle>
+              <CardTitle>Огляд операцій</CardTitle>
             </div>
 
             <div className="flex shrink-0 items-center gap-2">
