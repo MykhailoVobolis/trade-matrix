@@ -141,6 +141,8 @@ export function BuyersDashboardClient() {
   });
   const exportReportRef = useRef<HTMLElement | null>(null);
   const [isPdfExportPending, setIsPdfExportPending] = useState(false);
+  const [pendingExportFormat, setPendingExportFormat] =
+    useState<OverviewExportFormat | null>(null);
   const [printFilterLabels, setPrintFilterLabels] =
     useState<BuyersPrintFilterLabels>({
       buyerRegions: {},
@@ -168,6 +170,9 @@ export function BuyersDashboardClient() {
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(objectUrl);
+    },
+    onSettled: () => {
+      setPendingExportFormat(null);
     },
   });
 
@@ -250,8 +255,12 @@ export function BuyersDashboardClient() {
         onRetryTable={() => {
           void tableQuery.refetch();
         }}
-        onExport={(format) => exportMutation.mutate(format)}
+        onExport={(format) => {
+          setPendingExportFormat(format);
+          exportMutation.mutate(format);
+        }}
         isExportPending={exportMutation.isPending}
+        pendingExportFormat={pendingExportFormat}
         onExportPdf={() => {
           void exportPdf();
         }}

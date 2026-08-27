@@ -19,6 +19,7 @@ import {
   EyeOffIcon,
   FileSpreadsheetIcon,
   FileTextIcon,
+  LoaderCircleIcon,
   RotateCwIcon,
 } from "lucide-react";
 
@@ -162,6 +163,7 @@ export function OverviewMarketTable({
   onUpdateTableState,
   onExport,
   isExportPending,
+  pendingExportFormat,
 }: {
   rows: OverviewTableItem[];
   total: number;
@@ -173,6 +175,7 @@ export function OverviewMarketTable({
   onUpdateTableState: (patch: Partial<OverviewTableState>) => void;
   onExport: (format: OverviewExportFormat) => void;
   isExportPending: boolean;
+  pendingExportFormat: OverviewExportFormat | null;
 }) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
@@ -419,18 +422,39 @@ export function OverviewMarketTable({
                       className="h-8 rounded-lg px-3"
                       disabled={isExportPending || total === 0}
                     >
-                      <DownloadIcon />
-                      {isExportPending ? "Експортуємо..." : "Експорт"}
+                      {isExportPending ? (
+                        <span
+                          className="inline-flex animate-spin"
+                          style={{
+                            animationDuration: "0.9s",
+                            animationTimingFunction: "linear",
+                            willChange: "transform",
+                          }}
+                        >
+                          <LoaderCircleIcon className="size-4" />
+                        </span>
+                      ) : (
+                        <DownloadIcon />
+                      )}
+                      {isExportPending
+                        ? `Експорт ${pendingExportFormat?.toUpperCase() ?? ""}`.trim()
+                        : "Експорт"}
                       <ChevronDownIcon className="size-4 text-current/75" />
                     </Button>
                   }
                 />
                 <DropdownMenuContent align="end" className="min-w-40">
-                  <DropdownMenuItem onClick={() => onExport("xlsx")}>
+                  <DropdownMenuItem
+                    disabled={isExportPending || total === 0}
+                    onClick={() => onExport("xlsx")}
+                  >
                     <FileSpreadsheetIcon />
                     XLSX
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onExport("csv")}>
+                  <DropdownMenuItem
+                    disabled={isExportPending || total === 0}
+                    onClick={() => onExport("csv")}
+                  >
                     <FileTextIcon />
                     CSV
                   </DropdownMenuItem>

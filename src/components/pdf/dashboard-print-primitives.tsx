@@ -509,7 +509,7 @@ export function DashboardPrintTopCards({
                   style={{ borderTopColor: "#d4d4d8" }}
                 >
                   <span className="print-text whitespace-nowrap font-semibold text-foreground">
-                    Разом TOP-5
+                    {`Разом TOP-${Math.min(card.rows.length, 5)}`}
                   </span>
                   <span className="print-text whitespace-nowrap text-sm font-semibold text-foreground">
                     {formatCompactCurrency(

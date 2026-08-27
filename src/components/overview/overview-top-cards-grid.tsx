@@ -673,7 +673,7 @@ export function OverviewTopCardsGrid({
                 className={`grid ${gridClassName} items-center gap-4 border-t border-border/70 px-1 pt-2.5 text-sm`}
               >
                 <span className="print-text whitespace-nowrap font-semibold text-foreground">
-                  Разом TOP-5
+                  {`Разом TOP-${Math.min(rows[cardIndex].length, 5)}`}
                 </span>
                 <span className="print-text text-sm font-semibold text-foreground">
                   {formatCompactCurrency(

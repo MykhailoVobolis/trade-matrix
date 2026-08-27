@@ -281,6 +281,8 @@ export function OverviewDashboardClient() {
   });
   const exportReportRef = useRef<HTMLElement | null>(null);
   const [isPdfExportPending, setIsPdfExportPending] = useState(false);
+  const [pendingExportFormat, setPendingExportFormat] =
+    useState<OverviewExportFormat | null>(null);
   const [pdfExportError, setPdfExportError] = useState<string | null>(null);
   const [printFilterLabels, setPrintFilterLabels] =
     useState<OverviewPrintFilterLabels>({
@@ -309,6 +311,9 @@ export function OverviewDashboardClient() {
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(objectUrl);
+    },
+    onSettled: () => {
+      setPendingExportFormat(null);
     },
   });
 
@@ -566,8 +571,12 @@ export function OverviewDashboardClient() {
         }}
         isPdfExportPending={isPdfExportPending}
         pdfExportError={pdfExportError}
-        onExport={(format) => exportMutation.mutate(format)}
+        onExport={(format) => {
+          setPendingExportFormat(format);
+          exportMutation.mutate(format);
+        }}
         isExportPending={exportMutation.isPending}
+        pendingExportFormat={pendingExportFormat}
       />
 
       <div

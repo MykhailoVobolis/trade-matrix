@@ -37,6 +37,7 @@ export function OverviewDashboardScreen({
   pdfExportError,
   onExport,
   isExportPending,
+  pendingExportFormat,
 }: {
   state: OverviewFilterState;
   accessToken: string | null;
@@ -58,6 +59,7 @@ export function OverviewDashboardScreen({
   pdfExportError: string | null;
   onExport: (format: OverviewExportFormat) => void;
   isExportPending: boolean;
+  pendingExportFormat: OverviewExportFormat | null;
 }) {
   const hasOverviewData = Boolean(
     overview &&
@@ -156,6 +158,7 @@ export function OverviewDashboardScreen({
         onUpdateTableState={onUpdateTableState}
         onExport={onExport}
         isExportPending={isExportPending}
+        pendingExportFormat={pendingExportFormat}
       />
     </section>
   );

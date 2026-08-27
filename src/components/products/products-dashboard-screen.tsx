@@ -14,6 +14,7 @@ import {
   EyeOffIcon,
   FileSpreadsheetIcon,
   FileTextIcon,
+  LoaderCircleIcon,
   MapPinnedIcon,
   PackageIcon,
   TrophyIcon,
@@ -1182,7 +1183,7 @@ function ProductsTopCardsGrid({
                 className={`grid ${gridClassName} items-center gap-4 border-t border-border/70 px-1 pt-2.5 text-sm`}
               >
                 <span className="whitespace-nowrap font-semibold text-foreground">
-                  Разом TOP-5
+                  {`Разом TOP-${Math.min(rows[cardIndex].length, 5)}`}
                 </span>
                 <span className="text-sm font-semibold text-foreground">
                   {formatCompactCurrency(
@@ -1230,6 +1231,7 @@ function ProductsOperationsTable({
   onUpdateTableState,
   onExport,
   isExportPending,
+  pendingExportFormat,
 }: {
   rows: ProductsTableResponse["items"];
   total: number;
@@ -1241,6 +1243,7 @@ function ProductsOperationsTable({
   onUpdateTableState: (patch: Partial<OverviewTableState>) => void;
   onExport: (format: OverviewExportFormat) => void;
   isExportPending: boolean;
+  pendingExportFormat: OverviewExportFormat | null;
 }) {
   const [hiddenColumns, setHiddenColumns] = useState<Record<string, boolean>>(
     {},
@@ -1426,18 +1429,39 @@ function ProductsOperationsTable({
                       className="h-8 rounded-lg px-3"
                       disabled={isExportPending || total === 0}
                     >
-                      <DownloadIcon />
-                      {isExportPending ? "Експортуємо..." : "Експорт"}
+                      {isExportPending ? (
+                        <span
+                          className="inline-flex animate-spin"
+                          style={{
+                            animationDuration: "0.9s",
+                            animationTimingFunction: "linear",
+                            willChange: "transform",
+                          }}
+                        >
+                          <LoaderCircleIcon className="size-4" />
+                        </span>
+                      ) : (
+                        <DownloadIcon />
+                      )}
+                      {isExportPending
+                        ? `Експорт ${pendingExportFormat?.toUpperCase() ?? ""}`.trim()
+                        : "Експорт"}
                       <ChevronDownIcon className="size-4 text-current/75" />
                     </Button>
                   }
                 />
                 <DropdownMenuContent align="end" className="min-w-40">
-                  <DropdownMenuItem onClick={() => onExport("xlsx")}>
+                  <DropdownMenuItem
+                    disabled={isExportPending || total === 0}
+                    onClick={() => onExport("xlsx")}
+                  >
                     <FileSpreadsheetIcon />
                     XLSX
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onExport("csv")}>
+                  <DropdownMenuItem
+                    disabled={isExportPending || total === 0}
+                    onClick={() => onExport("csv")}
+                  >
                     <FileTextIcon />
                     CSV
                   </DropdownMenuItem>
@@ -1630,6 +1654,7 @@ export function ProductsDashboardScreen({
   onRetryTable,
   onExport,
   isExportPending,
+  pendingExportFormat,
   onExportPdf,
   isPdfExportPending,
 }: {
@@ -1650,6 +1675,7 @@ export function ProductsDashboardScreen({
   onRetryTable: () => void;
   onExport: (format: OverviewExportFormat) => void;
   isExportPending: boolean;
+  pendingExportFormat: OverviewExportFormat | null;
   onExportPdf: () => void;
   isPdfExportPending: boolean;
 }) {
@@ -1742,6 +1768,7 @@ export function ProductsDashboardScreen({
         onUpdateTableState={onUpdateTableState}
         onExport={onExport}
         isExportPending={isExportPending}
+        pendingExportFormat={pendingExportFormat}
       />
     </section>
   );

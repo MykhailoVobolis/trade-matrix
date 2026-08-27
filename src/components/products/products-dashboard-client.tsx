@@ -139,6 +139,8 @@ export function ProductsDashboardClient() {
   });
   const exportReportRef = useRef<HTMLElement | null>(null);
   const [isPdfExportPending, setIsPdfExportPending] = useState(false);
+  const [pendingExportFormat, setPendingExportFormat] =
+    useState<OverviewExportFormat | null>(null);
   const [printFilterLabels, setPrintFilterLabels] =
     useState<ProductsPrintFilterLabels>({
       buyerRegions: {},
@@ -166,6 +168,9 @@ export function ProductsDashboardClient() {
       anchor.click();
       anchor.remove();
       URL.revokeObjectURL(objectUrl);
+    },
+    onSettled: () => {
+      setPendingExportFormat(null);
     },
   });
 
@@ -248,8 +253,12 @@ export function ProductsDashboardClient() {
         onRetryTable={() => {
           void tableQuery.refetch();
         }}
-        onExport={(format) => exportMutation.mutate(format)}
+        onExport={(format) => {
+          setPendingExportFormat(format);
+          exportMutation.mutate(format);
+        }}
         isExportPending={exportMutation.isPending}
+        pendingExportFormat={pendingExportFormat}
         onExportPdf={() => {
           void exportPdf();
         }}
