@@ -1,12 +1,14 @@
 import type { RefObject } from "react";
-import { LayoutDashboardIcon } from "lucide-react";
 
+import {
+  DashboardPrintSummary,
+  type PrintSummaryItem,
+} from "@/components/pdf/dashboard-print-primitives";
 import { OverviewKpiGrid } from "@/components/overview/overview-kpi-grid";
 import { OverviewMarketInsightsCard } from "@/components/overview/overview-market-insights-card";
 import { OverviewMarketStructureCard } from "@/components/overview/overview-market-structure-card";
 import { OverviewTopCardsGrid } from "@/components/overview/overview-top-cards-grid";
 import { OverviewTrendCard } from "@/components/overview/overview-trend-card";
-import { Card, CardContent } from "@/components/ui/card";
 import type { OverviewResponse } from "@/lib/overview/overview-api";
 import type { OverviewFilterState } from "@/lib/overview/overview-url-state";
 
@@ -22,7 +24,7 @@ function formatDateRange(dateFrom: string, dateTo: string) {
   )}`;
 }
 
-function formatFilterSummary(
+function buildSummaryItems(
   state: OverviewFilterState,
   labels?: {
     buyerRegions?: Record<string, string>;
@@ -30,7 +32,7 @@ function formatFilterSummary(
     suppliers?: Record<string, string>;
   },
 ) {
-  const items: Array<{ label: string; value: string[] }> = [
+  const primaryItems: PrintSummaryItem[] = [
     {
       label: "Період",
       value: [formatDateRange(state.dateFrom, state.dateTo)],
@@ -38,7 +40,7 @@ function formatFilterSummary(
   ];
 
   if (state.comparisonMode === "PREVIOUS_PERIOD") {
-    items.push({
+    primaryItems.push({
       label: "Порівняння",
       value: ["Той самий вибраний період, попередній рік"],
     });
@@ -49,37 +51,25 @@ function formatFilterSummary(
     state.compareDateFrom &&
     state.compareDateTo
   ) {
-    items.push({
+    primaryItems.push({
       label: "Порівняння",
       value: [formatDateRange(state.compareDateFrom, state.compareDateTo)],
     });
   }
 
-  if (state.uktzed.length) {
-    items.push({
-      label: "УКТЗЕД",
-      value: state.uktzed,
-    });
-  }
+  const secondaryItems: PrintSummaryItem[] = [];
 
-  if (state.products.length) {
-    items.push({
-      label: "Продукти",
-      value: state.products,
-    });
-  }
-
-  if (state.buyerRegionCodes.length) {
-    items.push({
-      label: "Регіони покупця",
-      value: state.buyerRegionCodes.map(
-        (value) => labels?.buyerRegions?.[value] ?? value,
+  if (state.supplierTaxNumbers.length) {
+    secondaryItems.push({
+      label: "Постачальники",
+      value: state.supplierTaxNumbers.map(
+        (value) => labels?.suppliers?.[value] ?? value,
       ),
     });
   }
 
   if (state.buyerTaxNumbers.length) {
-    items.push({
+    secondaryItems.push({
       label: "Покупці",
       value: state.buyerTaxNumbers.map(
         (value) => labels?.buyers?.[value] ?? value,
@@ -87,12 +77,26 @@ function formatFilterSummary(
     });
   }
 
-  if (state.supplierTaxNumbers.length) {
-    items.push({
-      label: "Постачальники",
-      value: state.supplierTaxNumbers.map(
-        (value) => labels?.suppliers?.[value] ?? value,
+  if (state.buyerRegionCodes.length) {
+    secondaryItems.push({
+      label: "Регіони покупця",
+      value: state.buyerRegionCodes.map(
+        (value) => labels?.buyerRegions?.[value] ?? value,
       ),
+    });
+  }
+
+  if (state.uktzed.length) {
+    secondaryItems.push({
+      label: "УКТЗЕД",
+      value: state.uktzed,
+    });
+  }
+
+  if (state.products.length) {
+    secondaryItems.push({
+      label: "Продукти",
+      value: state.products,
     });
   }
 
@@ -103,13 +107,13 @@ function formatFilterSummary(
       YEAR: "Рік",
     } as const;
 
-    items.push({
+    secondaryItems.push({
       label: "Групування",
       value: [labels[state.timeGrain]],
     });
   }
 
-  return items;
+  return { primaryItems, secondaryItems };
 }
 
 export function OverviewPrintScreen({
@@ -135,116 +139,21 @@ export function OverviewPrintScreen({
   };
   onRetry: () => void;
 }) {
-  const summaryItems = formatFilterSummary(state, filterLabels);
-  const primarySummaryMap = new Map(
-    summaryItems
-      .filter((item) => item.label === "Період" || item.label === "Порівняння")
-      .map((item) => [item.label, item]),
+  const { primaryItems, secondaryItems } = buildSummaryItems(
+    state,
+    filterLabels,
   );
-  const secondarySummaryMap = new Map(
-    summaryItems
-      .filter((item) => item.label !== "Період" && item.label !== "Порівняння")
-      .map((item) => [item.label, item]),
-  );
-  const primarySummaryItems = [
-    primarySummaryMap.get("Період"),
-    primarySummaryMap.get("Порівняння"),
-    undefined,
-  ];
-  const secondarySummaryItems = [
-    secondarySummaryMap.get("Постачальники"),
-    secondarySummaryMap.get("Покупці"),
-    secondarySummaryMap.get("Регіони покупця"),
-    secondarySummaryMap.get("УКТЗЕД"),
-    secondarySummaryMap.get("Продукти"),
-    secondarySummaryMap.get("Групування"),
-  ].filter(Boolean);
 
   return (
-    <section
+    <DashboardPrintSummary
       ref={reportRef}
-      className="print-report mx-auto flex w-full max-w-[1120px] min-w-0 flex-col gap-4 bg-background px-4 py-5 md:px-6"
+      reportRef={reportRef}
+      title="TradeMatrix"
+      subtitle="Overview dashboard report"
+      primaryItems={primaryItems}
+      secondaryItems={secondaryItems}
+      error={error}
     >
-      <Card className="print-section border border-border/70 shadow-none">
-        <CardContent className="flex flex-col gap-4 px-0 py-5">
-          <div className="flex items-start justify-between gap-4">
-            <div className="grid grid-cols-[44px_minmax(0,1fr)] items-center gap-4">
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-                <LayoutDashboardIcon className="size-5" />
-              </div>
-              <div className="flex min-h-11 flex-col justify-center">
-                <p className="print-text text-lg font-semibold leading-none text-foreground">
-                  TradeMatrix
-                </p>
-                <p className="print-text mt-1 text-sm leading-none text-muted-foreground">
-                  Overview dashboard report
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="-ml-3 grid grid-cols-3 gap-4">
-            {primarySummaryItems.map((item, index) =>
-              item ? (
-                <div
-                  key={`${item.label}-${item.value}`}
-                  className="rounded-md border border-border/70 bg-muted/10 px-3 py-2.5"
-                >
-                  <p className="print-text text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                    {item.label}
-                  </p>
-                  <div className="mt-1 space-y-1">
-                    {item.value.map((line, lineIndex) => (
-                      <p
-                        key={`${item.label}-${lineIndex}`}
-                        className="print-text text-sm text-foreground"
-                        style={{ color: "#18181b" }}
-                      >
-                        {line}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div key={`summary-spacer-${index}`} />
-              ),
-            )}
-          </div>
-
-          {secondarySummaryItems.length ? (
-            <div className="-ml-3 grid grid-cols-3 gap-4">
-              {secondarySummaryItems.map((item) => (
-                <div
-                  key={`${item.label}-${item.value}`}
-                  className="rounded-md border border-border/70 bg-muted/10 px-3 py-2.5"
-                >
-                  <p className="print-text text-[11px] font-medium uppercase tracking-[0.08em] text-muted-foreground">
-                    {item.label}
-                  </p>
-                  <div className="mt-1 space-y-1">
-                    {item.value.map((line, index) => (
-                      <p
-                        key={`${item.label}-${index}`}
-                        className="print-text text-sm text-foreground"
-                        style={{ color: "#18181b" }}
-                      >
-                        {line}
-                      </p>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : null}
-
-          {error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
-              {error}
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
-
       <div className="print-section">
         <OverviewKpiGrid
           kpi={overview?.kpi}
@@ -318,6 +227,6 @@ export function OverviewPrintScreen({
         onRetry={onRetry}
         printMode
       />
-    </section>
+    </DashboardPrintSummary>
   );
 }
