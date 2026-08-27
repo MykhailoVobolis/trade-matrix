@@ -82,6 +82,7 @@ function OverviewTrendTick({
   index,
   payload,
   trendData = [],
+  printMode = false,
 }: {
   x?: number;
   y?: number;
@@ -90,9 +91,27 @@ function OverviewTrendTick({
     value?: string;
   };
   trendData?: OverviewTrendItem[];
+  printMode?: boolean;
 }) {
   const salesWithVat =
     typeof index === "number" ? (trendData[index]?.salesWithVat ?? 0) : 0;
+
+  const primaryTickStyle = printMode
+    ? {
+        fill: "#18181b",
+        fontFamily: "Geist, Arial, sans-serif",
+        fontSize: 11,
+        fontWeight: 500,
+      }
+    : undefined;
+  const secondaryTickStyle = printMode
+    ? {
+        fill: "#71717a",
+        fontFamily: "Geist, Arial, sans-serif",
+        fontSize: 10,
+        fontWeight: 400,
+      }
+    : undefined;
 
   return (
     <g transform={`translate(${x},${y})`}>
@@ -102,6 +121,7 @@ function OverviewTrendTick({
         dy={12}
         textAnchor="middle"
         className="fill-foreground text-[11px] font-medium"
+        style={primaryTickStyle}
       >
         {payload?.value ?? ""}
       </text>
@@ -111,6 +131,7 @@ function OverviewTrendTick({
         dy={31}
         textAnchor="middle"
         className="fill-muted-foreground text-[10px]"
+        style={secondaryTickStyle}
       >
         {formatCompactCurrency(salesWithVat)}
       </text>
@@ -159,8 +180,8 @@ export function OverviewTrendCard({
         : null,
   }));
   const chartTick = useMemo(
-    () => <OverviewTrendTick trendData={chartData} />,
-    [chartData],
+    () => <OverviewTrendTick trendData={chartData} printMode={printMode} />,
+    [chartData, printMode],
   );
 
   return (

@@ -166,7 +166,7 @@ export function OverviewPrintScreen({
       className="print-report mx-auto flex w-full max-w-[1120px] min-w-0 flex-col gap-4 bg-background px-4 py-5 md:px-6"
     >
       <Card className="print-section border border-border/70 shadow-none">
-        <CardContent className="flex flex-col gap-4 p-5">
+        <CardContent className="flex flex-col gap-4 px-0 py-5">
           <div className="flex items-start justify-between gap-4">
             <div className="grid grid-cols-[44px_minmax(0,1fr)] items-center gap-4">
               <div className="flex size-11 shrink-0 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
@@ -183,7 +183,7 @@ export function OverviewPrintScreen({
             </div>
           </div>
 
-          <div className="grid grid-cols-3 gap-2">
+          <div className="-ml-3 grid grid-cols-3 gap-4">
             {primarySummaryItems.map((item, index) =>
               item ? (
                 <div
@@ -212,7 +212,7 @@ export function OverviewPrintScreen({
           </div>
 
           {secondarySummaryItems.length ? (
-            <div className="grid grid-cols-3 gap-2">
+            <div className="-ml-3 grid grid-cols-3 gap-4">
               {secondarySummaryItems.map((item) => (
                 <div
                   key={`${item.label}-${item.value}`}
