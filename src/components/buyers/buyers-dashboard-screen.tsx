@@ -4,11 +4,16 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import {
   Building2Icon,
+  ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronsUpDownIcon,
   DatabaseIcon,
+  DownloadIcon,
   EyeOffIcon,
+  FileSpreadsheetIcon,
+  FileTextIcon,
+  LoaderCircleIcon,
   MapPinnedIcon,
   PackageIcon,
   ShoppingCartIcon,
@@ -28,6 +33,7 @@ import {
 } from "recharts";
 
 import { BuyersFilters } from "@/components/buyers/buyers-filters";
+import { DashboardKpiGrid } from "@/components/overview/dashboard-kpi-grid";
 import { OverflowTooltipText } from "@/components/overview/overflow-tooltip-text";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -35,6 +41,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -76,9 +83,7 @@ import type { OverviewExportFormat } from "@/lib/overview/overview-api";
 import { buildOverviewDrilldownHref } from "@/lib/overview/overview-drilldown";
 import {
   formatCompactCurrency,
-  formatDelta,
   formatFullCurrency,
-  formatNumber,
   formatPercent,
   formatQuantity,
   formatQuantityWithUnit,
@@ -105,21 +110,25 @@ const kpiCards = [
     title: "Закупівлі з ПДВ",
     icon: ShoppingCartIcon,
     iconClassName: "bg-cyan-500/10 text-cyan-600",
+    kind: "currency",
   },
   {
     title: "Активні постачальники",
     icon: Building2Icon,
     iconClassName: "bg-cyan-500/10 text-cyan-600",
+    kind: "number",
   },
   {
     title: "Регіони постачання",
     icon: MapPinnedIcon,
     iconClassName: "bg-amber-500/10 text-amber-600",
+    kind: "number",
   },
   {
     title: "Товарні позиції",
     icon: PackageIcon,
     iconClassName: "bg-violet-500/10 text-violet-600",
+    kind: "number",
   },
 ] as const;
 
@@ -130,7 +139,7 @@ const structureItems = [
     iconClassName: "bg-cyan-500/10 text-cyan-600",
   },
   {
-    title: "Топ регіон постачання",
+    title: "Топ регіон збуту",
     icon: MapPinnedIcon,
     iconClassName: "bg-amber-500/10 text-amber-600",
   },
@@ -145,7 +154,7 @@ const structureItems = [
     iconClassName: "bg-cyan-500/10 text-cyan-600",
   },
   {
-    title: "Частка TOP-5 регіонів постачання",
+    title: "Частка TOP-5 регіонів збуту",
     icon: MapPinnedIcon,
     iconClassName: "bg-amber-500/10 text-amber-600",
   },
@@ -172,9 +181,9 @@ const topCards = [
     iconClassName: "bg-violet-500/10 text-violet-600",
   },
   {
-    title: "Топ регіонів постачання",
-    sheetTitle: "Усі регіони постачання",
-    columns: ["Регіон постачальника", "Закупівлі з ПДВ", "Частка"],
+    title: "Топ регіонів збуту",
+    sheetTitle: "Усі регіони збуту",
+    columns: ["Регіон покупця", "Закупівлі з ПДВ", "Частка"],
     icon: MapPinnedIcon,
     iconClassName: "bg-amber-500/10 text-amber-600",
   },
@@ -182,7 +191,7 @@ const topCards = [
 
 const buyersTableColumnLabels: Record<string, string> = {
   period: "Період",
-  supplierRegion: "Регіон постачальника",
+  buyerRegion: "Регіон покупця",
   buyer: "Покупець",
   supplier: "Постачальник",
   product: "Продукт",
@@ -336,8 +345,8 @@ function formatBuyersInsight(insight?: BuyersInsight | null) {
         ? `Пік закупівель — ${insight.payload.periodLabel ?? "—"}`
         : "Пік закупівель — —";
     }
-    case "TOP_SUPPLIER_REGION":
-      return `Найбільший регіон постачання — ${insight.payload.regionName ?? "—"}`;
+    case "TOP_BUYER_REGION":
+      return `Найбільший регіон попиту — ${insight.payload.regionName ?? "—"}`;
     default:
       return "—";
   }
@@ -360,80 +369,20 @@ function BuyersKpiGrid({
     ? [
         kpi.purchasesWithVat,
         kpi.activeSuppliers,
-        kpi.supplierRegions,
+        kpi.buyerRegions,
         kpi.productPositions,
       ]
     : [];
 
   return (
-    <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-4">
-      {kpiCards.map((card, index) => {
-        const Icon = card.icon;
-        const metric = metrics[index];
-        const value =
-          index === 0
-            ? formatCompactCurrency(metric?.current)
-            : formatNumber(metric?.current);
-
-        return (
-          <Card
-            key={card.title}
-            size="sm"
-            className={
-              isLoading
-                ? "border border-border/70 shadow-none"
-                : "flex h-full border border-border/70 shadow-none"
-            }
-          >
-            <CardHeader className="gap-2 pb-2.5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1.5">
-                  <p className="text-[0.78rem] leading-snug text-muted-foreground">
-                    {card.title}
-                  </p>
-                  <CardTitle>
-                    {isLoading ? <Skeleton className="h-6 w-20" /> : value}
-                  </CardTitle>
-                </div>
-                <div
-                  className={`flex size-10 shrink-0 items-center justify-center rounded-md ${card.iconClassName}`}
-                >
-                  <Icon className="size-4" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent
-              className={
-                isLoading
-                  ? "pt-0"
-                  : "flex flex-1 flex-col justify-end space-y-1.5 pt-0"
-              }
-            >
-              {isLoading ? (
-                <Skeleton className="h-4 w-40 max-w-full" />
-              ) : error ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-destructive">{error}</p>
-                  {onRetry ? (
-                    <Button size="xs" variant="outline" onClick={onRetry}>
-                      Retry
-                    </Button>
-                  ) : null}
-                </div>
-              ) : !comparisonEnabled ? (
-                <p className="text-xs text-muted-foreground">&nbsp;</p>
-              ) : metric ? (
-                <p className="text-xs text-muted-foreground">
-                  {formatDelta(metric)}
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">No data</p>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+    <DashboardKpiGrid
+      cards={kpiCards}
+      metrics={metrics}
+      isLoading={isLoading}
+      error={error}
+      comparisonEnabled={comparisonEnabled}
+      onRetry={onRetry}
+    />
   );
 }
 
@@ -620,14 +569,14 @@ function BuyersMarketStructureCard({
                   : null,
             }
           : null,
-        data.topSupplierRegion
+        data.topBuyerRegion
           ? {
               primary:
-                data.topSupplierRegion.regionName &&
-                data.topSupplierRegion.regionName.trim() !== "undefined"
-                  ? data.topSupplierRegion.regionName
+                data.topBuyerRegion.regionName &&
+                data.topBuyerRegion.regionName.trim() !== "undefined"
+                  ? data.topBuyerRegion.regionName
                   : "Не визначено",
-              secondary: `${formatCompactCurrency(data.topSupplierRegion.amount)} • ${formatPercent(data.topSupplierRegion.share)}`,
+              secondary: `${formatCompactCurrency(data.topBuyerRegion.amount)} • ${formatPercent(data.topBuyerRegion.share)}`,
             }
           : null,
         data.topUKTZED
@@ -761,10 +710,10 @@ function BuyersMarketInsightsCard({
       emptyText: "Пік закупівель — —",
     },
     {
-      insight: insights.find((item) => item.type === "TOP_SUPPLIER_REGION"),
+      insight: insights.find((item) => item.type === "TOP_BUYER_REGION"),
       icon: MapPinnedIcon,
       iconClassName: "bg-amber-500/10 text-amber-600",
-      emptyText: "Найбільший регіон постачання — —",
+      emptyText: "Найбільший регіон попиту — —",
     },
   ] as const;
 
@@ -894,7 +843,7 @@ function BuyersRankingSheet({
     item:
       | BuyersDashboardResponse["topSuppliers"][number]
       | BuyersDashboardResponse["topProducts"][number]
-      | BuyersDashboardResponse["topSupplierRegions"][number],
+      | BuyersDashboardResponse["topBuyerRegions"][number],
   ) {
     const rawName = "regionName" in item ? item.regionName : item.name;
     const name = rawName?.trim() || "—";
@@ -936,7 +885,7 @@ function BuyersRankingSheet({
           : buildOverviewDrilldownHref({
               state,
               target: "regions",
-              supplierRegionCodes:
+              buyerRegionCodes:
                 "regionCode" in item && typeof item.regionCode === "string"
                   ? [item.regionCode]
                   : undefined,
@@ -1066,11 +1015,11 @@ function BuyersRankingSheet({
                       </span>
                     ) : null}
                     <Button
-                      variant="outline"
+                      variant={pageNumber === page ? "outline" : "ghost"}
                       size="icon-sm"
                       className={
                         pageNumber === page
-                          ? "border-sidebar-primary text-foreground"
+                          ? "border-sidebar-primary bg-background text-foreground shadow-sm dark:border-input dark:bg-input/40 dark:text-foreground dark:hover:bg-input/40"
                           : ""
                       }
                       disabled={rankingsQuery.isFetching}
@@ -1143,7 +1092,7 @@ function BuyersTopCardsGrid({
   accessToken,
   topSuppliers,
   topProducts,
-  topSupplierRegions,
+  topBuyerRegions,
   isLoading,
   error,
   onRetry,
@@ -1152,13 +1101,13 @@ function BuyersTopCardsGrid({
   accessToken: string | null;
   topSuppliers: BuyersDashboardResponse["topSuppliers"];
   topProducts: BuyersDashboardResponse["topProducts"];
-  topSupplierRegions: BuyersDashboardResponse["topSupplierRegions"];
+  topBuyerRegions: BuyersDashboardResponse["topBuyerRegions"];
   isLoading: boolean;
   error: string | null;
   onRetry?: () => void;
 }) {
   const [activeSheetIndex, setActiveSheetIndex] = useState<number | null>(null);
-  const rows = [topSuppliers, topProducts, topSupplierRegions];
+  const rows = [topSuppliers, topProducts, topBuyerRegions];
   const gridClassName =
     "grid-cols-[minmax(0,2.9fr)_minmax(148px,0.62fr)_minmax(72px,0.28fr)]";
 
@@ -1239,7 +1188,7 @@ function BuyersTopCardsGrid({
                         : buildOverviewDrilldownHref({
                             state,
                             target: "regions",
-                            supplierRegionCodes:
+                            buyerRegionCodes:
                               "regionCode" in item &&
                               typeof item.regionCode === "string"
                                 ? [item.regionCode]
@@ -1298,7 +1247,7 @@ function BuyersTopCardsGrid({
                 className={`grid ${gridClassName} items-center gap-4 border-t border-border/70 px-1 pt-2.5 text-sm`}
               >
                 <span className="whitespace-nowrap font-semibold text-foreground">
-                  Разом TOP-5
+                  {`Разом TOP-${Math.min(rows[cardIndex].length, 5)}`}
                 </span>
                 <span className="text-sm font-semibold text-foreground">
                   {formatCompactCurrency(
@@ -1369,6 +1318,9 @@ function BuyersOperationsTable({
   tableState,
   onRetry,
   onUpdateTableState,
+  onExport,
+  isExportPending,
+  pendingExportFormat,
 }: {
   rows: BuyersTableResponse["items"];
   total: number;
@@ -1378,6 +1330,9 @@ function BuyersOperationsTable({
   tableState: OverviewTableState;
   onRetry?: () => void;
   onUpdateTableState: (patch: Partial<OverviewTableState>) => void;
+  onExport: (format: OverviewExportFormat) => void;
+  isExportPending: boolean;
+  pendingExportFormat: OverviewExportFormat | null;
 }) {
   const [hiddenColumns, setHiddenColumns] = useState<Record<string, boolean>>(
     {},
@@ -1400,7 +1355,7 @@ function BuyersOperationsTable({
   const columns: Array<{
     key:
       | "period"
-      | "supplierRegion"
+      | "buyerRegion"
       | "buyer"
       | "supplier"
       | "product"
@@ -1418,11 +1373,11 @@ function BuyersOperationsTable({
       render: (row) => row.period || "—",
     },
     {
-      key: "supplierRegion",
-      label: "Регіон постачальника",
+      key: "buyerRegion",
+      label: "Регіон покупця",
       render: (row) => (
         <OverflowTooltipText
-          text={row.supplierRegionName || "Не визначено"}
+          text={row.buyerRegionName || "Не визначено"}
           className="block whitespace-normal break-words leading-snug"
         />
       ),
@@ -1509,14 +1464,14 @@ function BuyersOperationsTable({
               <span className="inline-flex size-10 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-600">
                 <DatabaseIcon className="size-4" />
               </span>
-              <CardTitle>Огляд закупівель</CardTitle>
+              <CardTitle>Огляд операцій</CardTitle>
             </div>
 
-            <div className="shrink-0">
+            <div className="flex shrink-0 items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <Button variant="outline" className="h-9 rounded-lg px-3">
+                    <Button variant="outline" className="h-8 rounded-lg px-3">
                       <EyeOffIcon />
                       Колонки
                     </Button>
@@ -1552,6 +1507,53 @@ function BuyersOperationsTable({
                       </DropdownMenuCheckboxItem>
                     );
                   })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  disabled={isExportPending || total === 0}
+                  render={
+                    <Button
+                      className="h-8 rounded-lg px-3"
+                      disabled={isExportPending || total === 0}
+                    >
+                      {isExportPending ? (
+                        <span
+                          className="inline-flex animate-spin"
+                          style={{
+                            animationDuration: "0.9s",
+                            animationTimingFunction: "linear",
+                            willChange: "transform",
+                          }}
+                        >
+                          <LoaderCircleIcon className="size-4" />
+                        </span>
+                      ) : (
+                        <DownloadIcon />
+                      )}
+                      {isExportPending
+                        ? `Експорт ${pendingExportFormat?.toUpperCase() ?? ""}`.trim()
+                        : "Експорт"}
+                      <ChevronDownIcon className="size-4 text-current/75" />
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent align="end" className="min-w-40">
+                  <DropdownMenuItem
+                    disabled={isExportPending || total === 0}
+                    onClick={() => onExport("xlsx")}
+                  >
+                    <FileSpreadsheetIcon />
+                    XLSX
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={isExportPending || total === 0}
+                    onClick={() => onExport("csv")}
+                  >
+                    <FileTextIcon />
+                    CSV
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -1649,11 +1651,10 @@ function BuyersOperationsTable({
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="h-9 w-9 rounded-lg"
+                  size="icon-sm"
                   disabled={tableState.page <= 1}
                   onClick={() =>
                     onUpdateTableState({
@@ -1666,10 +1667,11 @@ function BuyersOperationsTable({
                 {pageNumbers.map((page) => (
                   <Button
                     key={page}
-                    variant="outline"
-                    className={`h-9 min-w-9 rounded-lg px-0 ${
+                    variant={tableState.page === page ? "outline" : "ghost"}
+                    size="icon-sm"
+                    className={`text-xs ${
                       tableState.page === page
-                        ? "border-sidebar-primary text-sidebar-primary"
+                        ? "border-sidebar-primary bg-background text-foreground shadow-sm dark:border-input dark:bg-input/40 dark:text-foreground dark:hover:bg-input/40"
                         : ""
                     }`}
                     onClick={() => onUpdateTableState({ page })}
@@ -1679,8 +1681,7 @@ function BuyersOperationsTable({
                 ))}
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="h-9 w-9 rounded-lg"
+                  size="icon-sm"
                   disabled={tableState.page >= totalPages}
                   onClick={() =>
                     onUpdateTableState({
@@ -1701,8 +1702,8 @@ function BuyersOperationsTable({
                   })
                 }
               >
-                <SelectTrigger className="h-9 min-w-32 rounded-lg">
-                  <SelectValue />
+                <SelectTrigger className="h-8 min-w-28 rounded-lg px-3">
+                  <SelectValue>{tableState.limit} / сторінка</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {[5, 10, 20, 50, 100].map((option) => (
@@ -1742,6 +1743,9 @@ export function BuyersDashboardScreen({
   onRetryTable,
   onExport,
   isExportPending,
+  pendingExportFormat,
+  onExportPdf,
+  isPdfExportPending,
 }: {
   state: OverviewFilterState;
   accessToken: string | null;
@@ -1760,9 +1764,23 @@ export function BuyersDashboardScreen({
   onRetryTable: () => void;
   onExport: (format: OverviewExportFormat) => void;
   isExportPending: boolean;
+  pendingExportFormat: OverviewExportFormat | null;
+  onExportPdf: () => void;
+  isPdfExportPending: boolean;
 }) {
   const dashboardData = dashboard;
   const tableData = table;
+  const hasBuyersData = Boolean(
+    dashboardData &&
+    (dashboardData.kpi.purchasesWithVat.current > 0 ||
+      dashboardData.kpi.activeSuppliers.current > 0 ||
+      dashboardData.kpi.buyerRegions.current > 0 ||
+      dashboardData.kpi.productPositions.current > 0 ||
+      dashboardData.trend.some((item) => item.purchasesWithVat > 0) ||
+      dashboardData.topSuppliers.length > 0 ||
+      dashboardData.topProducts.length > 0 ||
+      dashboardData.topBuyerRegions.length > 0),
+  );
 
   return (
     <section className="flex min-w-0 w-full flex-1 flex-col gap-4">
@@ -1771,8 +1789,9 @@ export function BuyersDashboardScreen({
         accessToken={accessToken}
         onUpdateFilters={onUpdateFilters}
         onResetFilters={onResetFilters}
-        onExport={onExport}
-        isExportPending={isExportPending}
+        onExportPdf={onExportPdf}
+        isPdfExportPending={isPdfExportPending}
+        isPdfExportDisabled={!hasBuyersData}
       />
 
       <BuyersKpiGrid
@@ -1813,7 +1832,7 @@ export function BuyersDashboardScreen({
         accessToken={accessToken}
         topSuppliers={dashboardData?.topSuppliers ?? []}
         topProducts={dashboardData?.topProducts ?? []}
-        topSupplierRegions={dashboardData?.topSupplierRegions ?? []}
+        topBuyerRegions={dashboardData?.topBuyerRegions ?? []}
         isLoading={isDashboardLoading}
         error={dashboardError}
         onRetry={onRetryDashboard}
@@ -1828,6 +1847,9 @@ export function BuyersDashboardScreen({
         tableState={state.table}
         onRetry={onRetryTable}
         onUpdateTableState={onUpdateTableState}
+        onExport={onExport}
+        isExportPending={isExportPending}
+        pendingExportFormat={pendingExportFormat}
       />
     </section>
   );

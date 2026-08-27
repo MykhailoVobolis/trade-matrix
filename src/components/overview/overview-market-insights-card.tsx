@@ -109,6 +109,23 @@ function isPlaceholderInsight(insight: OverviewInsight) {
   }
 }
 
+function getPlaceholderInsightText(insight: OverviewInsight) {
+  switch (insight.type) {
+    case "SALES_CHANGE":
+      return "Продажі змінились на —% порівняно з попереднім періодом";
+    case "PEAK_SALES_PERIOD":
+      return "Пік продажів — —";
+    case "SUPPLIER_CONCENTRATION":
+      return "TOP-5 постачальників формують —% закупівель";
+    case "TOP_REGION":
+      return "Найбільший регіон попиту — —";
+    case "TOP_UKTZED":
+      return "УКТЗЕД — формує —% продажів";
+    default:
+      return formatOverviewInsight(insight);
+  }
+}
+
 export function OverviewMarketInsightsCard({
   insights,
   isLoading,
@@ -118,6 +135,7 @@ export function OverviewMarketInsightsCard({
   emptyGridCount = 3,
   emptyGridTemplates,
   emptyGridTypes,
+  printMode = false,
 }: {
   insights: OverviewInsight[];
   isLoading: boolean;
@@ -127,17 +145,32 @@ export function OverviewMarketInsightsCard({
   emptyGridCount?: number;
   emptyGridTemplates?: string[];
   emptyGridTypes?: OverviewInsight["type"][];
+  printMode?: boolean;
 }) {
   const visibleInsights = insights.filter(isRenderableInsight);
 
   return (
-    <Card className="border border-border/70 shadow-none">
+    <Card
+      className="border border-border/70 shadow-none"
+      style={
+        printMode
+          ? {
+              borderColor: "#d4d4d8",
+              backgroundColor: "#ffffff",
+            }
+          : undefined
+      }
+    >
       <CardHeader className="pb-3.5">
-        <CardTitle>Ринкові інсайти</CardTitle>
+        <CardTitle className="print-text">Ринкові інсайти</CardTitle>
       </CardHeader>
       <CardContent className="border-t border-border/70 pt-3.5">
         {isLoading ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div
+            className={`overview-market-insights-grid grid gap-3 ${
+              printMode ? "grid-cols-3" : "md:grid-cols-2 xl:grid-cols-3"
+            }`}
+          >
             {Array.from({ length: 6 }).map((_, index) => (
               <div
                 key={index}
@@ -152,7 +185,7 @@ export function OverviewMarketInsightsCard({
           </div>
         ) : error ? (
           <div className="space-y-3 rounded-md border border-destructive/30 bg-destructive/5 px-3.5 py-3 text-sm text-destructive">
-            <p>{error}</p>
+            <p className="print-text">{error}</p>
             {onRetry ? (
               <Button size="sm" variant="outline" onClick={onRetry}>
                 Retry
@@ -160,7 +193,11 @@ export function OverviewMarketInsightsCard({
             ) : null}
           </div>
         ) : visibleInsights.length ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div
+            className={`overview-market-insights-grid grid gap-3 ${
+              printMode ? "grid-cols-3" : "md:grid-cols-2 xl:grid-cols-3"
+            }`}
+          >
             {visibleInsights.slice(0, 6).map((insight, index) => {
               const { icon: InsightIcon, className } = getInsightIcon(
                 insight.type,
@@ -171,21 +208,61 @@ export function OverviewMarketInsightsCard({
                 <div
                   key={`${insight.type}-${index}`}
                   className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3"
+                  style={
+                    printMode
+                      ? {
+                          borderColor: "#d4d4d8",
+                          backgroundColor: "#ffffff",
+                        }
+                      : undefined
+                  }
                 >
                   <div className="flex items-start gap-3">
                     <div
                       className={`flex size-10 shrink-0 items-center justify-center rounded-md ${className}`}
+                      style={
+                        printMode
+                          ? insight.type === "SUPPLIER_CONCENTRATION"
+                            ? {
+                                backgroundColor: "#cffafe",
+                                color: "#0891b2",
+                              }
+                            : insight.type === "TOP_REGION" ||
+                                insight.type === "REGION_CONCENTRATION"
+                              ? {
+                                  backgroundColor: "#fef3c7",
+                                  color: "#d97706",
+                                }
+                              : insight.type === "TOP_UKTZED" ||
+                                  insight.type === "PRODUCT_CONCENTRATION"
+                                ? {
+                                    backgroundColor: "#ede9fe",
+                                    color: "#7c3aed",
+                                  }
+                                : {
+                                    backgroundColor: "#dbeafe",
+                                    color: "#2563eb",
+                                  }
+                          : undefined
+                      }
                     >
                       <InsightIcon className="size-4" />
                     </div>
                     <p
-                      className={`text-sm leading-6 ${
+                      className={`print-text text-sm leading-6 ${
                         isPlaceholder
-                          ? "text-muted-foreground/80"
+                          ? "text-muted-foreground"
                           : "text-foreground"
                       }`}
+                      style={
+                        printMode && isPlaceholder
+                          ? { color: "#71717a" }
+                          : undefined
+                      }
                     >
-                      {formatOverviewInsight(insight)}
+                      {isPlaceholder
+                        ? getPlaceholderInsightText(insight)
+                        : formatOverviewInsight(insight)}
                     </p>
                   </div>
                 </div>
@@ -193,7 +270,11 @@ export function OverviewMarketInsightsCard({
             })}
           </div>
         ) : renderEmptyAsGrid ? (
-          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <div
+            className={`overview-market-insights-grid grid gap-3 ${
+              printMode ? "grid-cols-3" : "md:grid-cols-2 xl:grid-cols-3"
+            }`}
+          >
             {(emptyGridTemplates?.length
               ? emptyGridTemplates
               : Array.from({ length: emptyGridCount }, () => "")
@@ -207,15 +288,51 @@ export function OverviewMarketInsightsCard({
                 <div
                   key={`empty-insight-${index}`}
                   className="rounded-md border border-border/70 bg-muted/10 px-3.5 py-3"
+                  style={
+                    printMode
+                      ? {
+                          borderColor: "#d4d4d8",
+                          backgroundColor: "#ffffff",
+                        }
+                      : undefined
+                  }
                 >
                   <div className="flex items-start gap-3">
                     <div
                       className={`flex size-10 shrink-0 items-center justify-center rounded-md ${className}`}
+                      style={
+                        printMode
+                          ? insightType === "SUPPLIER_CONCENTRATION"
+                            ? {
+                                backgroundColor: "#cffafe",
+                                color: "#0891b2",
+                              }
+                            : insightType === "TOP_REGION" ||
+                                insightType === "REGION_CONCENTRATION"
+                              ? {
+                                  backgroundColor: "#fef3c7",
+                                  color: "#d97706",
+                                }
+                              : insightType === "TOP_UKTZED" ||
+                                  insightType === "PRODUCT_CONCENTRATION"
+                                ? {
+                                    backgroundColor: "#ede9fe",
+                                    color: "#7c3aed",
+                                  }
+                                : {
+                                    backgroundColor: "#dbeafe",
+                                    color: "#2563eb",
+                                  }
+                          : undefined
+                      }
                     >
                       <EmptyInsightIcon className="size-4" />
                     </div>
                     {template ? (
-                      <p className="text-sm leading-6 text-muted-foreground/80">
+                      <p
+                        className="print-text text-sm leading-6 text-muted-foreground"
+                        style={printMode ? { color: "#71717a" } : undefined}
+                      >
                         {template}
                       </p>
                     ) : (

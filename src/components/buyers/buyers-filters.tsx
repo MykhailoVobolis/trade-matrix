@@ -5,8 +5,8 @@ import {
   CalendarRangeIcon,
   ChevronDownIcon,
   DownloadIcon,
-  FileSpreadsheetIcon,
   FileTextIcon,
+  LoaderCircleIcon,
 } from "lucide-react";
 
 import { OverviewSearchableMultiSelect } from "@/components/overview/overview-searchable-multi-select";
@@ -24,7 +24,6 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Switch } from "@/components/ui/switch";
-import type { OverviewExportFormat } from "@/lib/overview/overview-api";
 import type {
   OverviewFilterState,
   OverviewFilterValues,
@@ -32,7 +31,7 @@ import type {
 import { useBuyersFilterOptionsInfiniteQuery } from "@/lib/buyers/buyers-query";
 
 type FilterDimension =
-  "buyers" | "suppliers" | "products" | "uktzed" | "supplierRegions";
+  "buyers" | "suppliers" | "products" | "uktzed" | "buyerRegions";
 
 const dependentFilters = [
   {
@@ -44,9 +43,9 @@ const dependentFilters = [
   },
   {
     key: "buyerRegionCodes",
-    label: "Регіон постачальника",
+    label: "Регіон покупця",
     placeholder: "Усі регіони",
-    dimension: "supplierRegions",
+    dimension: "buyerRegions",
   },
   {
     key: "uktzed",
@@ -387,15 +386,17 @@ export function BuyersFilters({
   accessToken,
   onUpdateFilters,
   onResetFilters,
-  onExport,
-  isExportPending,
+  onExportPdf,
+  isPdfExportPending,
+  isPdfExportDisabled = false,
 }: {
   state: OverviewFilterState;
   accessToken: string | null;
   onUpdateFilters: (patch: Partial<OverviewFilterValues>) => void;
   onResetFilters: () => void;
-  onExport: (format: OverviewExportFormat) => void;
-  isExportPending: boolean;
+  onExportPdf: () => void;
+  isPdfExportPending: boolean;
+  isPdfExportDisabled?: boolean;
 }) {
   const hasSelectedBuyers = state.buyerTaxNumbers.length > 0;
   const hasActiveFilters =
@@ -429,9 +430,9 @@ export function BuyersFilters({
             <p className="text-xs font-medium text-muted-foreground">
               Порівняння
             </p>
-            <div className="flex h-11 items-center justify-between gap-4 rounded-lg border border-border/70 bg-background px-4 shadow-sm shadow-black/[0.02]">
+            <div className="flex min-h-11 items-center justify-between gap-3 rounded-lg border border-border/70 bg-background px-3 py-2.5 shadow-sm shadow-black/[0.02]">
               <div className="space-y-0.5">
-                <p className="text-sm font-medium text-foreground">
+                <p className="text-sm text-foreground">
                   Той самий вибраний період, попередній рік
                 </p>
               </div>
@@ -460,28 +461,41 @@ export function BuyersFilters({
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
-              disabled={!accessToken || isExportPending || !hasSelectedBuyers}
               render={
                 <Button
                   className="px-3 shadow-sm shadow-black/[0.02]"
-                  disabled={
-                    !accessToken || isExportPending || !hasSelectedBuyers
-                  }
+                  disabled={isPdfExportPending || isPdfExportDisabled}
                 >
-                  <DownloadIcon />
-                  {isExportPending ? "Експортуємо..." : "Експорт"}
+                  {isPdfExportPending ? (
+                    <span
+                      className="inline-flex animate-spin"
+                      style={{
+                        animationDuration: "0.9s",
+                        animationTimingFunction: "linear",
+                        willChange: "transform",
+                      }}
+                    >
+                      <LoaderCircleIcon />
+                    </span>
+                  ) : (
+                    <DownloadIcon />
+                  )}
+                  {isPdfExportPending ? "Експорт PDF" : "Експорт"}
                   <ChevronDownIcon className="size-4 text-current/75" />
                 </Button>
               }
             />
-            <DropdownMenuContent align="end" className="min-w-40">
-              <DropdownMenuItem onClick={() => onExport("xlsx")}>
-                <FileSpreadsheetIcon />
-                XLSX
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onExport("csv")}>
-                <FileTextIcon />
-                CSV
+            <DropdownMenuContent
+              align="end"
+              className="min-w-40"
+              sideOffset={8}
+            >
+              <DropdownMenuItem
+                disabled={isPdfExportPending || isPdfExportDisabled}
+                onClick={onExportPdf}
+              >
+                <FileTextIcon className="size-4" />
+                PDF
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

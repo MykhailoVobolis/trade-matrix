@@ -138,3 +138,9 @@
     scrollbar-gutter: stable;
   }
 }
+
+.print-report .print-text,
+.print-report [data-slot="card-title"] {
+  position: relative;
+  top: -6px;
+}

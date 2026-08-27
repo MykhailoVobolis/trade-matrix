@@ -13,7 +13,7 @@ import type {
 import type { OverviewFilterState } from "@/lib/overview/overview-url-state";
 
 export type BuyersInsightType =
-  "PURCHASES_CHANGE" | "PEAK_PURCHASES_PERIOD" | "TOP_SUPPLIER_REGION";
+  "PURCHASES_CHANGE" | "PEAK_PURCHASES_PERIOD" | "TOP_BUYER_REGION";
 
 export type BuyersInsight = {
   type: BuyersInsightType;
@@ -36,7 +36,7 @@ export type BuyersDashboardResponse = {
   kpi: {
     purchasesWithVat: OverviewMetric;
     activeSuppliers: OverviewMetric;
-    supplierRegions: OverviewMetric;
+    buyerRegions: OverviewMetric;
     productPositions: OverviewMetric;
   };
   trend: Array<{
@@ -49,7 +49,7 @@ export type BuyersDashboardResponse = {
   }>;
   marketStructure: {
     topSupplier: OverviewRankingItem | null;
-    topSupplierRegion: {
+    topBuyerRegion: {
       regionCode: string | null;
       regionName: string | null;
       amount: number;
@@ -69,14 +69,14 @@ export type BuyersDashboardResponse = {
   };
   topSuppliers: OverviewRankingItem[];
   topProducts: OverviewProductRankingItem[];
-  topSupplierRegions: BuyersRegionRankingItem[];
+  topBuyerRegions: BuyersRegionRankingItem[];
   insights: BuyersInsight[];
 };
 
 export type BuyersTableItem = {
   period: string;
-  supplierRegionCode?: string | null;
-  supplierRegionName?: string | null;
+  buyerRegionCode?: string | null;
+  buyerRegionName?: string | null;
   buyerTaxNumber: string | null;
   buyerName: string | null;
   supplierTaxNumber: string | null;
@@ -97,7 +97,7 @@ export type BuyersTableResponse = {
 };
 
 export type BuyersFilterOptionsDimension =
-  "buyers" | "suppliers" | "products" | "uktzed" | "supplierRegions";
+  "buyers" | "suppliers" | "products" | "uktzed" | "buyerRegions";
 
 export type BuyersFilterOption = OverviewFilterOption;
 export type BuyersFilterOptionsResponse = {
@@ -149,7 +149,7 @@ export function buildBuyersBaseSearchParams(
 
   appendMultiValue(params, "buyerTaxNumbers", state.buyerTaxNumbers);
   appendMultiValue(params, "supplierTaxNumbers", state.supplierTaxNumbers);
-  appendMultiValue(params, "supplierRegionCodes", state.buyerRegionCodes);
+  appendMultiValue(params, "buyerRegionCodes", state.buyerRegionCodes);
   appendMultiValue(params, "uktzed", state.uktzed);
   appendMultiValue(params, "products", state.products);
 
@@ -169,9 +169,7 @@ export function buildBuyersTableSearchParams(
   params.set("limit", String(state.table.limit));
   params.set(
     "sortBy",
-    state.table.sortBy === "buyerRegion"
-      ? "supplierRegion"
-      : state.table.sortBy,
+    state.table.sortBy === "buyerRegion" ? "buyerRegion" : state.table.sortBy,
   );
   params.set("sortDirection", state.table.sortDirection);
 

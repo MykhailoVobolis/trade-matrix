@@ -3,8 +3,8 @@ import {
   CalendarRangeIcon,
   ChevronDownIcon,
   DownloadIcon,
-  FileSpreadsheetIcon,
   FileTextIcon,
+  LoaderCircleIcon,
 } from "lucide-react";
 
 import { OverviewSearchableMultiSelect } from "@/components/overview/overview-searchable-multi-select";
@@ -27,7 +27,6 @@ import type {
   OverviewFilterValues,
 } from "@/lib/overview/overview-url-state";
 import { useOverviewFilterOptionsInfiniteQuery } from "@/lib/overview/overview-query";
-import type { OverviewExportFormat } from "@/lib/overview/overview-api";
 
 const primaryFilters = [
   {
@@ -379,15 +378,19 @@ export function OverviewFilters({
   accessToken,
   onUpdateOverviewFilters,
   onResetFilters,
-  onExport,
-  isExportPending,
+  onExportPdf,
+  isPdfExportPending,
+  isPdfExportDisabled = false,
+  pdfExportError,
 }: {
   state: OverviewFilterState;
   accessToken: string | null;
   onUpdateOverviewFilters: (patch: Partial<OverviewFilterValues>) => void;
   onResetFilters: () => void;
-  onExport: (format: OverviewExportFormat) => void;
-  isExportPending: boolean;
+  onExportPdf: () => void;
+  isPdfExportPending: boolean;
+  isPdfExportDisabled?: boolean;
+  pdfExportError: string | null;
 }) {
   const hasOverviewFilters =
     state.comparisonMode !== "PREVIOUS_PERIOD" ||
@@ -451,28 +454,50 @@ export function OverviewFilters({
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger
-              disabled={!accessToken || isExportPending}
               render={
-                <Button className="px-3 shadow-sm shadow-black/[0.02]">
-                  <DownloadIcon />
-                  {isExportPending ? "Експортуємо..." : "Експорт"}
+                <Button
+                  className="px-3 shadow-sm shadow-black/[0.02]"
+                  disabled={isPdfExportPending || isPdfExportDisabled}
+                >
+                  {isPdfExportPending ? (
+                    <span
+                      className="inline-flex animate-spin"
+                      style={{
+                        animationDuration: "0.9s",
+                        animationTimingFunction: "linear",
+                        willChange: "transform",
+                      }}
+                    >
+                      <LoaderCircleIcon />
+                    </span>
+                  ) : (
+                    <DownloadIcon />
+                  )}
+                  {isPdfExportPending ? "Експорт PDF" : "Експорт"}
                   <ChevronDownIcon className="size-4 text-current/75" />
                 </Button>
               }
             />
-            <DropdownMenuContent align="end" className="min-w-40">
-              <DropdownMenuItem onClick={() => onExport("xlsx")}>
-                <FileSpreadsheetIcon />
-                XLSX
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => onExport("csv")}>
-                <FileTextIcon />
-                CSV
+            <DropdownMenuContent
+              align="end"
+              className="min-w-40"
+              sideOffset={8}
+            >
+              <DropdownMenuItem
+                disabled={isPdfExportPending || isPdfExportDisabled}
+                onClick={onExportPdf}
+              >
+                <FileTextIcon className="size-4" />
+                PDF
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
+
+      {pdfExportError ? (
+        <p className="text-sm text-destructive">{pdfExportError}</p>
+      ) : null}
 
       <div className="grid gap-2.5 xl:grid-cols-5">
         {primaryFilters.map((filter) => (

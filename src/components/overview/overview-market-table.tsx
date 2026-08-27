@@ -10,11 +10,16 @@ import {
   type VisibilityState,
 } from "@tanstack/react-table";
 import {
+  ChevronDownIcon,
   DatabaseIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronsUpDownIcon,
+  DownloadIcon,
   EyeOffIcon,
+  FileSpreadsheetIcon,
+  FileTextIcon,
+  LoaderCircleIcon,
   RotateCwIcon,
 } from "lucide-react";
 
@@ -24,6 +29,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -47,7 +53,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { OverflowTooltipText } from "@/components/overview/overflow-tooltip-text";
-import type { OverviewTableItem } from "@/lib/overview/overview-api";
+import type {
+  OverviewExportFormat,
+  OverviewTableItem,
+} from "@/lib/overview/overview-api";
 import {
   formatCompactCurrency,
   formatFullCurrency,
@@ -152,6 +161,9 @@ export function OverviewMarketTable({
   tableState,
   onRetry,
   onUpdateTableState,
+  onExport,
+  isExportPending,
+  pendingExportFormat,
 }: {
   rows: OverviewTableItem[];
   total: number;
@@ -161,6 +173,9 @@ export function OverviewMarketTable({
   tableState: OverviewTableState;
   onRetry?: () => void;
   onUpdateTableState: (patch: Partial<OverviewTableState>) => void;
+  onExport: (format: OverviewExportFormat) => void;
+  isExportPending: boolean;
+  pendingExportFormat: OverviewExportFormat | null;
 }) {
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
 
@@ -367,11 +382,11 @@ export function OverviewMarketTable({
               <CardTitle>Огляд операцій</CardTitle>
             </div>
 
-            <div className="shrink-0">
+            <div className="flex shrink-0 items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <Button variant="outline" className="h-9 rounded-lg px-3">
+                    <Button variant="outline" className="h-8 rounded-lg px-3">
                       <EyeOffIcon />
                       Колонки
                     </Button>
@@ -396,6 +411,53 @@ export function OverviewMarketTable({
                       {columnLabels[column.id] ?? column.id}
                     </DropdownMenuCheckboxItem>
                   ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  disabled={isExportPending || total === 0}
+                  render={
+                    <Button
+                      className="h-8 rounded-lg px-3"
+                      disabled={isExportPending || total === 0}
+                    >
+                      {isExportPending ? (
+                        <span
+                          className="inline-flex animate-spin"
+                          style={{
+                            animationDuration: "0.9s",
+                            animationTimingFunction: "linear",
+                            willChange: "transform",
+                          }}
+                        >
+                          <LoaderCircleIcon className="size-4" />
+                        </span>
+                      ) : (
+                        <DownloadIcon />
+                      )}
+                      {isExportPending
+                        ? `Експорт ${pendingExportFormat?.toUpperCase() ?? ""}`.trim()
+                        : "Експорт"}
+                      <ChevronDownIcon className="size-4 text-current/75" />
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent align="end" className="min-w-40">
+                  <DropdownMenuItem
+                    disabled={isExportPending || total === 0}
+                    onClick={() => onExport("xlsx")}
+                  >
+                    <FileSpreadsheetIcon />
+                    XLSX
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={isExportPending || total === 0}
+                    onClick={() => onExport("csv")}
+                  >
+                    <FileTextIcon />
+                    CSV
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -514,11 +576,13 @@ export function OverviewMarketTable({
                       </span>
                     ) : null}
                     <Button
-                      variant="outline"
+                      variant={
+                        pageNumber === tableState.page ? "outline" : "ghost"
+                      }
                       size="icon-sm"
                       className={
                         pageNumber === tableState.page
-                          ? "border-sidebar-primary text-foreground"
+                          ? "border-sidebar-primary bg-background text-foreground shadow-sm dark:border-input dark:bg-input/40 dark:text-foreground dark:hover:bg-input/40"
                           : ""
                       }
                       onClick={() =>

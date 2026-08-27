@@ -4,11 +4,16 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   BarChart3Icon,
+  ChevronDownIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronsUpDownIcon,
   DatabaseIcon,
+  DownloadIcon,
   EyeOffIcon,
+  FileSpreadsheetIcon,
+  FileTextIcon,
+  LoaderCircleIcon,
   MapPinnedIcon,
   PackageIcon,
   TagIcon,
@@ -29,6 +34,7 @@ import {
 
 import { OverviewMarketInsightsCard } from "@/components/overview/overview-market-insights-card";
 import { OverflowTooltipText } from "@/components/overview/overflow-tooltip-text";
+import { DashboardKpiGrid } from "@/components/overview/dashboard-kpi-grid";
 import { SuppliersFilters } from "@/components/suppliers/suppliers-filters";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -36,6 +42,7 @@ import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
@@ -69,10 +76,8 @@ import type { OverviewExportFormat } from "@/lib/overview/overview-api";
 import { buildOverviewDrilldownHref } from "@/lib/overview/overview-drilldown";
 import {
   formatCompactCurrency,
-  formatDelta,
   formatFullCurrency,
   formatInsightPercent,
-  formatNumber,
   formatPercent,
   formatQuantity,
   formatQuantityWithUnit,
@@ -101,11 +106,20 @@ const timeGrainOptions: Array<{
   { value: "YEAR", label: "Рік" },
 ];
 
-function SuppliersTrendTooltip({
-  active,
-  payload,
-  label,
-}: RechartsTooltipProps<number, string>) {
+function SuppliersTrendTooltip(props: RechartsTooltipProps<number, string>) {
+  const { active, payload, label } = props as RechartsTooltipProps<
+    number,
+    string
+  > & {
+    payload?: Array<{
+      value?: number;
+      dataKey?: string | number;
+      name?: string;
+      color?: string;
+    }>;
+    label?: string;
+  };
+
   if (!active || !payload?.length) {
     return null;
   }
@@ -133,7 +147,7 @@ function SuppliersTrendTooltip({
               <span>{item.name}</span>
             </div>
             <span className="font-medium text-foreground">
-              {formatCompactCurrency(Number(item.value))}
+              {formatCompactCurrency(item.value ?? null)}
             </span>
           </div>
         ))}
@@ -189,21 +203,25 @@ const kpiCards = [
     title: "Продажі з ПДВ",
     icon: BarChart3Icon,
     iconClassName: "bg-blue-500/10 text-blue-600",
+    kind: "currency",
   },
   {
     title: "Активні покупці",
     icon: UsersIcon,
     iconClassName: "bg-blue-500/10 text-blue-600",
+    kind: "number",
   },
   {
     title: "Регіони збуту",
     icon: MapPinnedIcon,
     iconClassName: "bg-amber-500/10 text-amber-600",
+    kind: "number",
   },
   {
     title: "Товарні позиції",
     icon: PackageIcon,
     iconClassName: "bg-violet-500/10 text-violet-600",
+    kind: "number",
   },
 ] as const;
 
@@ -516,11 +534,11 @@ function SuppliersRankingSheet({
                       </span>
                     ) : null}
                     <Button
-                      variant="outline"
+                      variant={pageNumber === page ? "outline" : "ghost"}
                       size="icon-sm"
                       className={
                         pageNumber === page
-                          ? "border-sidebar-primary text-foreground"
+                          ? "border-sidebar-primary bg-background text-foreground shadow-sm dark:border-input dark:bg-input/40 dark:text-foreground dark:hover:bg-input/40"
                           : ""
                       }
                       disabled={rankingsQuery.isFetching}
@@ -632,74 +650,14 @@ function SuppliersKpiGrid({
     : [];
 
   return (
-    <div className="grid gap-3.5 md:grid-cols-2 xl:grid-cols-4">
-      {kpiCards.map((card, index) => {
-        const Icon = card.icon;
-        const metric = metrics[index];
-        const value =
-          index === 0
-            ? formatCompactCurrency(metric?.current)
-            : formatNumber(metric?.current);
-
-        return (
-          <Card
-            key={card.title}
-            size="sm"
-            className={
-              isLoading
-                ? "border border-border/70 shadow-none"
-                : "flex h-full border border-border/70 shadow-none"
-            }
-          >
-            <CardHeader className="gap-2 pb-2.5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1.5">
-                  <p className="text-[0.78rem] leading-snug text-muted-foreground">
-                    {card.title}
-                  </p>
-                  <CardTitle>
-                    {isLoading ? <Skeleton className="h-6 w-20" /> : value}
-                  </CardTitle>
-                </div>
-                <div
-                  className={`flex size-10 shrink-0 items-center justify-center rounded-md ${card.iconClassName}`}
-                >
-                  <Icon className="size-4" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent
-              className={
-                isLoading
-                  ? "pt-0"
-                  : "flex flex-1 flex-col justify-end space-y-1.5 pt-0"
-              }
-            >
-              {isLoading ? (
-                <Skeleton className="h-4 w-40 max-w-full" />
-              ) : error ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-destructive">{error}</p>
-                  {onRetry ? (
-                    <Button size="xs" variant="outline" onClick={onRetry}>
-                      Retry
-                    </Button>
-                  ) : null}
-                </div>
-              ) : !comparisonEnabled ? (
-                <p className="text-xs text-muted-foreground">&nbsp;</p>
-              ) : metric ? (
-                <p className="text-xs text-muted-foreground">
-                  {formatDelta(metric)}
-                </p>
-              ) : (
-                <p className="text-xs text-muted-foreground">No data</p>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
-    </div>
+    <DashboardKpiGrid
+      cards={kpiCards}
+      metrics={metrics}
+      isLoading={isLoading}
+      error={error}
+      comparisonEnabled={comparisonEnabled}
+      onRetry={onRetry}
+    />
   );
 }
 
@@ -1175,7 +1133,7 @@ function SuppliersTopCardsGrid({
                 className={`grid ${gridClassName} items-center gap-4 border-t border-border/70 px-1 pt-2.5 text-sm`}
               >
                 <span className="whitespace-nowrap font-semibold text-foreground">
-                  Разом TOP-5
+                  {`Разом TOP-${Math.min(rows[cardIndex].length, 5)}`}
                 </span>
                 <span className="text-sm font-semibold text-foreground">
                   {formatCompactCurrency(
@@ -1246,6 +1204,9 @@ function SuppliersOperationsTable({
   tableState,
   onRetry,
   onUpdateTableState,
+  onExport,
+  isExportPending,
+  pendingExportFormat,
 }: {
   rows: SuppliersTableResponse["items"];
   total: number;
@@ -1255,6 +1216,9 @@ function SuppliersOperationsTable({
   tableState: OverviewTableState;
   onRetry?: () => void;
   onUpdateTableState: (patch: Partial<OverviewTableState>) => void;
+  onExport: (format: OverviewExportFormat) => void;
+  isExportPending: boolean;
+  pendingExportFormat: OverviewExportFormat | null;
 }) {
   const [hiddenColumns, setHiddenColumns] = useState<Record<string, boolean>>(
     {},
@@ -1389,11 +1353,11 @@ function SuppliersOperationsTable({
               <CardTitle>Огляд операцій</CardTitle>
             </div>
 
-            <div className="shrink-0">
+            <div className="flex shrink-0 items-center gap-2">
               <DropdownMenu>
                 <DropdownMenuTrigger
                   render={
-                    <Button variant="outline" className="h-9 rounded-lg px-3">
+                    <Button variant="outline" className="h-8 rounded-lg px-3">
                       <EyeOffIcon />
                       Колонки
                     </Button>
@@ -1429,6 +1393,53 @@ function SuppliersOperationsTable({
                       </DropdownMenuCheckboxItem>
                     );
                   })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  disabled={isExportPending || total === 0}
+                  render={
+                    <Button
+                      className="h-8 rounded-lg px-3"
+                      disabled={isExportPending || total === 0}
+                    >
+                      {isExportPending ? (
+                        <span
+                          className="inline-flex animate-spin"
+                          style={{
+                            animationDuration: "0.9s",
+                            animationTimingFunction: "linear",
+                            willChange: "transform",
+                          }}
+                        >
+                          <LoaderCircleIcon className="size-4" />
+                        </span>
+                      ) : (
+                        <DownloadIcon />
+                      )}
+                      {isExportPending
+                        ? `Експорт ${pendingExportFormat?.toUpperCase() ?? ""}`.trim()
+                        : "Експорт"}
+                      <ChevronDownIcon className="size-4 text-current/75" />
+                    </Button>
+                  }
+                />
+                <DropdownMenuContent align="end" className="min-w-40">
+                  <DropdownMenuItem
+                    disabled={isExportPending || total === 0}
+                    onClick={() => onExport("xlsx")}
+                  >
+                    <FileSpreadsheetIcon />
+                    XLSX
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    disabled={isExportPending || total === 0}
+                    onClick={() => onExport("csv")}
+                  >
+                    <FileTextIcon />
+                    CSV
+                  </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -1526,11 +1537,10 @@ function SuppliersOperationsTable({
             </p>
 
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1">
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="h-9 w-9 rounded-lg"
+                  size="icon-sm"
                   disabled={tableState.page <= 1}
                   onClick={() =>
                     onUpdateTableState({
@@ -1543,10 +1553,11 @@ function SuppliersOperationsTable({
                 {pageNumbers.map((page) => (
                   <Button
                     key={page}
-                    variant="outline"
-                    className={`h-9 min-w-9 rounded-lg px-0 ${
+                    variant={tableState.page === page ? "outline" : "ghost"}
+                    size="icon-sm"
+                    className={`text-xs ${
                       tableState.page === page
-                        ? "border-sidebar-primary text-sidebar-primary"
+                        ? "border-sidebar-primary bg-background text-foreground shadow-sm dark:border-input dark:bg-input/40 dark:text-foreground dark:hover:bg-input/40"
                         : ""
                     }`}
                     onClick={() => onUpdateTableState({ page })}
@@ -1556,8 +1567,7 @@ function SuppliersOperationsTable({
                 ))}
                 <Button
                   variant="outline"
-                  size="icon"
-                  className="h-9 w-9 rounded-lg"
+                  size="icon-sm"
                   disabled={tableState.page >= totalPages}
                   onClick={() =>
                     onUpdateTableState({
@@ -1578,8 +1588,8 @@ function SuppliersOperationsTable({
                   })
                 }
               >
-                <SelectTrigger className="h-9 min-w-32 rounded-lg">
-                  <SelectValue />
+                <SelectTrigger className="h-8 min-w-28 rounded-lg px-3">
+                  <SelectValue>{tableState.limit} / сторінка</SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   {[5, 10, 20, 50, 100].map((option) => (
@@ -1619,6 +1629,9 @@ export function SuppliersDashboardScreen({
   onRetryTable,
   onExport,
   isExportPending,
+  pendingExportFormat,
+  onExportPdf,
+  isPdfExportPending,
 }: {
   state: OverviewFilterState;
   accessToken: string | null;
@@ -1637,7 +1650,22 @@ export function SuppliersDashboardScreen({
   onRetryTable: () => void;
   onExport: (format: OverviewExportFormat) => void;
   isExportPending: boolean;
+  pendingExportFormat: OverviewExportFormat | null;
+  onExportPdf: () => void;
+  isPdfExportPending: boolean;
 }) {
+  const hasSuppliersData = Boolean(
+    dashboard &&
+    (dashboard.kpi.salesWithVat.current > 0 ||
+      dashboard.kpi.activeBuyers.current > 0 ||
+      dashboard.kpi.salesRegions.current > 0 ||
+      dashboard.kpi.productPositions.current > 0 ||
+      dashboard.trend.some((item) => item.salesWithVat > 0) ||
+      dashboard.topBuyers.length > 0 ||
+      dashboard.topProducts.length > 0 ||
+      dashboard.topRegions.length > 0),
+  );
+
   return (
     <section className="flex min-w-0 w-full flex-1 flex-col gap-4">
       <SuppliersFilters
@@ -1645,8 +1673,9 @@ export function SuppliersDashboardScreen({
         accessToken={accessToken}
         onUpdateFilters={onUpdateFilters}
         onResetFilters={onResetFilters}
-        onExport={onExport}
-        isExportPending={isExportPending}
+        onExportPdf={onExportPdf}
+        isPdfExportPending={isPdfExportPending}
+        isPdfExportDisabled={!hasSuppliersData}
       />
 
       <SuppliersKpiGrid
@@ -1711,6 +1740,9 @@ export function SuppliersDashboardScreen({
         tableState={state.table}
         onRetry={onRetryTable}
         onUpdateTableState={onUpdateTableState}
+        onExport={onExport}
+        isExportPending={isExportPending}
+        pendingExportFormat={pendingExportFormat}
       />
     </section>
   );

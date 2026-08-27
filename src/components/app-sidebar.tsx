@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useSyncExternalStore } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -33,6 +33,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  Popover,
+  PopoverContent,
+  PopoverDescription,
+  PopoverHeader,
+  PopoverTitle,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -59,11 +67,6 @@ const navigationItems = [
     icon: HouseIcon,
   },
   {
-    title: "Таблиці",
-    href: "/app/tables",
-    icon: DatabaseIcon,
-  },
-  {
     title: "Постачальники",
     href: "/app/suppliers",
     icon: Building2Icon,
@@ -77,6 +80,11 @@ const navigationItems = [
     title: "Продукти",
     href: "/app/products",
     icon: PackageIcon,
+  },
+  {
+    title: "Таблиці",
+    href: "/app/tables",
+    icon: DatabaseIcon,
   },
   {
     title: "УКТЗЕД",
@@ -125,6 +133,7 @@ export function AppSidebar() {
     () => true,
     () => false,
   );
+  const [isUktzedComingSoonOpen, setIsUktzedComingSoonOpen] = useState(false);
 
   const effectiveTheme = mounted ? resolvedTheme : "light";
   const selectedTheme = mounted ? (theme ?? "system") : "system";
@@ -176,17 +185,58 @@ export function AppSidebar() {
             <SidebarMenu>
               {navigationItems.map((item) => {
                 const Icon = item.icon;
+                const isUktzedItem = item.href === "/app/uktzed";
+                const menuButtonContent = (
+                  <>
+                    <Icon />
+                    <span>{item.title}</span>
+                  </>
+                );
 
                 return (
                   <SidebarMenuItem key={item.href} className="py-0.5">
-                    <SidebarMenuButton
-                      render={<Link href={item.href} />}
-                      isActive={isItemActive(pathname, item.href)}
-                      tooltip={item.title}
-                    >
-                      <Icon />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
+                    {isUktzedItem ? (
+                      <Popover
+                        modal={false}
+                        open={isUktzedComingSoonOpen}
+                        onOpenChange={setIsUktzedComingSoonOpen}
+                      >
+                        <PopoverTrigger
+                          render={
+                            <SidebarMenuButton
+                              isActive={isItemActive(pathname, item.href)}
+                              tooltip={item.title}
+                            />
+                          }
+                        >
+                          {menuButtonContent}
+                        </PopoverTrigger>
+                        <PopoverContent
+                          align="start"
+                          side="bottom"
+                          sideOffset={8}
+                          className="w-64 rounded-md px-3 py-3 shadow-[0_20px_48px_-24px_rgba(15,23,42,0.28)]"
+                        >
+                          <PopoverHeader className="gap-2">
+                            <PopoverTitle className="text-base font-normal tracking-[-0.02em] text-foreground">
+                              Незабаром
+                            </PopoverTitle>
+                            <PopoverDescription className="leading-6 text-muted-foreground text-sm">
+                              Ми завершуємо останні приготування. Завітайте
+                              пізніше.
+                            </PopoverDescription>
+                          </PopoverHeader>
+                        </PopoverContent>
+                      </Popover>
+                    ) : (
+                      <SidebarMenuButton
+                        render={<Link href={item.href} />}
+                        isActive={isItemActive(pathname, item.href)}
+                        tooltip={item.title}
+                      >
+                        {menuButtonContent}
+                      </SidebarMenuButton>
+                    )}
                   </SidebarMenuItem>
                 );
               })}

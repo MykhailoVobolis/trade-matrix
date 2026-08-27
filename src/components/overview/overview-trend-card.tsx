@@ -18,6 +18,7 @@ import {
   YAxis,
   type TooltipProps,
 } from "recharts";
+import { useMemo } from "react";
 import { useTheme } from "next-themes";
 import type { OverviewTrendItem } from "@/lib/overview/overview-api";
 import { formatCompactCurrency } from "@/lib/overview/overview-format";
@@ -81,6 +82,7 @@ function OverviewTrendTick({
   index,
   payload,
   trendData = [],
+  printMode = false,
 }: {
   x?: number;
   y?: number;
@@ -89,9 +91,27 @@ function OverviewTrendTick({
     value?: string;
   };
   trendData?: OverviewTrendItem[];
+  printMode?: boolean;
 }) {
   const salesWithVat =
     typeof index === "number" ? (trendData[index]?.salesWithVat ?? 0) : 0;
+
+  const primaryTickStyle = printMode
+    ? {
+        fill: "#18181b",
+        fontFamily: "Geist, Arial, sans-serif",
+        fontSize: 11,
+        fontWeight: 500,
+      }
+    : undefined;
+  const secondaryTickStyle = printMode
+    ? {
+        fill: "#71717a",
+        fontFamily: "Geist, Arial, sans-serif",
+        fontSize: 10,
+        fontWeight: 400,
+      }
+    : undefined;
 
   return (
     <g transform={`translate(${x},${y})`}>
@@ -101,6 +121,7 @@ function OverviewTrendTick({
         dy={12}
         textAnchor="middle"
         className="fill-foreground text-[11px] font-medium"
+        style={primaryTickStyle}
       >
         {payload?.value ?? ""}
       </text>
@@ -110,6 +131,7 @@ function OverviewTrendTick({
         dy={31}
         textAnchor="middle"
         className="fill-muted-foreground text-[10px]"
+        style={secondaryTickStyle}
       >
         {formatCompactCurrency(salesWithVat)}
       </text>
@@ -126,6 +148,7 @@ export function OverviewTrendCard({
   comparisonEnabled = true,
   onRetry,
   onTimeGrainChange,
+  printMode = false,
 }: {
   trend: OverviewTrendItem[];
   isLoading: boolean;
@@ -135,6 +158,7 @@ export function OverviewTrendCard({
   comparisonEnabled?: boolean;
   onRetry?: () => void;
   onTimeGrainChange: (timeGrain: OverviewTimeGrain | "") => void;
+  printMode?: boolean;
 }) {
   const { resolvedTheme } = useTheme();
   const resolvedTimeGrain: OverviewTimeGrain | "" = timeGrain;
@@ -155,59 +179,111 @@ export function OverviewTrendCard({
         ? item.comparisonSalesWithVat
         : null,
   }));
+  const chartTick = useMemo(
+    () => <OverviewTrendTick trendData={chartData} printMode={printMode} />,
+    [chartData, printMode],
+  );
 
   return (
-    <Card className="border border-border/70 shadow-none">
-      <CardHeader className="flex flex-col gap-3 border-b border-border/70 pb-4 lg:flex-row lg:items-center lg:justify-between">
-        <CardTitle>Продажі за період</CardTitle>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={resolvedTimeGrain || "__AUTO__"}
-            onValueChange={(value) =>
-              onTimeGrainChange(
-                value === "__AUTO__" ? "" : (value as OverviewTimeGrain),
-              )
+    <Card
+      className="border border-border/70 shadow-none"
+      style={
+        printMode
+          ? {
+              borderColor: "#d4d4d8",
+              backgroundColor: "#ffffff",
             }
-          >
-            <SelectTrigger className="h-9 min-w-36 rounded-md">
-              <SelectValue>{resolvedTimeGrainLabel}</SelectValue>
-            </SelectTrigger>
-            <SelectContent className="p-1">
-              {timeGrainOptions.map((option) => (
-                <SelectItem
-                  key={option.value || "__AUTO__"}
-                  value={option.value || "__AUTO__"}
-                >
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <div className="flex h-9 items-center gap-2 rounded-md border border-border/70 bg-background px-3 text-sm text-muted-foreground">
-            <span>Сума</span>
+          : undefined
+      }
+    >
+      <CardHeader className="flex flex-col gap-3 border-b border-border/70 pb-4 lg:flex-row lg:items-center lg:justify-between">
+        <CardTitle className="print-text">Продажі за період</CardTitle>
+
+        {printMode ? (
+          <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
+            <span className="print-text rounded-md border border-border/70 bg-background px-3 py-2">
+              {resolvedTimeGrainLabel}
+            </span>
+            <span className="print-text rounded-md border border-border/70 bg-background px-3 py-2">
+              Сума
+            </span>
           </div>
-        </div>
+        ) : (
+          <div className="flex flex-wrap items-center gap-2">
+            <Select
+              value={resolvedTimeGrain || "__AUTO__"}
+              onValueChange={(value) =>
+                onTimeGrainChange(
+                  value === "__AUTO__" ? "" : (value as OverviewTimeGrain),
+                )
+              }
+            >
+              <SelectTrigger className="h-9 min-w-36 rounded-md">
+                <SelectValue>{resolvedTimeGrainLabel}</SelectValue>
+              </SelectTrigger>
+              <SelectContent className="p-1">
+                {timeGrainOptions.map((option) => (
+                  <SelectItem
+                    key={option.value || "__AUTO__"}
+                    value={option.value || "__AUTO__"}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <div className="flex h-9 items-center gap-2 rounded-md border border-border/70 bg-background px-3 text-sm text-muted-foreground">
+              <span>Сума</span>
+            </div>
+          </div>
+        )}
       </CardHeader>
 
       <CardContent className="space-y-4 pt-4">
         <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
-            <span className="size-2.5 rounded-full bg-sidebar-primary" />
-            Продажі з ПДВ
+            <span
+              className="size-2.5 rounded-full"
+              style={{ backgroundColor: "#2563eb" }}
+            />
+            <span className="print-text">Продажі з ПДВ</span>
           </div>
           {comparisonEnabled ? (
             <div className="flex items-center gap-2">
-              <span
-                className="h-px w-6 border-t border-dashed"
-                style={{ borderColor: comparisonSalesLineColor }}
-              />
-              Попер. період
+              <svg
+                width="24"
+                height="8"
+                viewBox="0 0 24 8"
+                aria-hidden="true"
+                className="shrink-0"
+              >
+                <line
+                  x1="0"
+                  y1="4"
+                  x2="24"
+                  y2="4"
+                  stroke={printMode ? "#93c5fd" : comparisonSalesLineColor}
+                  strokeWidth="2"
+                  strokeDasharray="6 4"
+                  strokeLinecap="round"
+                />
+              </svg>
+              <span className="print-text">Попер. період</span>
             </div>
           ) : null}
         </div>
 
-        <div className="rounded-md border border-border/70 bg-muted/15 p-4">
+        <div
+          className="rounded-md border border-border/70 bg-muted/15 p-4"
+          style={
+            printMode
+              ? {
+                  borderColor: "#d4d4d8",
+                  backgroundColor: "#ffffff",
+                }
+              : undefined
+          }
+        >
           {isLoading ? (
             <Skeleton className="h-[320px] w-full rounded-md" />
           ) : error ? (
@@ -220,7 +296,7 @@ export function OverviewTrendCard({
               ) : null}
             </div>
           ) : trend.length === 0 ? (
-            <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
+            <div className="print-text flex h-[320px] items-center justify-center text-sm text-muted-foreground">
               No trend data
             </div>
           ) : (
@@ -244,7 +320,7 @@ export function OverviewTrendCard({
                     tickMargin={12}
                     minTickGap={16}
                     height={56}
-                    tick={<OverviewTrendTick trendData={chartData} />}
+                    tick={chartTick}
                   />
                   <YAxis hide />
                   <Tooltip cursor={false} content={<OverviewTrendTooltip />} />
@@ -254,6 +330,7 @@ export function OverviewTrendCard({
                     fill="var(--sidebar-primary)"
                     radius={[3, 3, 0, 0]}
                     maxBarSize={24}
+                    isAnimationActive={!printMode}
                   />
                   {comparisonEnabled && hasComparisonSales ? (
                     <Line
@@ -265,6 +342,7 @@ export function OverviewTrendCard({
                       strokeDasharray="6 6"
                       dot={false}
                       activeDot={{ r: 4 }}
+                      isAnimationActive={!printMode}
                     />
                   ) : null}
                 </ComposedChart>
@@ -273,7 +351,9 @@ export function OverviewTrendCard({
           )}
         </div>
         {isFetching && !isLoading ? (
-          <p className="text-xs text-muted-foreground">Updating overview...</p>
+          <p className="print-text text-xs text-muted-foreground">
+            Updating overview...
+          </p>
         ) : null}
       </CardContent>
     </Card>
