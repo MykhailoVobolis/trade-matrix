@@ -2,13 +2,15 @@ import type { ReactNode, RefObject } from "react";
 import type { LucideIcon } from "lucide-react";
 import { LayoutDashboardIcon } from "lucide-react";
 
+import {
+  DashboardKpiGrid,
+  type DashboardKpiCardDefinition,
+} from "@/components/overview/dashboard-kpi-grid";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   formatCompactCurrency,
-  formatDelta,
-  formatNumber,
   formatPercent,
 } from "@/lib/overview/overview-format";
 import type { OverviewMetric } from "@/lib/overview/overview-api";
@@ -193,84 +195,24 @@ export function DashboardPrintKpiGrid({
   comparisonEnabled: boolean;
   onRetry?: () => void;
 }) {
-  return (
-    <div className="print-section grid grid-cols-4 gap-3.5">
-      {cards.map((card, index) => {
-        const Icon = card.icon;
-        const metric = metrics[index];
-        const accent = accentStyles[card.accent];
-        const value =
-          card.kind === "currency"
-            ? formatCompactCurrency(metric?.current)
-            : formatNumber(metric?.current);
+  const normalizedCards: DashboardKpiCardDefinition[] = cards.map((card) => ({
+    title: card.title,
+    icon: card.icon,
+    iconClassName: `${accentStyles[card.accent].bg} ${accentStyles[card.accent].text}`,
+    kind: card.kind,
+  }));
 
-        return (
-          <Card
-            key={card.title}
-            size="sm"
-            className={
-              isLoading
-                ? "border border-border/70 shadow-none"
-                : "flex h-full border border-border/70 shadow-none"
-            }
-            style={{ borderColor: "#d4d4d8", backgroundColor: "#ffffff" }}
-          >
-            <CardHeader className="gap-2 pb-2.5">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1.5">
-                  <p className="print-text text-[0.78rem] leading-snug text-muted-foreground">
-                    {card.title}
-                  </p>
-                  <CardTitle>
-                    {isLoading ? <Skeleton className="h-6 w-20" /> : value}
-                  </CardTitle>
-                </div>
-                <div
-                  className={`flex size-10 shrink-0 items-center justify-center rounded-md ${accent.bg} ${accent.text}`}
-                  style={{
-                    backgroundColor: accent.softBg,
-                    color: accent.softText,
-                  }}
-                >
-                  <Icon className="size-4" />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent
-              className={
-                isLoading
-                  ? "pt-0"
-                  : "flex flex-1 flex-col justify-end space-y-1.5 pt-0"
-              }
-            >
-              {isLoading ? (
-                <Skeleton className="h-4 w-40 max-w-full" />
-              ) : error ? (
-                <div className="space-y-2">
-                  <p className="text-xs text-destructive">{error}</p>
-                  {onRetry ? (
-                    <Button size="xs" variant="outline" onClick={onRetry}>
-                      Retry
-                    </Button>
-                  ) : null}
-                </div>
-              ) : !comparisonEnabled ? (
-                <p className="print-text text-xs text-muted-foreground">
-                  &nbsp;
-                </p>
-              ) : metric ? (
-                <p className="print-text text-xs text-muted-foreground">
-                  {formatDelta(metric)}
-                </p>
-              ) : (
-                <p className="print-text text-xs text-muted-foreground">
-                  Немає даних
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        );
-      })}
+  return (
+    <div className="print-section">
+      <DashboardKpiGrid
+        cards={normalizedCards}
+        metrics={metrics}
+        isLoading={isLoading}
+        error={error}
+        comparisonEnabled={comparisonEnabled}
+        onRetry={onRetry}
+        printMode
+      />
     </div>
   );
 }
