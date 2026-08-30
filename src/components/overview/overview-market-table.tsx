@@ -1,20 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import {
-  createCoreRowModel,
-  flexRender,
-  stockFeatures,
-  useTable,
-  type ColumnDef,
-  type VisibilityState,
-} from "@tanstack/react-table";
+import { useMemo, useState, type ReactNode } from "react";
 import {
   ChevronDownIcon,
-  DatabaseIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   ChevronsUpDownIcon,
+  DatabaseIcon,
   DownloadIcon,
   EyeOffIcon,
   FileSpreadsheetIcon,
@@ -23,6 +15,7 @@ import {
   RotateCwIcon,
 } from "lucide-react";
 
+import { OverflowTooltipText } from "@/components/overview/overflow-tooltip-text";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -52,7 +45,6 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { OverflowTooltipText } from "@/components/overview/overflow-tooltip-text";
 import type {
   OverviewExportFormat,
   OverviewTableItem,
@@ -70,7 +62,7 @@ import type {
 
 const pageSizeOptions = [5, 10, 20, 50, 100] as const;
 
-const columnLabels: Record<string, string> = {
+const columnLabels = {
   period: "Період",
   buyerRegion: "Регіон покупця",
   buyer: "Покупець",
@@ -81,6 +73,14 @@ const columnLabels: Record<string, string> = {
   unit: "Од.",
   priceWithVat: "Ціна з ПДВ",
   salesWithVat: "Продажі з ПДВ",
+} as const;
+
+type ColumnId = keyof typeof columnLabels;
+type ColumnVisibilityState = Partial<Record<ColumnId, boolean>>;
+type OverviewMarketTableColumn = {
+  id: ColumnId;
+  header: ReactNode;
+  cell: (row: OverviewTableItem) => ReactNode;
 };
 
 function TooltipValue({
@@ -177,13 +177,14 @@ export function OverviewMarketTable({
   isExportPending: boolean;
   pendingExportFormat: OverviewExportFormat | null;
 }) {
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] =
+    useState<ColumnVisibilityState>({});
 
-  const columns = useMemo<ColumnDef<OverviewTableItem>[]>(
+  const columns = useMemo<OverviewMarketTableColumn[]>(
     () => [
       {
         id: "period",
-        header: () => (
+        header: (
           <TableHeaderButton
             label="Період"
             sortBy="period"
@@ -191,11 +192,11 @@ export function OverviewMarketTable({
             onUpdateTableState={onUpdateTableState}
           />
         ),
-        cell: ({ row }) => formatOverviewTableCell(row.original, "period"),
+        cell: (row) => formatOverviewTableCell(row, "period"),
       },
       {
         id: "buyerRegion",
-        header: () => (
+        header: (
           <TableHeaderButton
             label="Регіон покупця"
             sortBy="buyerRegion"
@@ -203,16 +204,16 @@ export function OverviewMarketTable({
             onUpdateTableState={onUpdateTableState}
           />
         ),
-        cell: ({ row }) => (
+        cell: (row) => (
           <OverflowTooltipText
-            value={formatOverviewTableCell(row.original, "buyerRegion")}
+            value={formatOverviewTableCell(row, "buyerRegion")}
             className="block whitespace-normal break-words leading-snug"
           />
         ),
       },
       {
         id: "buyer",
-        header: () => (
+        header: (
           <TableHeaderButton
             label="Покупець"
             sortBy="buyer"
@@ -220,16 +221,16 @@ export function OverviewMarketTable({
             onUpdateTableState={onUpdateTableState}
           />
         ),
-        cell: ({ row }) => (
+        cell: (row) => (
           <OverflowTooltipText
-            value={formatOverviewTableCell(row.original, "buyer")}
+            value={formatOverviewTableCell(row, "buyer")}
             className="block whitespace-normal break-words leading-snug"
           />
         ),
       },
       {
         id: "supplier",
-        header: () => (
+        header: (
           <TableHeaderButton
             label="Постачальник"
             sortBy="supplier"
@@ -237,16 +238,16 @@ export function OverviewMarketTable({
             onUpdateTableState={onUpdateTableState}
           />
         ),
-        cell: ({ row }) => (
+        cell: (row) => (
           <OverflowTooltipText
-            value={formatOverviewTableCell(row.original, "supplier")}
+            value={formatOverviewTableCell(row, "supplier")}
             className="block whitespace-normal break-words leading-snug"
           />
         ),
       },
       {
         id: "product",
-        header: () => (
+        header: (
           <TableHeaderButton
             label="Продукт"
             sortBy="product"
@@ -254,16 +255,16 @@ export function OverviewMarketTable({
             onUpdateTableState={onUpdateTableState}
           />
         ),
-        cell: ({ row }) => (
+        cell: (row) => (
           <OverflowTooltipText
-            value={formatOverviewTableCell(row.original, "product")}
+            value={formatOverviewTableCell(row, "product")}
             className="block whitespace-normal break-words leading-snug"
           />
         ),
       },
       {
         id: "uktzed",
-        header: () => (
+        header: (
           <TableHeaderButton
             label="УКТЗЕД"
             sortBy="uktzed"
@@ -271,11 +272,11 @@ export function OverviewMarketTable({
             onUpdateTableState={onUpdateTableState}
           />
         ),
-        cell: ({ row }) => formatOverviewTableCell(row.original, "uktzed"),
+        cell: (row) => formatOverviewTableCell(row, "uktzed"),
       },
       {
         id: "quantity",
-        header: () => (
+        header: (
           <TableHeaderButton
             label="Кількість"
             sortBy="quantity"
@@ -283,19 +284,16 @@ export function OverviewMarketTable({
             onUpdateTableState={onUpdateTableState}
           />
         ),
-        cell: ({ row }) => (
+        cell: (row) => (
           <TooltipValue
-            value={formatOverviewTableCell(row.original, "quantity")}
-            tooltip={formatQuantityWithUnit(
-              row.original.quantity,
-              row.original.unit,
-            )}
+            value={formatOverviewTableCell(row, "quantity")}
+            tooltip={formatQuantityWithUnit(row.quantity, row.unit)}
           />
         ),
       },
       {
         id: "unit",
-        header: () => (
+        header: (
           <TableHeaderButton
             label="Од."
             sortBy="unit"
@@ -303,11 +301,11 @@ export function OverviewMarketTable({
             onUpdateTableState={onUpdateTableState}
           />
         ),
-        cell: ({ row }) => formatOverviewTableCell(row.original, "unit"),
+        cell: (row) => formatOverviewTableCell(row, "unit"),
       },
       {
         id: "priceWithVat",
-        header: () => (
+        header: (
           <TableHeaderButton
             label="Ціна з ПДВ"
             sortBy={null}
@@ -315,16 +313,16 @@ export function OverviewMarketTable({
             onUpdateTableState={onUpdateTableState}
           />
         ),
-        cell: ({ row }) => (
+        cell: (row) => (
           <TooltipValue
-            value={formatCompactCurrency(row.original.priceWithVat)}
-            tooltip={formatFullCurrency(row.original.priceWithVat)}
+            value={formatCompactCurrency(row.priceWithVat)}
+            tooltip={formatFullCurrency(row.priceWithVat)}
           />
         ),
       },
       {
         id: "salesWithVat",
-        header: () => (
+        header: (
           <TableHeaderButton
             label="Продажі з ПДВ"
             sortBy="salesWithVat"
@@ -332,10 +330,10 @@ export function OverviewMarketTable({
             onUpdateTableState={onUpdateTableState}
           />
         ),
-        cell: ({ row }) => (
+        cell: (row) => (
           <TooltipValue
-            value={formatCompactCurrency(row.original.salesWithVat)}
-            tooltip={formatFullCurrency(row.original.salesWithVat)}
+            value={formatCompactCurrency(row.salesWithVat)}
+            tooltip={formatFullCurrency(row.salesWithVat)}
           />
         ),
       },
@@ -343,18 +341,10 @@ export function OverviewMarketTable({
     [onUpdateTableState, tableState],
   );
 
-  const table = useTable({
-    features: stockFeatures,
-    data: rows,
-    columns,
-    state: {
-      columnVisibility,
-    },
-    onColumnVisibilityChange: setColumnVisibility,
-    getCoreRowModel: createCoreRowModel(),
-  });
-
-  const visibleColumnCount = table.getVisibleLeafColumns().length;
+  const visibleColumns = columns.filter(
+    (column) => columnVisibility[column.id] !== false,
+  );
+  const visibleColumnCount = visibleColumns.length;
   const pageSummaryStart =
     total === 0 ? 0 : (tableState.page - 1) * tableState.limit + 1;
   const pageSummaryEnd = Math.min(tableState.page * tableState.limit, total);
@@ -393,24 +383,26 @@ export function OverviewMarketTable({
                   }
                 />
                 <DropdownMenuContent align="end" className="min-w-52">
-                  {table.getAllLeafColumns().map((column) => (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      checked={column.getIsVisible()}
-                      disabled={
-                        column.getIsVisible() &&
-                        table
-                          .getAllLeafColumns()
-                          .filter((tableColumn) => tableColumn.getIsVisible())
-                          .length === 1
-                      }
-                      onCheckedChange={(checked) =>
-                        column.toggleVisibility(Boolean(checked))
-                      }
-                    >
-                      {columnLabels[column.id] ?? column.id}
-                    </DropdownMenuCheckboxItem>
-                  ))}
+                  {columns.map((column) => {
+                    const isVisible = columnVisibility[column.id] !== false;
+                    const canHide = visibleColumns.length > 1 || !isVisible;
+
+                    return (
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        checked={isVisible}
+                        disabled={!canHide}
+                        onCheckedChange={(checked) =>
+                          setColumnVisibility((currentState) => ({
+                            ...currentState,
+                            [column.id]: Boolean(checked),
+                          }))
+                        }
+                      >
+                        {columnLabels[column.id]}
+                      </DropdownMenuCheckboxItem>
+                    );
+                  })}
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -468,23 +460,13 @@ export function OverviewMarketTable({
           <div className="w-full max-w-full overflow-x-auto overflow-y-hidden rounded-md border border-border/70 bg-background">
             <Table className="min-w-[1280px]">
               <TableHeader className="bg-muted/30">
-                {table.getHeaderGroups().map((headerGroup) => (
-                  <TableRow
-                    key={headerGroup.id}
-                    className="hover:bg-transparent"
-                  >
-                    {headerGroup.headers.map((header) => (
-                      <TableHead key={header.id} className="h-11 px-4">
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                              header.column.columnDef.header,
-                              header.getContext(),
-                            )}
-                      </TableHead>
-                    ))}
-                  </TableRow>
-                ))}
+                <TableRow className="hover:bg-transparent">
+                  {visibleColumns.map((column) => (
+                    <TableHead key={column.id} className="h-11 px-4">
+                      {column.header}
+                    </TableHead>
+                  ))}
+                </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
@@ -520,15 +502,15 @@ export function OverviewMarketTable({
                       </div>
                     </TableCell>
                   </TableRow>
-                ) : table.getRowModel().rows.length ? (
-                  table.getRowModel().rows.map((row) => (
-                    <TableRow key={row.id} className="border-border/70">
-                      {row.getVisibleCells().map((cell) => (
-                        <TableCell key={cell.id} className="px-4 py-3">
-                          {flexRender(
-                            cell.column.columnDef.cell,
-                            cell.getContext(),
-                          )}
+                ) : rows.length ? (
+                  rows.map((row, rowIndex) => (
+                    <TableRow
+                      key={`${row.period}-${row.buyerTaxNumber ?? "buyer"}-${row.supplierTaxNumber ?? "supplier"}-${row.product ?? "product"}-${rowIndex}`}
+                      className="border-border/70"
+                    >
+                      {visibleColumns.map((column) => (
+                        <TableCell key={column.id} className="px-4 py-3">
+                          {column.cell(row)}
                         </TableCell>
                       ))}
                     </TableRow>

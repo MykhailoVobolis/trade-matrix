@@ -16,8 +16,12 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-  type TooltipProps,
+  type TooltipContentProps,
 } from "recharts";
+import type {
+  NameType,
+  ValueType,
+} from "recharts/types/component/DefaultTooltipContent";
 import { useMemo } from "react";
 import { useTheme } from "next-themes";
 import type { OverviewTrendItem } from "@/lib/overview/overview-api";
@@ -39,12 +43,15 @@ function OverviewTrendTooltip({
   active,
   payload,
   label,
-}: TooltipProps<number, string>) {
+}: TooltipContentProps<ValueType, NameType>) {
   if (!active || !payload?.length) {
     return null;
   }
 
-  const items = payload.filter((item) => typeof item.value === "number");
+  const items = payload.filter(
+    (item): item is NonNullable<typeof payload>[number] =>
+      typeof item.value === "number",
+  );
 
   if (items.length === 0) {
     return null;
@@ -323,7 +330,14 @@ export function OverviewTrendCard({
                     tick={chartTick}
                   />
                   <YAxis hide />
-                  <Tooltip cursor={false} content={<OverviewTrendTooltip />} />
+                  <Tooltip
+                    cursor={false}
+                    content={(props) => (
+                      <OverviewTrendTooltip
+                        {...(props as TooltipContentProps<ValueType, NameType>)}
+                      />
+                    )}
+                  />
                   <Bar
                     dataKey="salesWithVat"
                     name="Продажі з ПДВ"

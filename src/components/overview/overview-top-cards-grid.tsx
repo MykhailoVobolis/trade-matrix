@@ -52,6 +52,21 @@ export type OverviewTopCardDefinition = {
   iconClassName: string;
 };
 
+type OverviewTopCardsRegionItem =
+  | OverviewRegionRankingItem
+  | {
+      regionCode: string | null;
+      regionName: string | null;
+      amount: number;
+      share: number;
+      activeSuppliers: number | null;
+      previousAmount: number | null;
+      deltaPercent: number | null;
+    };
+
+type OverviewTopCardsItem =
+  OverviewRankingItem | OverviewProductRankingItem | OverviewTopCardsRegionItem;
+
 const topCards: readonly OverviewTopCardDefinition[] = [
   {
     title: "Топ покупців",
@@ -424,24 +439,15 @@ export function OverviewTopCardsGrid({
   topBuyers: OverviewRankingItem[];
   topSuppliers: OverviewRankingItem[];
   topProducts: OverviewProductRankingItem[];
-  topRegions: OverviewRegionRankingItem[];
+  topRegions: OverviewTopCardsRegionItem[];
   isLoading: boolean;
   error: string | null;
   onRetry?: () => void;
   printMode?: boolean;
   cardsOverride?: readonly OverviewTopCardDefinition[];
-  rowsOverride?: Array<
-    (
-      | OverviewRankingItem
-      | OverviewProductRankingItem
-      | OverviewRegionRankingItem
-    )[]
-  >;
+  rowsOverride?: Array<OverviewTopCardsItem[]>;
   secondaryTextResolver?: (
-    item:
-      | OverviewRankingItem
-      | OverviewProductRankingItem
-      | OverviewRegionRankingItem,
+    item: OverviewTopCardsItem,
     cardIndex: number,
   ) => string | null;
 }) {
@@ -599,21 +605,31 @@ export function OverviewTopCardsGrid({
                                   : undefined,
                             });
                   const name =
-                    "regionName" in item ? item.regionName : item.name;
+                    ("regionName" in item
+                      ? item.regionName
+                      : item.name
+                    )?.trim() || "—";
+                  const entityId =
+                    "id" in item &&
+                    typeof item.id === "string" &&
+                    item.id.trim()
+                      ? item.id
+                      : null;
                   const secondaryText =
-                    (secondaryTextResolver?.(item, cardIndex) ??
-                    ((cardIndex === 0 || cardIndex === 1) &&
-                      "id" in item &&
-                      typeof item.id === "string" &&
-                      item.id.trim()))
-                      ? `ЄДРПОУ ${item.id}`
+                    secondaryTextResolver?.(item, cardIndex) ??
+                    ((cardIndex === 0 || cardIndex === 1) && entityId
+                      ? `ЄДРПОУ ${entityId}`
                       : cardIndex === 2 && "uktzed" in item && item.uktzed
                         ? `УКТЗЕД ${item.uktzed}`
                         : cardIndex === 3 &&
                             "activeBuyers" in item &&
                             typeof item.activeBuyers === "number"
                           ? `${item.activeBuyers} активних покупців`
-                          : null;
+                          : cardIndex === 3 &&
+                              "activeSuppliers" in item &&
+                              typeof item.activeSuppliers === "number"
+                            ? `${item.activeSuppliers} активних постачальників`
+                            : null);
 
                   const rowContent = (
                     <>

@@ -146,7 +146,6 @@ export function OverviewPrintScreen({
 
   return (
     <DashboardPrintSummary
-      ref={reportRef}
       reportRef={reportRef}
       title="TradeMatrix"
       subtitle="Overview dashboard report"

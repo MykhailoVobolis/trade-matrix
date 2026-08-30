@@ -46,7 +46,9 @@ function createUrl(pathname: string, state: OverviewFilterState) {
   return queryString ? `${pathname}?${queryString}` : pathname;
 }
 
-const exportThemeVariables = {
+type CssVariableProperties = CSSProperties & Record<`--${string}`, string>;
+
+const exportThemeVariables: CssVariableProperties = {
   colorScheme: "light",
   "--background": "#ffffff",
   "--foreground": "#171717",
@@ -74,7 +76,7 @@ const exportThemeVariables = {
   "--sidebar-accent-foreground": "#315ca8",
   "--sidebar-border": "#e5e5e5",
   "--sidebar-ring": "#a3a3a3",
-} satisfies CSSProperties;
+};
 
 type FrozenStyleSnapshot = Array<{
   element: HTMLElement;
