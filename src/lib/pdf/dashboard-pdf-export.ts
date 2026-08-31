@@ -44,13 +44,6 @@ let domColorResolver: HTMLSpanElement | null = null;
 const unsupportedColorPattern =
   /(?:^|[\s,(])(lab|lch|oklab|oklch)\(|color-mix\(/i;
 
-type UnsupportedColorFinding = {
-  phase: "source" | "clone";
-  target: string;
-  value: string;
-  descriptor: string;
-};
-
 function getDomColorResolver() {
   if (domColorResolver && document.body.contains(domColorResolver)) {
     return domColorResolver;
@@ -184,111 +177,6 @@ function normalizeCssFunctionsInValue(value: string) {
   return value.replace(unsupportedColorFunctionPattern, (match) =>
     normalizeCssColor(match),
   );
-}
-
-function elementDescriptor(element: Element) {
-  const tagName = element.tagName.toLowerCase();
-  const id = element.id ? `#${element.id}` : "";
-  const className =
-    typeof element.className === "string" && element.className.trim()
-      ? `.${element.className.trim().split(/\s+/).join(".")}`
-      : "";
-
-  return `${tagName}${id}${className}`;
-}
-
-function collectUnsupportedColorFindings(
-  root: ParentNode,
-  phase: "source" | "clone",
-) {
-  const findings: UnsupportedColorFinding[] = [];
-  const elements = Array.from(root.querySelectorAll("*"));
-  const colorAttributes = [
-    "style",
-    "fill",
-    "stroke",
-    "stop-color",
-    "flood-color",
-    "lighting-color",
-    "color",
-  ] as const;
-  const colorProperties = [
-    "color",
-    "background-color",
-    "border-top-color",
-    "border-right-color",
-    "border-bottom-color",
-    "border-left-color",
-    "outline-color",
-    "text-decoration-color",
-    "caret-color",
-    "column-rule-color",
-    "fill",
-    "stroke",
-    "stop-color",
-    "flood-color",
-    "lighting-color",
-  ] as const;
-
-  for (const element of elements) {
-    for (const attribute of colorAttributes) {
-      const value = element.getAttribute(attribute);
-
-      if (value && unsupportedColorPattern.test(value)) {
-        findings.push({
-          phase,
-          target: elementDescriptor(element),
-          value,
-          descriptor: `attribute:${attribute}`,
-        });
-      }
-    }
-
-    const computed = window.getComputedStyle(element);
-
-    for (const property of colorProperties) {
-      const value = computed.getPropertyValue(property);
-
-      if (value && unsupportedColorPattern.test(value)) {
-        findings.push({
-          phase,
-          target: elementDescriptor(element),
-          value,
-          descriptor: `computed:${property}`,
-        });
-      }
-    }
-  }
-
-  return findings;
-}
-
-function logUnsupportedColorFindings(
-  findings: UnsupportedColorFinding[],
-  fileName: string,
-) {
-  if (!findings.length) {
-    return;
-  }
-
-  console.groupCollapsed(
-    `[pdf-export] Unsupported color functions detected for ${fileName}: ${findings.length}`,
-  );
-
-  for (const finding of findings.slice(0, 50)) {
-    console.warn(
-      `[pdf-export][${finding.phase}] ${finding.target} ${finding.descriptor}`,
-      finding.value,
-    );
-  }
-
-  if (findings.length > 50) {
-    console.warn(
-      `[pdf-export] ${findings.length - 50} more unsupported color occurrences omitted.`,
-    );
-  }
-
-  console.groupEnd();
 }
 
 function freezeExportStyles(root: HTMLElement): FrozenStyleSnapshot {
@@ -735,11 +623,6 @@ export async function exportDashboardPdf({
   try {
     frozenStyles = freezeExportStyles(exportNode);
 
-    logUnsupportedColorFindings(
-      collectUnsupportedColorFindings(exportNode, "source"),
-      fileName,
-    );
-
     const pdf = new jsPDF({
       orientation: "portrait",
       unit: "pt",
@@ -833,10 +716,6 @@ export async function exportDashboardPdf({
                 clonedSection,
               );
               sanitizeClonedInlineStyles(clonedSection);
-              logUnsupportedColorFindings(
-                collectUnsupportedColorFindings(clonedSection, "clone"),
-                fileName,
-              );
             }
           },
           windowWidth: sectionNode.scrollWidth,

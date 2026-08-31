@@ -697,7 +697,7 @@ function SuppliersTrendCard({
   return (
     <Card className="border border-border/70 shadow-none">
       <CardHeader className="flex flex-col gap-3 border-b border-border/70 pb-4 lg:flex-row lg:items-center lg:justify-between">
-        <CardTitle>Продажі за період</CardTitle>
+        <CardTitle className="print-text">Продажі за період</CardTitle>
 
         <div className="flex flex-wrap items-center gap-2">
           <Select
@@ -733,12 +733,12 @@ function SuppliersTrendCard({
         <div className="flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
           <div className="flex items-center gap-2">
             <span className="size-2.5 rounded-full bg-sidebar-primary" />
-            Продажі з ПДВ
+            <span className="print-text">Продажі з ПДВ</span>
           </div>
           {comparisonEnabled ? (
             <div className="flex items-center gap-2">
               <span className="h-px w-6 border-t border-dashed border-sidebar-primary/70" />
-              Попер. період
+              <span className="print-text">Попер. період</span>
             </div>
           ) : null}
         </div>
@@ -756,7 +756,7 @@ function SuppliersTrendCard({
               ) : null}
             </div>
           ) : trend.length === 0 ? (
-            <div className="flex h-[320px] items-center justify-center text-sm text-muted-foreground">
+            <div className="print-text flex h-[320px] items-center justify-center text-sm text-muted-foreground">
               Немає даних для відображення.
             </div>
           ) : (
@@ -813,7 +813,9 @@ function SuppliersTrendCard({
         </div>
 
         {isFetching && !isLoading ? (
-          <p className="text-xs text-muted-foreground">Updating dashboard...</p>
+          <p className="print-text text-xs text-muted-foreground">
+            Updating dashboard...
+          </p>
         ) : null}
       </CardContent>
     </Card>

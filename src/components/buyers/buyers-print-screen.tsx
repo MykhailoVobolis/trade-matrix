@@ -188,6 +188,60 @@ function BuyersTrendTooltip(props: TooltipProps<number, string>) {
   );
 }
 
+function BuyersPrintTrendTick({
+  x = 0,
+  y = 0,
+  index,
+  payload,
+  trendData = [],
+}: {
+  x?: number;
+  y?: number;
+  index?: number;
+  payload?: {
+    value?: string;
+  };
+  trendData?: BuyersDashboardResponse["trend"];
+}) {
+  const purchasesWithVat =
+    typeof index === "number" ? (trendData[index]?.purchasesWithVat ?? 0) : 0;
+
+  return (
+    <g transform={`translate(${x},${y})`}>
+      <text
+        x={0}
+        y={0}
+        dy={12}
+        textAnchor="middle"
+        className="fill-foreground text-[11px] font-medium"
+        style={{
+          fill: "#18181b",
+          fontFamily: "Geist, Arial, sans-serif",
+          fontSize: 11,
+          fontWeight: 500,
+        }}
+      >
+        {payload?.value ?? ""}
+      </text>
+      <text
+        x={0}
+        y={0}
+        dy={31}
+        textAnchor="middle"
+        className="fill-muted-foreground text-[10px]"
+        style={{
+          fill: "#71717a",
+          fontFamily: "Geist, Arial, sans-serif",
+          fontSize: 10,
+          fontWeight: 400,
+        }}
+      >
+        {formatCompactCurrency(purchasesWithVat)}
+      </text>
+    </g>
+  );
+}
+
 function BuyersPrintTrendCard({
   trend,
   isLoading,
@@ -303,6 +357,7 @@ function BuyersPrintTrendCard({
                     tickMargin={12}
                     minTickGap={16}
                     height={56}
+                    tick={<BuyersPrintTrendTick trendData={chartData} />}
                   />
                   <YAxis hide />
                   <Tooltip cursor={false} content={<BuyersTrendTooltip />} />

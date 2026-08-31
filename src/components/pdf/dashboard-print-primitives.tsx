@@ -94,7 +94,7 @@ function renderSummaryGrid(items: PrintSummaryItem[], columns: 2 | 3) {
 
   return (
     <div
-      className={`-ml-3 grid gap-4 ${columns === 3 ? "grid-cols-3" : "grid-cols-2"}`}
+      className={`grid gap-4 ${columns === 3 ? "grid-cols-3" : "grid-cols-2"}`}
     >
       {normalizedItems.map((item, index) =>
         item ? (
@@ -147,7 +147,7 @@ export function DashboardPrintSummary({
       ref={reportRef}
       className="print-report mx-auto flex w-full max-w-[1120px] min-w-0 flex-col gap-2 bg-background px-4 py-5 md:px-6"
     >
-      <Card className="print-section border border-border/70 shadow-none">
+      <Card className="print-section border-0 shadow-none ring-0">
         <CardContent className="flex flex-col gap-4 px-0 pt-5 pb-0">
           <div className="flex items-start justify-between gap-4">
             <div className="grid grid-cols-[44px_minmax(0,1fr)] items-center gap-4">
