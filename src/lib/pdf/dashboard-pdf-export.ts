@@ -112,7 +112,9 @@ function normalizeCssColor(value: string) {
     const canvas = document.createElement("canvas");
     canvas.width = 1;
     canvas.height = 1;
-    colorNormalizationContext = canvas.getContext("2d");
+    colorNormalizationContext = canvas.getContext("2d", {
+      willReadFrequently: true,
+    });
   }
 
   if (!colorNormalizationContext) {
@@ -137,7 +139,9 @@ function normalizeResolvedColor(resolvedValue: string, fallbackValue: string) {
     const canvas = document.createElement("canvas");
     canvas.width = 1;
     canvas.height = 1;
-    colorNormalizationContext = canvas.getContext("2d");
+    colorNormalizationContext = canvas.getContext("2d", {
+      willReadFrequently: true,
+    });
   }
 
   if (!colorNormalizationContext) {
@@ -511,6 +515,23 @@ function sanitizeClonedInlineStyles(root: HTMLElement) {
   }
 }
 
+function sanitizeClonedDocumentShell(clonedDocument: Document) {
+  clonedDocument.documentElement.removeAttribute("class");
+  clonedDocument.documentElement.removeAttribute("style");
+  clonedDocument.documentElement.style.backgroundColor = "#ffffff";
+  clonedDocument.documentElement.style.color = "#171717";
+  clonedDocument.documentElement.style.colorScheme = "light";
+
+  if (clonedDocument.body) {
+    clonedDocument.body.removeAttribute("class");
+    clonedDocument.body.removeAttribute("style");
+    clonedDocument.body.style.backgroundColor = "#ffffff";
+    clonedDocument.body.style.color = "#171717";
+    clonedDocument.body.style.margin = "0";
+    clonedDocument.body.style.padding = "0";
+  }
+}
+
 function createDetachedExportSnapshot(root: HTMLElement) {
   const snapshotRoot = root.cloneNode(true) as HTMLElement;
   const sourceElements = [
@@ -571,6 +592,7 @@ function createDetachedExportSnapshot(root: HTMLElement) {
 
     snapshotElement.removeAttribute("class");
     snapshotElement.removeAttribute("id");
+    snapshotElement.removeAttribute("style");
 
     for (const attributeName of Array.from(
       snapshotElement.getAttributeNames(),
@@ -682,12 +704,12 @@ export async function exportDashboardPdf({
   let frozenStyles: FrozenStyleSnapshot | null = null;
 
   try {
+    frozenStyles = freezeExportStyles(exportNode);
+
     logUnsupportedColorFindings(
       collectUnsupportedColorFindings(exportNode, "source"),
       fileName,
     );
-
-    frozenStyles = freezeExportStyles(exportNode);
 
     const pdf = new jsPDF({
       orientation: "portrait",
@@ -771,6 +793,8 @@ export async function exportDashboardPdf({
           backgroundColor: "#ffffff",
           logging: false,
           onclone: (clonedDocument) => {
+            sanitizeClonedDocumentShell(clonedDocument);
+
             const clonedSection = clonedDocument.body?.firstElementChild
               ?.firstElementChild as HTMLElement | undefined;
 
@@ -784,13 +808,7 @@ export async function exportDashboardPdf({
                 collectUnsupportedColorFindings(clonedSection, "clone"),
                 fileName,
               );
-              return;
             }
-
-            logUnsupportedColorFindings(
-              collectUnsupportedColorFindings(clonedDocument, "clone"),
-              fileName,
-            );
           },
           windowWidth: sectionNode.scrollWidth,
           windowHeight: sectionNode.scrollHeight,
