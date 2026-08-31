@@ -101,7 +101,7 @@ function normalizeCssColor(value: string) {
       const resolvedValue = window.getComputedStyle(resolver).color;
 
       if (resolvedValue) {
-        return resolvedValue;
+        return normalizeResolvedColor(resolvedValue, trimmedValue);
       }
     } catch {
       return trimmedValue;
@@ -123,9 +123,49 @@ function normalizeCssColor(value: string) {
 
   try {
     colorNormalizationContext.fillStyle = trimmedValue;
-    return colorNormalizationContext.fillStyle;
+    return normalizeResolvedColor(
+      colorNormalizationContext.fillStyle,
+      trimmedValue,
+    );
   } catch {
     return trimmedValue;
+  }
+}
+
+function normalizeResolvedColor(resolvedValue: string, fallbackValue: string) {
+  if (!colorNormalizationContext) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1;
+    canvas.height = 1;
+    colorNormalizationContext = canvas.getContext("2d");
+  }
+
+  if (!colorNormalizationContext) {
+    return resolvedValue || fallbackValue;
+  }
+
+  try {
+    colorNormalizationContext.clearRect(0, 0, 1, 1);
+    colorNormalizationContext.fillStyle = "#000000";
+    colorNormalizationContext.fillStyle = resolvedValue || fallbackValue;
+    colorNormalizationContext.fillRect(0, 0, 1, 1);
+
+    const [red, green, blue, alpha] = colorNormalizationContext.getImageData(
+      0,
+      0,
+      1,
+      1,
+    ).data;
+
+    if (alpha === 255) {
+      return `rgb(${red}, ${green}, ${blue})`;
+    }
+
+    return `rgba(${red}, ${green}, ${blue}, ${Number(
+      (alpha / 255).toFixed(3),
+    )})`;
+  } catch {
+    return resolvedValue || fallbackValue;
   }
 }
 
@@ -338,6 +378,75 @@ function freezeExportStyles(root: HTMLElement): FrozenStyleSnapshot {
   return snapshot;
 }
 
+function applyCloneColorSanitization(
+  sourceRoot: HTMLElement,
+  clonedRoot: HTMLElement,
+) {
+  const sourceElements = [
+    sourceRoot,
+    ...Array.from(sourceRoot.querySelectorAll<HTMLElement | SVGElement>("*")),
+  ];
+  const clonedElements = [
+    clonedRoot,
+    ...Array.from(clonedRoot.querySelectorAll<HTMLElement | SVGElement>("*")),
+  ];
+  const colorProperties = [
+    "color",
+    "background-color",
+    "border-top-color",
+    "border-right-color",
+    "border-bottom-color",
+    "border-left-color",
+    "outline-color",
+    "text-decoration-color",
+    "caret-color",
+    "column-rule-color",
+    "fill",
+    "stroke",
+  ] as const;
+  const svgColorProperties = [
+    { attribute: "fill", property: "fill" },
+    { attribute: "stroke", property: "stroke" },
+    { attribute: "stop-color", property: "stop-color" },
+    { attribute: "flood-color", property: "flood-color" },
+    { attribute: "lighting-color", property: "lighting-color" },
+    { attribute: "color", property: "color" },
+  ] as const;
+
+  for (let index = 0; index < sourceElements.length; index += 1) {
+    const sourceElement = sourceElements[index];
+    const clonedElement = clonedElements[index];
+
+    if (!clonedElement) {
+      break;
+    }
+
+    const computed = window.getComputedStyle(sourceElement);
+
+    for (const property of colorProperties) {
+      const value = computed.getPropertyValue(property);
+
+      if (value) {
+        clonedElement.style.setProperty(
+          property,
+          normalizeCssColor(value),
+          "important",
+        );
+      }
+    }
+
+    if (clonedElement instanceof SVGElement) {
+      for (const { attribute, property } of svgColorProperties) {
+        const value = computed.getPropertyValue(property);
+
+        if (value) {
+          clonedElement.setAttribute(attribute, normalizeCssColor(value));
+        }
+      }
+    }
+  }
+}
+
 function restoreFrozenStyles(snapshot: FrozenStyleSnapshot) {
   for (const item of snapshot) {
     if (item.styleAttribute === null) {
@@ -463,12 +572,28 @@ export async function exportDashboardPdf({
     addNewPage();
 
     for (const sectionNode of nodesToExport) {
+      const cloneId = `pdf-export-${Math.random().toString(36).slice(2)}`;
+      sectionNode.setAttribute("data-pdf-export-clone-id", cloneId);
+
       const sectionCanvas = await html2canvas(sectionNode, {
         scale: 2,
         useCORS: true,
         backgroundColor: "#ffffff",
         logging: false,
         onclone: (clonedDocument) => {
+          const clonedSection = clonedDocument.querySelector<HTMLElement>(
+            `[data-pdf-export-clone-id="${cloneId}"]`,
+          );
+
+          if (clonedSection) {
+            applyCloneColorSanitization(sectionNode, clonedSection);
+            logUnsupportedColorFindings(
+              collectUnsupportedColorFindings(clonedSection, "clone"),
+              fileName,
+            );
+            return;
+          }
+
           logUnsupportedColorFindings(
             collectUnsupportedColorFindings(clonedDocument, "clone"),
             fileName,
@@ -479,6 +604,7 @@ export async function exportDashboardPdf({
         scrollX: 0,
         scrollY: 0,
       });
+      sectionNode.removeAttribute("data-pdf-export-clone-id");
 
       const pixelsPerPoint = sectionCanvas.width / contentWidth;
       const sectionHeightPt = sectionCanvas.height / pixelsPerPoint;
