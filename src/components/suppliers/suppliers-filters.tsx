@@ -28,6 +28,7 @@ import type {
   OverviewFilterState,
   OverviewFilterValues,
 } from "@/lib/overview/overview-url-state";
+import { getSuppliersFilterOptionsRequest } from "@/lib/suppliers/suppliers-api";
 import { useSuppliersFilterOptionsInfiniteQuery } from "@/lib/suppliers/suppliers-query";
 
 type FilterDimension =
@@ -356,6 +357,76 @@ function SuppliersFilterField({
       JSON.stringify(labelCache),
     );
   }, [dimension, labelCache]);
+
+  useEffect(() => {
+    if (!accessToken || selectedValues.length === 0) {
+      return;
+    }
+
+    const missingValues = selectedValues.filter((value) => {
+      if (labelCache[value]) {
+        return false;
+      }
+
+      return !optionItems.some((item) => item.value === value && item.label);
+    });
+
+    if (missingValues.length === 0) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void Promise.all(
+      missingValues.map(async (value) => {
+        const response = await getSuppliersFilterOptionsRequest({
+          state: optionsState,
+          dimension,
+          search: value,
+          page: 1,
+          limit: 20,
+          accessToken,
+        });
+
+        const exactMatch = response.items.find((item) => item.value === value);
+        return exactMatch ? [value, exactMatch.label] : null;
+      }),
+    ).then((resolvedEntries) => {
+      if (cancelled) {
+        return;
+      }
+
+      const nextEntries = resolvedEntries.filter(
+        (entry): entry is [string, string] =>
+          Array.isArray(entry) && entry.length === 2,
+      );
+
+      if (nextEntries.length === 0) {
+        return;
+      }
+
+      setLabelCache((current) => {
+        const next = { ...current };
+
+        nextEntries.forEach(([value, label]) => {
+          next[value] = label;
+        });
+
+        return next;
+      });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    accessToken,
+    dimension,
+    labelCache,
+    optionItems,
+    optionsState,
+    selectedValues,
+  ]);
 
   return (
     <OverviewSearchableMultiSelect
