@@ -511,6 +511,132 @@ function sanitizeClonedInlineStyles(root: HTMLElement) {
   }
 }
 
+function createDetachedExportSnapshot(root: HTMLElement) {
+  const snapshotRoot = root.cloneNode(true) as HTMLElement;
+  const sourceElements = [
+    root,
+    ...Array.from(root.querySelectorAll<HTMLElement | SVGElement>("*")),
+  ];
+  const snapshotElements = [
+    snapshotRoot,
+    ...Array.from(snapshotRoot.querySelectorAll<HTMLElement | SVGElement>("*")),
+  ];
+  const colorProperties = new Set([
+    "color",
+    "background-color",
+    "border-top-color",
+    "border-right-color",
+    "border-bottom-color",
+    "border-left-color",
+    "outline-color",
+    "text-decoration-color",
+    "caret-color",
+    "column-rule-color",
+    "fill",
+    "stroke",
+    "stop-color",
+    "flood-color",
+    "lighting-color",
+  ]);
+  const container = document.createElement("div");
+
+  container.setAttribute("aria-hidden", "true");
+  container.style.position = "fixed";
+  container.style.left = "-100000px";
+  container.style.top = "0";
+  container.style.pointerEvents = "none";
+  container.style.opacity = "0";
+  container.style.zIndex = "-1";
+  container.style.backgroundColor = "#ffffff";
+  container.style.padding = "0";
+  container.style.margin = "0";
+  container.style.width = `${root.scrollWidth}px`;
+
+  snapshotRoot.style.width = `${root.scrollWidth}px`;
+  snapshotRoot.style.maxWidth = `${root.scrollWidth}px`;
+  snapshotRoot.style.minWidth = `${root.scrollWidth}px`;
+  snapshotRoot.style.backgroundColor = "#ffffff";
+  snapshotRoot.style.colorScheme = "light";
+
+  for (let index = 0; index < sourceElements.length; index += 1) {
+    const sourceElement = sourceElements[index];
+    const snapshotElement = snapshotElements[index];
+
+    if (!snapshotElement) {
+      break;
+    }
+
+    const computed = window.getComputedStyle(sourceElement);
+    const computedPropertyNames = Array.from(computed);
+
+    snapshotElement.removeAttribute("class");
+    snapshotElement.removeAttribute("id");
+
+    for (const attributeName of Array.from(
+      snapshotElement.getAttributeNames(),
+    )) {
+      if (
+        attributeName === "class" ||
+        attributeName === "id" ||
+        attributeName.startsWith("data-")
+      ) {
+        snapshotElement.removeAttribute(attributeName);
+      }
+    }
+
+    for (const property of computedPropertyNames) {
+      if (property.startsWith("--")) {
+        continue;
+      }
+
+      const value = computed.getPropertyValue(property);
+
+      if (!value) {
+        continue;
+      }
+
+      snapshotElement.style.setProperty(
+        property,
+        colorProperties.has(property) ? normalizeCssColor(value) : value,
+        "important",
+      );
+    }
+
+    snapshotElement.style.setProperty("animation", "none", "important");
+    snapshotElement.style.setProperty("transition", "none", "important");
+
+    if (snapshotElement instanceof SVGElement) {
+      const svgColorProperties = [
+        { attribute: "fill", property: "fill" },
+        { attribute: "stroke", property: "stroke" },
+        { attribute: "stop-color", property: "stop-color" },
+        { attribute: "flood-color", property: "flood-color" },
+        { attribute: "lighting-color", property: "lighting-color" },
+        { attribute: "color", property: "color" },
+      ] as const;
+
+      for (const { attribute, property } of svgColorProperties) {
+        const value = computed.getPropertyValue(property);
+
+        if (value) {
+          snapshotElement.setAttribute(attribute, normalizeCssColor(value));
+        }
+      }
+    }
+  }
+
+  container.appendChild(snapshotRoot);
+  document.body.appendChild(container);
+
+  return {
+    container,
+    snapshotRoot,
+    cleanup() {
+      container.remove();
+    },
+  };
+}
+
 function restoreFrozenStyles(snapshot: FrozenStyleSnapshot) {
   for (const item of snapshot) {
     if (item.styleAttribute === null) {
@@ -636,95 +762,99 @@ export async function exportDashboardPdf({
     addNewPage();
 
     for (const sectionNode of nodesToExport) {
-      const cloneId = `pdf-export-${Math.random().toString(36).slice(2)}`;
-      sectionNode.setAttribute("data-pdf-export-clone-id", cloneId);
+      const detachedSnapshot = createDetachedExportSnapshot(sectionNode);
 
-      const sectionCanvas = await html2canvas(sectionNode, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
-        logging: false,
-        onclone: (clonedDocument) => {
-          const clonedSection = clonedDocument.querySelector<HTMLElement>(
-            `[data-pdf-export-clone-id="${cloneId}"]`,
-          );
+      try {
+        const sectionCanvas = await html2canvas(detachedSnapshot.snapshotRoot, {
+          scale: 2,
+          useCORS: true,
+          backgroundColor: "#ffffff",
+          logging: false,
+          onclone: (clonedDocument) => {
+            const clonedSection = clonedDocument.body?.firstElementChild
+              ?.firstElementChild as HTMLElement | undefined;
 
-          if (clonedSection) {
-            applyCloneColorSanitization(sectionNode, clonedSection);
-            sanitizeClonedInlineStyles(clonedSection);
+            if (clonedSection) {
+              applyCloneColorSanitization(
+                detachedSnapshot.snapshotRoot,
+                clonedSection,
+              );
+              sanitizeClonedInlineStyles(clonedSection);
+              logUnsupportedColorFindings(
+                collectUnsupportedColorFindings(clonedSection, "clone"),
+                fileName,
+              );
+              return;
+            }
+
             logUnsupportedColorFindings(
-              collectUnsupportedColorFindings(clonedSection, "clone"),
+              collectUnsupportedColorFindings(clonedDocument, "clone"),
               fileName,
             );
-            return;
+          },
+          windowWidth: sectionNode.scrollWidth,
+          windowHeight: sectionNode.scrollHeight,
+          scrollX: 0,
+          scrollY: 0,
+        });
+
+        const pixelsPerPoint = sectionCanvas.width / contentWidth;
+        const sectionHeightPt = sectionCanvas.height / pixelsPerPoint;
+        let remainingHeightPt = pageHeight - margin - cursorY;
+
+        if (
+          sectionHeightPt <= contentHeight &&
+          sectionHeightPt > remainingHeightPt &&
+          cursorY > margin
+        ) {
+          addNewPage();
+          remainingHeightPt = pageHeight - margin - cursorY;
+        }
+
+        if (sectionHeightPt <= remainingHeightPt) {
+          drawCanvasSlice(
+            sectionCanvas,
+            0,
+            sectionCanvas.height,
+            sectionHeightPt,
+          );
+          cursorY += sectionHeightPt + 10;
+          continue;
+        }
+
+        let sourceOffsetY = 0;
+        let availableHeightPt = remainingHeightPt;
+
+        while (sourceOffsetY < sectionCanvas.height) {
+          if (availableHeightPt <= 24) {
+            addNewPage();
+            availableHeightPt = contentHeight;
           }
 
-          logUnsupportedColorFindings(
-            collectUnsupportedColorFindings(clonedDocument, "clone"),
-            fileName,
+          const sliceHeightPx = Math.min(
+            sectionCanvas.height - sourceOffsetY,
+            Math.floor(availableHeightPt * pixelsPerPoint),
           );
-        },
-        windowWidth: sectionNode.scrollWidth,
-        windowHeight: sectionNode.scrollHeight,
-        scrollX: 0,
-        scrollY: 0,
-      });
-      sectionNode.removeAttribute("data-pdf-export-clone-id");
+          const targetHeightPt = sliceHeightPx / pixelsPerPoint;
 
-      const pixelsPerPoint = sectionCanvas.width / contentWidth;
-      const sectionHeightPt = sectionCanvas.height / pixelsPerPoint;
-      let remainingHeightPt = pageHeight - margin - cursorY;
+          drawCanvasSlice(
+            sectionCanvas,
+            sourceOffsetY,
+            sliceHeightPx,
+            targetHeightPt,
+          );
 
-      if (
-        sectionHeightPt <= contentHeight &&
-        sectionHeightPt > remainingHeightPt &&
-        cursorY > margin
-      ) {
-        addNewPage();
-        remainingHeightPt = pageHeight - margin - cursorY;
-      }
+          sourceOffsetY += sliceHeightPx;
+          cursorY += targetHeightPt + 8;
+          availableHeightPt = pageHeight - margin - cursorY;
 
-      if (sectionHeightPt <= remainingHeightPt) {
-        drawCanvasSlice(
-          sectionCanvas,
-          0,
-          sectionCanvas.height,
-          sectionHeightPt,
-        );
-        cursorY += sectionHeightPt + 10;
-        continue;
-      }
-
-      let sourceOffsetY = 0;
-      let availableHeightPt = remainingHeightPt;
-
-      while (sourceOffsetY < sectionCanvas.height) {
-        if (availableHeightPt <= 24) {
-          addNewPage();
-          availableHeightPt = contentHeight;
+          if (sourceOffsetY < sectionCanvas.height) {
+            addNewPage();
+            availableHeightPt = contentHeight;
+          }
         }
-
-        const sliceHeightPx = Math.min(
-          sectionCanvas.height - sourceOffsetY,
-          Math.floor(availableHeightPt * pixelsPerPoint),
-        );
-        const targetHeightPt = sliceHeightPx / pixelsPerPoint;
-
-        drawCanvasSlice(
-          sectionCanvas,
-          sourceOffsetY,
-          sliceHeightPx,
-          targetHeightPt,
-        );
-
-        sourceOffsetY += sliceHeightPx;
-        cursorY += targetHeightPt + 8;
-        availableHeightPt = pageHeight - margin - cursorY;
-
-        if (sourceOffsetY < sectionCanvas.height) {
-          addNewPage();
-          availableHeightPt = contentHeight;
-        }
+      } finally {
+        detachedSnapshot.cleanup();
       }
 
       cursorY += 2;
