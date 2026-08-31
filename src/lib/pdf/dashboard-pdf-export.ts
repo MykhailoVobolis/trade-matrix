@@ -447,6 +447,70 @@ function applyCloneColorSanitization(
   }
 }
 
+function sanitizeClonedInlineStyles(root: HTMLElement) {
+  const elements = [
+    root,
+    ...Array.from(root.querySelectorAll<HTMLElement | SVGElement>("*")),
+  ];
+
+  for (const element of elements) {
+    const styleAttribute = element.getAttribute("style");
+
+    if (!styleAttribute) {
+      continue;
+    }
+
+    const declarations = styleAttribute
+      .split(";")
+      .map((declaration) => declaration.trim())
+      .filter(Boolean);
+    const sanitizedDeclarations: string[] = [];
+
+    for (const declaration of declarations) {
+      const separatorIndex = declaration.indexOf(":");
+
+      if (separatorIndex === -1) {
+        continue;
+      }
+
+      const property = declaration.slice(0, separatorIndex).trim();
+      const value = declaration.slice(separatorIndex + 1).trim();
+
+      if (!property || property.startsWith("--")) {
+        continue;
+      }
+
+      if (!unsupportedColorPattern.test(value)) {
+        sanitizedDeclarations.push(`${property}: ${value}`);
+        continue;
+      }
+
+      const normalizedValue = normalizeCssColor(
+        value.replace(/\s*!important\s*$/i, ""),
+      );
+
+      if (!normalizedValue || unsupportedColorPattern.test(normalizedValue)) {
+        continue;
+      }
+
+      const importantSuffix = /\s*!important\s*$/i.test(value)
+        ? " !important"
+        : "";
+
+      sanitizedDeclarations.push(
+        `${property}: ${normalizedValue}${importantSuffix}`,
+      );
+    }
+
+    if (sanitizedDeclarations.length) {
+      element.setAttribute("style", sanitizedDeclarations.join("; "));
+      continue;
+    }
+
+    element.removeAttribute("style");
+  }
+}
+
 function restoreFrozenStyles(snapshot: FrozenStyleSnapshot) {
   for (const item of snapshot) {
     if (item.styleAttribute === null) {
@@ -587,6 +651,7 @@ export async function exportDashboardPdf({
 
           if (clonedSection) {
             applyCloneColorSanitization(sectionNode, clonedSection);
+            sanitizeClonedInlineStyles(clonedSection);
             logUnsupportedColorFindings(
               collectUnsupportedColorFindings(clonedSection, "clone"),
               fileName,
