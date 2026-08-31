@@ -1,8 +1,12 @@
 import type { CSSProperties } from "react";
 
 type FrozenStyleSnapshot = Array<{
-  element: HTMLElement;
+  element: HTMLElement | SVGElement;
   styleAttribute: string | null;
+  attributes: Array<{
+    name: string;
+    value: string | null;
+  }>;
 }>;
 
 export const exportThemeVariables = {
@@ -36,6 +40,26 @@ export const exportThemeVariables = {
 } satisfies CSSProperties & Record<string, string>;
 
 let colorNormalizationContext: CanvasRenderingContext2D | null = null;
+let domColorResolver: HTMLSpanElement | null = null;
+
+function getDomColorResolver() {
+  if (domColorResolver && document.body.contains(domColorResolver)) {
+    return domColorResolver;
+  }
+
+  const resolver = document.createElement("span");
+  resolver.setAttribute("aria-hidden", "true");
+  resolver.style.position = "fixed";
+  resolver.style.pointerEvents = "none";
+  resolver.style.opacity = "0";
+  resolver.style.inset = "0";
+  resolver.style.width = "0";
+  resolver.style.height = "0";
+  resolver.style.overflow = "hidden";
+  document.body.appendChild(resolver);
+  domColorResolver = resolver;
+  return resolver;
+}
 
 function normalizeCssColor(value: string) {
   const trimmedValue = value.trim();
@@ -50,6 +74,29 @@ function normalizeCssColor(value: string) {
     trimmedValue === "none"
   ) {
     return trimmedValue;
+  }
+
+  if (
+    trimmedValue.includes("var(") ||
+    trimmedValue.includes("oklch(") ||
+    trimmedValue.includes("oklab(") ||
+    trimmedValue.includes("lab(") ||
+    trimmedValue.includes("lch(") ||
+    trimmedValue.includes("color-mix(")
+  ) {
+    const resolver = getDomColorResolver();
+    resolver.style.color = "";
+
+    try {
+      resolver.style.color = trimmedValue;
+      const resolvedValue = window.getComputedStyle(resolver).color;
+
+      if (resolvedValue) {
+        return resolvedValue;
+      }
+    } catch {
+      return trimmedValue;
+    }
   }
 
   if (!colorNormalizationContext) {
@@ -77,13 +124,30 @@ function freezeExportStyles(root: HTMLElement): FrozenStyleSnapshot {
   const snapshot: FrozenStyleSnapshot = [];
   const elements = [
     root,
-    ...Array.from(root.querySelectorAll<HTMLElement>("*")),
+    ...Array.from(root.querySelectorAll<HTMLElement | SVGElement>("*")),
   ];
+  const svgColorAttributes = [
+    "fill",
+    "stroke",
+    "stop-color",
+    "flood-color",
+    "lighting-color",
+    "color",
+  ] as const;
 
   for (const element of elements) {
+    const attributes =
+      element instanceof SVGElement
+        ? svgColorAttributes.map((name) => ({
+            name,
+            value: element.getAttribute(name),
+          }))
+        : [];
+
     snapshot.push({
       element,
       styleAttribute: element.getAttribute("style"),
+      attributes,
     });
 
     const computed = window.getComputedStyle(element);
@@ -119,6 +183,42 @@ function freezeExportStyles(root: HTMLElement): FrozenStyleSnapshot {
     if (boxShadow) {
       element.style.setProperty("box-shadow", boxShadow, "important");
     }
+
+    if (element instanceof SVGElement) {
+      for (const attribute of svgColorAttributes) {
+        const currentValue = element.getAttribute(attribute);
+
+        if (!currentValue) {
+          continue;
+        }
+
+        const normalizedAttributeColor = normalizeCssColor(currentValue);
+
+        if (
+          normalizedAttributeColor &&
+          normalizedAttributeColor !== currentValue
+        ) {
+          element.setAttribute(attribute, normalizedAttributeColor);
+        }
+      }
+
+      const svgColorProperties = [
+        { attribute: "fill", property: "fill" },
+        { attribute: "stroke", property: "stroke" },
+        { attribute: "stop-color", property: "stop-color" },
+        { attribute: "flood-color", property: "flood-color" },
+        { attribute: "lighting-color", property: "lighting-color" },
+        { attribute: "color", property: "color" },
+      ] as const;
+
+      for (const { attribute, property } of svgColorProperties) {
+        const computedValue = computed.getPropertyValue(property);
+
+        if (computedValue) {
+          element.setAttribute(attribute, normalizeCssColor(computedValue));
+        }
+      }
+    }
   }
 
   return snapshot;
@@ -128,10 +228,20 @@ function restoreFrozenStyles(snapshot: FrozenStyleSnapshot) {
   for (const item of snapshot) {
     if (item.styleAttribute === null) {
       item.element.removeAttribute("style");
-      continue;
+    } else {
+      item.element.setAttribute("style", item.styleAttribute);
     }
 
-    item.element.setAttribute("style", item.styleAttribute);
+    if (item.element instanceof SVGElement) {
+      for (const attribute of item.attributes) {
+        if (attribute.value === null) {
+          item.element.removeAttribute(attribute.name);
+          continue;
+        }
+
+        item.element.setAttribute(attribute.name, attribute.value);
+      }
+    }
   }
 }
 
