@@ -173,6 +173,19 @@ function normalizeResolvedColor(resolvedValue: string, fallbackValue: string) {
   }
 }
 
+const unsupportedColorFunctionPattern =
+  /(color-mix\([^)]*\)|oklch\([^)]*\)|oklab\([^)]*\)|lch\([^)]*\)|lab\([^)]*\))/gi;
+
+function normalizeCssFunctionsInValue(value: string) {
+  if (!unsupportedColorPattern.test(value)) {
+    return value;
+  }
+
+  return value.replace(unsupportedColorFunctionPattern, (match) =>
+    normalizeCssColor(match),
+  );
+}
+
 function elementDescriptor(element: Element) {
   const tagName = element.tagName.toLowerCase();
   const id = element.id ? `#${element.id}` : "";
@@ -339,7 +352,11 @@ function freezeExportStyles(root: HTMLElement): FrozenStyleSnapshot {
     const boxShadow = computed.getPropertyValue("box-shadow");
 
     if (boxShadow) {
-      element.style.setProperty("box-shadow", boxShadow, "important");
+      element.style.setProperty(
+        "box-shadow",
+        normalizeCssFunctionsInValue(boxShadow),
+        "important",
+      );
     }
 
     if (element instanceof SVGElement) {
@@ -439,6 +456,16 @@ function applyCloneColorSanitization(
       }
     }
 
+    const boxShadow = computed.getPropertyValue("box-shadow");
+
+    if (boxShadow) {
+      clonedElement.style.setProperty(
+        "box-shadow",
+        normalizeCssFunctionsInValue(boxShadow),
+        "important",
+      );
+    }
+
     if (clonedElement instanceof SVGElement) {
       for (const { attribute, property } of svgColorProperties) {
         const value = computed.getPropertyValue(property);
@@ -489,7 +516,7 @@ function sanitizeClonedInlineStyles(root: HTMLElement) {
         continue;
       }
 
-      const normalizedValue = normalizeCssColor(
+      const normalizedValue = normalizeCssFunctionsInValue(
         value.replace(/\s*!important\s*$/i, ""),
       );
 
@@ -619,7 +646,9 @@ function createDetachedExportSnapshot(root: HTMLElement) {
 
       snapshotElement.style.setProperty(
         property,
-        colorProperties.has(property) ? normalizeCssColor(value) : value,
+        colorProperties.has(property)
+          ? normalizeCssColor(value)
+          : normalizeCssFunctionsInValue(value),
         "important",
       );
     }
