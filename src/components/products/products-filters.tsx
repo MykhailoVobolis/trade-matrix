@@ -506,7 +506,7 @@ export function ProductsFilters({
         </div>
       </div>
 
-      <div className="grid gap-2.5 xl:grid-cols-5">
+      <div className="dashboard-filter-grid grid gap-2.5 lg:grid-cols-2 xl:grid-cols-3">
         <ProductsFilterField
           filterKey="products"
           label="Продукт / Номенклатура"
