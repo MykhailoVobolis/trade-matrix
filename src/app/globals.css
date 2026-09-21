@@ -2,6 +2,16 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
+@media (min-width: 1440px) {
+  .dashboard-kpi-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .dashboard-filter-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {

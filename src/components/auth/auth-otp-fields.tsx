@@ -13,6 +13,7 @@ type AuthOtpFieldsProps = {
   footerText?: string;
   fieldError?: string;
   onCompleteChange?: (code: string, complete: boolean) => void;
+  onEnter?: () => void;
   disabled?: boolean;
   invalid?: boolean;
 };
@@ -25,6 +26,7 @@ export function AuthOtpFields({
   footerText,
   fieldError,
   onCompleteChange,
+  onEnter,
   disabled = false,
   invalid = false,
 }: AuthOtpFieldsProps) {
@@ -135,6 +137,17 @@ export function AuthOtpFields({
             onChange={(event) => updateDigit(index, event.target.value)}
             onFocus={(event) => event.currentTarget.select()}
             onKeyDown={(event) => {
+              if (
+                event.key === "Enter" &&
+                onEnter &&
+                !disabled &&
+                code.every((digit) => digit.length === 1)
+              ) {
+                event.preventDefault();
+                onEnter();
+                return;
+              }
+
               if (event.key === "Backspace" && !code[index] && index > 0) {
                 focusInput(index - 1);
               }

@@ -194,6 +194,7 @@ export default function VerifyCodePage() {
           disabled={verifyMutation.isPending}
           invalid={hasInvalidCode}
           fieldError={fieldErrorMessage}
+          onEnter={isLocked ? undefined : handleSubmit}
           onCompleteChange={(nextCode, complete) => {
             setCode(nextCode);
             setIsCodeComplete(complete);

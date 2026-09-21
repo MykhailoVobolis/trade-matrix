@@ -205,6 +205,7 @@ export function TwoFactorVerification({ method }: TwoFactorVerificationProps) {
           disabled={verifyMutation.isPending}
           invalid={hasInvalidCode}
           fieldError={fieldErrorMessage}
+          onEnter={isLocked ? undefined : handleSubmit}
           footerText={
             method === "totp"
               ? "Use the latest code shown in your authenticator app."

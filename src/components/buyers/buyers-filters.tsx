@@ -573,7 +573,7 @@ export function BuyersFilters({
         </div>
       </div>
 
-      <div className="grid gap-3 xl:grid-cols-5">
+      <div className="dashboard-filter-grid grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
         <BuyersFilterField
           filterKey="buyerTaxNumbers"
           label="Покупець"

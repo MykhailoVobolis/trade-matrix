@@ -124,6 +124,7 @@ export default function CheckYourInboxPage() {
             }}
             disabled={verifyMutation.isPending}
             fieldError={fieldError ?? undefined}
+            onEnter={handleContinue}
             onCompleteChange={(nextCode, complete) => {
               setCode(nextCode);
               setIsCodeComplete(complete);

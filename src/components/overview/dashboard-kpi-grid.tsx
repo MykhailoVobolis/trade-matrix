@@ -180,7 +180,7 @@ export function DashboardKpiGrid({
 }) {
   return (
     <div
-      className={`grid gap-3.5 ${printMode ? "grid-cols-4" : "md:grid-cols-2 xl:grid-cols-4"}`}
+      className={`dashboard-kpi-grid grid gap-3.5 ${printMode ? "grid-cols-4" : "md:grid-cols-2 xl:grid-cols-2"}`}
     >
       {cards.map((card, index) => {
         const Icon = card.icon;
