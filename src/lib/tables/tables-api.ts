@@ -1,7 +1,8 @@
 import { requestJson } from "@/lib/api/http-client";
 
-export const MAX_TABLE_UPLOAD_FILES = 20;
+export const MAX_TABLE_UPLOAD_FILES = 10;
 export const MAX_TABLE_UPLOAD_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+export const MAX_TABLE_UPLOAD_TOTAL_SIZE_BYTES = 50 * 1024 * 1024;
 export const TABLE_UPLOAD_ACCEPTED_EXTENSIONS = [".xlsx", ".csv"] as const;
 export const TABLE_UPLOAD_ACCEPT_ATTRIBUTE = [
   ".xlsx",
@@ -39,7 +40,7 @@ export type RegistryImportListResponse = {
 };
 
 export type RegistryImportUploadResponse = {
-  items: RegistryImportUploadItem[];
+  items: RegistryImportItem[];
 };
 
 export type RegistryImportStats = {
@@ -116,6 +117,45 @@ export type PreparedTablesUploadPayload = {
   fileCount: number;
   totalBytes: number;
 };
+
+export type TablesUploadValidationError =
+  | "too-many-files"
+  | "file-too-large"
+  | "total-size-too-large"
+  | "unsupported-extension";
+
+export function validateTablesUploadFiles(
+  files: File[],
+): TablesUploadValidationError | null {
+  if (files.length > MAX_TABLE_UPLOAD_FILES) {
+    return "too-many-files";
+  }
+
+  if (files.some((file) => file.size > MAX_TABLE_UPLOAD_FILE_SIZE_BYTES)) {
+    return "file-too-large";
+  }
+
+  if (
+    files.reduce((totalBytes, file) => totalBytes + file.size, 0) >
+    MAX_TABLE_UPLOAD_TOTAL_SIZE_BYTES
+  ) {
+    return "total-size-too-large";
+  }
+
+  if (
+    files.some((file) => {
+      const normalizedName = file.name.toLowerCase();
+
+      return !TABLE_UPLOAD_ACCEPTED_EXTENSIONS.some((extension) =>
+        normalizedName.endsWith(extension),
+      );
+    })
+  ) {
+    return "unsupported-extension";
+  }
+
+  return null;
+}
 
 function buildQueryString(params: Record<string, string | number | undefined>) {
   const searchParams = new URLSearchParams();

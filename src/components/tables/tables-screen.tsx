@@ -22,11 +22,9 @@ import {
   deleteRegistryImportRequest,
   getRegistryImportsRequest,
   getRegistryImportStatsRequest,
-  MAX_TABLE_UPLOAD_FILES,
-  MAX_TABLE_UPLOAD_FILE_SIZE_BYTES,
   TABLE_UPLOAD_ACCEPT_ATTRIBUTE,
-  TABLE_UPLOAD_ACCEPTED_EXTENSIONS,
   prepareTablesUploadPayload,
+  validateTablesUploadFiles,
   type RegistryImportItem,
   type RegistryImportStats,
   type RegistryImportStatus,
@@ -110,7 +108,6 @@ const statusOptions: Array<{
 ];
 
 const IMPORT_POLLING_INTERVAL_MS = 2_000;
-const IMPORT_POLLING_WINDOW_MS = 30_000;
 
 function getStatusMeta(status: RegistryImportStatus) {
   return (
@@ -144,14 +141,6 @@ function formatImportFileSize(record: RegistryImportItem) {
   }
 
   return "Unknown";
-}
-
-function isAcceptedTableFile(file: File) {
-  const normalizedName = file.name.toLowerCase();
-
-  return TABLE_UPLOAD_ACCEPTED_EXTENSIONS.some((extension) =>
-    normalizedName.endsWith(extension),
-  );
 }
 
 function formatImportDate(value: string) {
@@ -260,9 +249,6 @@ export function TablesScreen() {
     title: string;
     message: string;
   } | null>(null);
-  const [pollingDeadlineAt, setPollingDeadlineAt] = useState<number | null>(
-    null,
-  );
 
   async function invalidateDatabaseDependentQueries() {
     await Promise.all([
@@ -294,16 +280,8 @@ export function TablesScreen() {
       : getStatusMeta(selectedStatus).label;
 
   function shouldPollImports(stats?: RegistryImportStats) {
-    if (pollingDeadlineAt === null) {
-      return false;
-    }
-
-    if (Date.now() >= pollingDeadlineAt) {
-      return false;
-    }
-
     if (!stats) {
-      return true;
+      return false;
     }
 
     return stats.queuedCount > 0 || stats.processingCount > 0;
@@ -364,6 +342,20 @@ export function TablesScreen() {
         throw new Error("Authentication required.");
       }
 
+      const validationError = validateTablesUploadFiles(files);
+
+      if (validationError) {
+        const validationMessages = {
+          "too-many-files": "Можно загрузить не более 10 файлов.",
+          "file-too-large": "Файл превышает максимальный размер 10 MB.",
+          "total-size-too-large":
+            "Общий размер файлов не должен превышать 50 MB.",
+          "unsupported-extension": "Разрешены только файлы .xlsx и .csv.",
+        } satisfies Record<typeof validationError, string>;
+
+        throw new Error(validationMessages[validationError]);
+      }
+
       const preparedUpload = prepareTablesUploadPayload(files);
 
       return uploadRegistryImportsRequest({
@@ -371,11 +363,24 @@ export function TablesScreen() {
         accessToken,
       });
     },
-    onSuccess: async () => {
+    onSuccess: async (response) => {
       setSelectedStatus("all");
       setQuery("");
       setCurrentPage(1);
-      setPollingDeadlineAt(Date.now() + IMPORT_POLLING_WINDOW_MS);
+
+      const failedItems = response.items.filter(
+        (item) => item.status === "failed" && item.errorMessage,
+      );
+
+      if (failedItems.length > 0) {
+        setFeedback({
+          variant: "error",
+          title: "Некоторые файлы не загружены",
+          message: failedItems
+            .map((item) => `${item.fileName}: ${item.errorMessage}`)
+            .join(" "),
+        });
+      }
 
       await invalidateDatabaseDependentQueries();
     },
@@ -422,37 +427,21 @@ export function TablesScreen() {
       return;
     }
 
-    if (files.length > MAX_TABLE_UPLOAD_FILES) {
+    const validationError = validateTablesUploadFiles(files);
+
+    if (validationError) {
+      const validationMessages = {
+        "too-many-files": "Можно загрузить не более 10 файлов.",
+        "file-too-large": "Файл превышает максимальный размер 10 MB.",
+        "total-size-too-large":
+          "Общий размер файлов не должен превышать 50 MB.",
+        "unsupported-extension": "Разрешены только файлы .xlsx и .csv.",
+      } satisfies Record<typeof validationError, string>;
+
       setFeedback({
         variant: "error",
-        title: "Upload failed",
-        message: `You can upload up to ${MAX_TABLE_UPLOAD_FILES} XLSX or CSV files at a time.`,
-      });
-      event.target.value = "";
-      return;
-    }
-
-    const invalidTypeFile = files.find((file) => !isAcceptedTableFile(file));
-
-    if (invalidTypeFile) {
-      setFeedback({
-        variant: "error",
-        title: "Upload failed",
-        message: "Only XLSX and CSV files are supported.",
-      });
-      event.target.value = "";
-      return;
-    }
-
-    const oversizedFile = files.find(
-      (file) => file.size > MAX_TABLE_UPLOAD_FILE_SIZE_BYTES,
-    );
-
-    if (oversizedFile) {
-      setFeedback({
-        variant: "error",
-        title: "Upload failed",
-        message: "Each XLSX or CSV file must be 10 MB or smaller.",
+        title: "Ошибка загрузки",
+        message: validationMessages[validationError],
       });
       event.target.value = "";
       return;
@@ -549,6 +538,12 @@ export function TablesScreen() {
               title={feedback.title}
             >
               {feedback.message}
+            </AuthInlineMessage>
+          ) : null}
+
+          {uploadMutation.error ? (
+            <AuthInlineMessage variant="error" title="Ошибка загрузки">
+              {uploadMutation.error.message}
             </AuthInlineMessage>
           ) : null}
 
