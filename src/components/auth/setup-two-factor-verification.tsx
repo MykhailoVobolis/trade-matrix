@@ -245,6 +245,7 @@ export function SetupTwoFactorVerification() {
             }
             invalid={hasInvalidCode}
             fieldError={fieldErrorMessage}
+            onEnter={handleSubmit}
             footerText="Use the first code generated for this new TradeMatrix setup."
             onCompleteChange={(nextCode, complete) => {
               setCode(nextCode);
